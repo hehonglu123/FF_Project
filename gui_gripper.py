@@ -8,9 +8,9 @@ import numpy as np
   
 #Accept the names of the webcams and the nodename from command line
 parser = argparse.ArgumentParser(description="RR plug and play client")
-parser.add_argument("--gripper-name",type=str)
+parser.add_argument("--tool-name",type=str)
 args, _ = parser.parse_known_args()
-robot_name=args.gripper_name
+tool_name=args.tool_name
 
 
 #auto discovery
@@ -54,17 +54,17 @@ def gripper_ctrl(tool):
 	return
 def roller_ctrl(tool):
 
-	if gripper.config('relief')[-1] == 'sunken':
+	if roller.config('relief')[-1] == 'sunken':
 		tool.setf_param('roll1',RR.VarValue(1))
-		gripper.config(relief="raised")
-		gripper.configure(bg='red')
-		gripper.configure(text='gripper off')
+		roller.config(relief="raised")
+		roller.configure(bg='red')
+		roller.configure(text='gripper off')
 
 	else:
 		tool.setf_param('roll1',RR.VarValue(0))
-		gripper.config(relief="sunken")
-		gripper.configure(bg='green')
-		gripper.configure(text='gripper on')
+		roller.config(relief="sunken")
+		roller.configure(bg='green')
+		roller.configure(text='gripper on')
 	return
 
 
@@ -98,8 +98,8 @@ label.after(250,update_label)
 
 
 
-grip=Button(top,text='gripper off',command=lambda: gripper_ctrl(tool),bg='red')
-roll=Button(top,text='roller off',command=lambda: roller_ctrl(tool),bg='red')
+gripper=Button(top,text='gripper off',command=lambda: gripper_ctrl(tool),bg='red')
+roller=Button(top,text='roller off',command=lambda: roller_ctrl(tool),bg='red')
 
 
 gripper.pack()
