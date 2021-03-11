@@ -19,7 +19,7 @@ res=RRN.FindServiceByType("com.robotraconteur.robotics.tool.Tool",
 ["rr+local","rr+tcp","rrs+tcp"])
 url=None
 for serviceinfo2 in res:
-	if robot_name in serviceinfo2.NodeName:
+	if tool_name in serviceinfo2.NodeName:
 		url=serviceinfo2.ConnectionURL
 		break
 if url==None:
@@ -29,7 +29,7 @@ if url==None:
 
 
 #connect
-tool_sub=RRN.SubscribeService(url_gripper)
+tool_sub=RRN.SubscribeService(url)
 tool=tool_sub.GetDefaultClientWait(1)
 state_w = tool_sub.SubscribeWire("tool_state")
 
@@ -55,16 +55,16 @@ def gripper_ctrl(tool):
 def roller_ctrl(tool):
 
 	if roller.config('relief')[-1] == 'sunken':
-		tool.setf_param('roll1',RR.VarValue(1))
+		tool.setf_param('roll1',RR.VarValue(False,'bool'))
 		roller.config(relief="raised")
 		roller.configure(bg='red')
-		roller.configure(text='gripper off')
+		roller.configure(text='roller off')
 
 	else:
-		tool.setf_param('roll1',RR.VarValue(0))
+		tool.setf_param('roll1',RR.VarValue(True,'bool'))
 		roller.config(relief="sunken")
 		roller.configure(bg='green')
-		roller.configure(text='gripper on')
+		roller.configure(text='roller on')
 	return
 
 
@@ -74,19 +74,19 @@ def update_label():
 	flags_text = "Tool State Flags:\n\n"
 	if tool_state[0]:
 		flags_text += 'sensor: '
-		if tool_state[1].sensor.sensor[0] != 0:
+		if tool_state[1].sensor[0] != 0:
 			flags_text += 'blocked' + "\n"
 		else:
 			flags_text += 'unblocked' + "\n"
 		flags_text += 'switch: '
-		if tool_state[1].sensor.sensor[0] != 0:
+		if tool_state[1].sensor[1] != 0:
 			flags_text += 'pushed' + "\n"
 		else:
 			flags_text += 'released' + "\n"
 	else:
 		flags_text += 'service not running'
 
-	label.config(text = flags_text + "\n\n" + joint_text)
+	label.config(text = flags_text)
 
 	label.after(250, update_label)
 
