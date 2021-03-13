@@ -56,6 +56,8 @@ state_flags_enum = robot_const['RobotStateFlags']
 halt_mode = robot_const["RobotCommandMode"]["halt"]
 position_mode = robot_const["RobotCommandMode"]["position_command"]
 robot.command_mode = halt_mode
+time.sleep(0.1)
+robot.command_mode = position_mode
 cmd_w = robot_sub.SubscribeWire("position_command")
 
 #parameter setup
@@ -65,18 +67,21 @@ length=np.linalg.norm(P[1])+np.linalg.norm(P[2])+np.linalg.norm(P[3])
 H=np.transpose(np.array(robot.robot_info.chains[0].H.tolist()))
 robot_def=Robot(H,np.transpose(P),np.zeros(n))
 
-position=np.array([0,0.5,0.3])
-orientation=R_ee.R_ee(np.pi/2.)
-q=inv.inv(position,orientation)
-#start joggging to initial pose
-robot.command_mode = jog_mode
-robot.jog_freespace(q, np.ones(n), True)
-time.sleep(0.1)
-robot.command_mode = position_mode
-
 vel_ctrl = EmulatedVelocityControl(robot,state_w, cmd_w)
 #enable velocity mode
 vel_ctrl.enable_velocity_mode()
+
+orientation=R_ee.R_ee(np.pi/2.)
+fabric_position=np.array([0,0.5,0.])
+place_position=np.array([-0.3,0.5,0.])
+
+def jog_joint(q):
+	while np.linalg.norm(q-vel_ctrl.joint_position())>0.1:
+		qdot=2*(q-vel_ctrl.joint_position())
+		qdot[:-2]=np.array([x if np.abs(x)>0.1 else 0.1*np.sign(x) for x in qdot])[:-2]
+		vel_ctrl.set_velocity_command(qdot)
+	vel_ctrl.set_velocity_command(np.zeros((num_joints,)))
+	return
 
 def move_cartesian(vd):
 	w=1.
@@ -102,39 +107,55 @@ def move_cartesian(vd):
 	qdot=0.05*normalize_dq(solve_qp(H, f))
 	vel_ctrl.set_velocity_command(qdot)
 
-def pick(tool):
+def grip(tool):
 	tool.setf_param('roll1',RR.VarValue(True,'bool'))
 	time.sleep(0.5)
 	while not state_w.InValue.sensor[0]:
 		time.sleep(0.1)
 	tool.setf_param('roll1',RR.VarValue(False,'bool'))
 	tool.close()
-	
 
-#start performing fabric picking
-contact=False
-fabric_position=np.array([0,0.5,0.])
-vel_ctrl.set_velocity_command(qdot)
-robot_state=state_w.TryGetInValue()
-if not robot_state[0]:
-	sys.exit("robot not ready")
-
-q_cur=robot_state[1].joint_position
-qd=inv.inv(fabric_position,orientation)
-while np.linalg.norm(q_cur-qd)>0.1:
+def move_till_switch(qd):
+	#start performing fabric picking
+	contact=False
 	robot_state=state_w.TryGetInValue()
-	tool_state=tool_state_w.TryGetInValue()	
-	if not (robot_state[0] and tool_state[0]):
+	if not robot_state[0]:
 		sys.exit("robot not ready")
-	if tool_state[1].sensor[1]:
-		pick(tool)
-		contact=True
-		break
-	vel_ctrl.set_velocity_command(0.5*(qd-q_cur))
-while not contact:
-	move_cartesian(robot,[0,0,-0.1])
-	if tool_state[1].sensor[1]:
-		pick(tool)
-		contact=True
-		break
+
+	q_cur=robot_state[1].joint_position
+	
+	while np.linalg.norm(q_cur-qd)>0.1:
+		robot_state=state_w.TryGetInValue()
+		tool_state=tool_state_w.TryGetInValue()	
+		if not (robot_state[0] and tool_state[0]):
+			sys.exit("robot not ready")
+		if tool_state[1].sensor[1]:
+			return
+		vel_ctrl.set_velocity_command(0.5*(qd-q_cur))
+	while not contact:
+		move_cartesian(robot,[0,0,-0.1])
+		if tool_state[1].sensor[1]:
+			return
+def pick(fabric_position,tool):
+	#start joggging to initial pose
+	q=inv.inv(fabric_position+np.array([0,0,0.2]),orientation)
+	jog_joint(q)
+	qd=inv.inv(fabric_position,orientation)
+	move_till_switch(qd)
+	grip(tool)
+	#move up
+	jog_joint(q)
+	
+def place(place_position,tool):
+	#start joggging to initial pose
+	q=inv.inv(place_position+np.array([0,0,0.2]),orientation)
+	jog_joint(q)
+	qd=inv.inv(place_position,orientation)
+	move_till_switch(qd)
+	tool.open()
+
+
+while True:
+	pick(fabric_position,tool)
+	place(place_position,tool)
 
