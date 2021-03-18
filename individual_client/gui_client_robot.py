@@ -55,11 +55,11 @@ if url_gripper==None:
 
 #connect
 try:
-	# tool_sub=RRN.SubscribeService(url_gripper)
-	# tool=tool_sub.GetDefaultClientWait(1)
-	# tool_state_w = tool_sub.SubscribeWire("tool_state")
-	tool=RRN.ConnectService(url_gripper)
-	tool_state_w=tool.tool_state.Connect()
+	tool_sub=RRN.SubscribeService(url_gripper)
+	tool=tool_sub.GetDefaultClientWait(1)
+	tool_state_w = tool_sub.SubscribeWire("tool_state")
+	# tool=RRN.ConnectService(url_gripper)
+	# tool_state_w=tool.tool_state.Connect()
 except:
 	traceback.print_exc()
 	pass
