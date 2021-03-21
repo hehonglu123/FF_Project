@@ -71,13 +71,13 @@ vel_ctrl = EmulatedVelocityControl(robot,state_w, cmd_w)
 #enable velocity mode
 vel_ctrl.enable_velocity_mode()
 
-orientation=R_ee.R_ee(np.pi/2.)
-fabric_position=np.array([0,0.5,0.])
-place_position=np.array([-0.3,0.5,0.])
+orientation=R_ee.R_ee(np.pi/4.)
+fabric_position=np.array([0,0.5,0.12])
+place_position=np.array([-0.3,0.5,0.1])
 
 def jog_joint(q):
 	while np.linalg.norm(q-vel_ctrl.joint_position())>0.1:
-		qdot=2*(q-vel_ctrl.joint_position())
+		qdot=1	*(q-vel_ctrl.joint_position())
 		qdot[:-2]=np.array([x if np.abs(x)>0.1 else 0.1*np.sign(x) for x in qdot])[:-2]
 		vel_ctrl.set_velocity_command(qdot)
 	vel_ctrl.set_velocity_command(np.zeros((n,)))
@@ -108,11 +108,6 @@ def move_cartesian(vd):
 	vel_ctrl.set_velocity_command(qdot)
 
 def grip(tool):
-	tool.setf_param('roll1',RR.VarValue(True,'bool'))
-	time.sleep(0.5)
-	while not tool_state_w.InValue.sensor[0]:
-		time.sleep(0.001)
-	tool.setf_param('roll1',RR.VarValue(False,'bool'))
 	tool.close()
 
 def move_till_switch(qd):
@@ -123,24 +118,19 @@ def move_till_switch(qd):
 
 	
 	q_cur=robot_state[1].joint_position
-	while np.linalg.norm(q_cur-qd)>0.02:
+	while np.linalg.norm(q_cur-qd)>0.01:
 		robot_state=state_w.TryGetInValue()
 		q_cur=robot_state[1].joint_position
 		tool_state=tool_state_w.TryGetInValue()	
-		if not (robot_state[0] and tool_state[0]):
-			sys.exit("robot/sensor not ready")
+		# if not (robot_state[0] and tool_state[0]):
+		# 	sys.exit("robot/sensor not ready")
 		vel_ctrl.set_velocity_command(0.5*(qd-q_cur))
-		if tool_state[1].sensor[1]:
-			vel_ctrl.set_velocity_command(np.zeros(n))
-			return
-	while not tool_state[1].sensor[1]:
-		move_cartesian(robot,[0,0,-0.05])
-		if tool_state[1].sensor[1]:
-			vel_ctrl.set_velocity_command(np.zeros(n))
-			return
+	vel_ctrl.set_velocity_command(np.zeros(n))
+	return
+
 def pick(fabric_position,tool):
 	#start joggging to initial pose
-	q=inv.inv(fabric_position+np.array([0,0,0.2]),orientation)
+	q=inv.inv(fabric_position+np.array([0,0,0.1]),orientation)
 	jog_joint(q)
 	qd=inv.inv(fabric_position,orientation)
 	move_till_switch(qd)
@@ -159,7 +149,6 @@ def place(place_position,tool):
 
 while True:
 	#reset tool default state
-	tool.setf_param('roll1',RR.VarValue(False,'bool'))
 	tool.open()
 	time.sleep(0.5)
 	pick(fabric_position,tool)
