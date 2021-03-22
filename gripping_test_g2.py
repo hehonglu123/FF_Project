@@ -72,18 +72,18 @@ vel_ctrl = EmulatedVelocityControl(robot,state_w, cmd_w)
 vel_ctrl.enable_velocity_mode()
 
 orientation=R_ee.R_ee(np.pi/4.)
-fabric_position=np.array([0,0.5,0.12])
+# fabric_position=np.array([0,0.5,0.122])
+fabric_position=np.array([0,0.5,0.121])
 place_position=np.array([-0.3,0.5,0.1])
 
 def jog_joint(q):
 	while np.linalg.norm(q-vel_ctrl.joint_position())>0.1:
 		qdot=1	*(q-vel_ctrl.joint_position())
-		qdot[:-2]=np.array([x if np.abs(x)>0.1 else 0.1*np.sign(x) for x in qdot])[:-2]
 		vel_ctrl.set_velocity_command(qdot)
 	vel_ctrl.set_velocity_command(np.zeros((n,)))
 	return
 
-def move_cartesian(vd):
+def move_cartesian(vd,factor):
 	w=1.
 	Kq=.01*np.eye(n)    #small value to make sure positive definite
 	KR=np.eye(3)        #gains for position and orientation error
@@ -104,7 +104,7 @@ def move_cartesian(vd):
 	s=np.sin(theta/2)*k         #eR2
 	wd=-np.dot(KR,s)  
 	f=-np.dot(np.transpose(Jp),vd)-w*np.dot(np.transpose(JR),wd)
-	qdot=0.05*normalize_dq(solve_qp(H, f))
+	qdot=factor*normalize_dq(solve_qp(H, f))
 	vel_ctrl.set_velocity_command(qdot)
 
 def grip(tool):
@@ -128,16 +128,29 @@ def move_till_switch(qd):
 	vel_ctrl.set_velocity_command(np.zeros(n))
 	return
 
-def pick(fabric_position,tool):
+def pick(p,tool):
 	#start joggging to initial pose
-	q=inv.inv(fabric_position+np.array([0,0,0.1]),orientation)
+	q=inv.inv(p+np.array([0,0,0.1]),orientation)
 	jog_joint(q)
-	qd=inv.inv(fabric_position,orientation)
+	qd=inv.inv(p,orientation)
 	move_till_switch(qd)
+
 	grip(tool)
 	#move up
-	jog_joint(q)
-	
+	now=time.time()
+	while time.time()-now<2:
+		move_cartesian(np.array([0,0,0.1]),0.2)
+
+def shake(p):
+	qd=inv.inv(p,orientation)
+	qdot=qd-vel_ctrl.joint_position()
+	vel_ctrl.set_velocity_command(10*qdot)
+	time.sleep(0.15)
+	vel_ctrl.set_velocity_command(-10*qdot)
+	time.sleep(0.15)
+	vel_ctrl.set_velocity_command(np.zeros(n))
+
+
 def place(place_position,tool):
 	#start joggging to initial pose
 	q=inv.inv(place_position+np.array([0,0,0.2]),orientation)
@@ -146,11 +159,15 @@ def place(place_position,tool):
 	move_till_switch(qd)
 	tool.open()
 
-
+i=0
+# fabric_height=0.00025
+fabric_height=0.0001
 while True:
 	#reset tool default state
 	tool.open()
-	time.sleep(0.5)
-	pick(fabric_position,tool)
+	# time.sleep(0.5)
+	pick(fabric_position-i*np.array([0,0,fabric_height]),tool)
+	# shake(fabric_position)
 	# place(place_position,tool)
+	i+=1
 
