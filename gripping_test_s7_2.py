@@ -73,12 +73,12 @@ vel_ctrl = EmulatedVelocityControl(robot,state_w, cmd_w)
 vel_ctrl.enable_velocity_mode()
 
 orientation=R_ee.R_ee(np.pi/2.)
-fabric_position=np.array([0,0.5,0.])
-place_position=np.array([-0.3,0.5,0.])
+fabric_position=np.array([0,0.6,0.])
+place_position=np.array([-0.3,0.6,0.])
 
 def jog_joint(q):
 	while np.linalg.norm(q-vel_ctrl.joint_position())>0.1:
-		qdot=2*(q-vel_ctrl.joint_position())
+		qdot=1*(q-vel_ctrl.joint_position())
 		qdot[:-2]=np.array([x if np.abs(x)>0.1 else 0.1*np.sign(x) for x in qdot])[:-2]
 		vel_ctrl.set_velocity_command(qdot)
 	vel_ctrl.set_velocity_command(np.zeros((n,)))
@@ -129,7 +129,7 @@ def move_till_switch(qd):
 		tool_state=tool_state_w.TryGetInValue()	
 		if not (robot_state[0] and tool_state[0]):
 			sys.exit("robot/sensor not ready")
-		vel_ctrl.set_velocity_command(0.5*(qd-q_cur))
+		vel_ctrl.set_velocity_command(0.1*(qd-q_cur))
 		if tool_state[1].sensor[1] and tool_state[1].sensor[3]:
 			vel_ctrl.set_velocity_command(np.zeros(n))
 			return

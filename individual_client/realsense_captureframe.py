@@ -39,11 +39,11 @@ def main():
 	#Connect the pipe FrameStream to get the PipeEndpoint p
 	cam=Multi_Cam_obj.get_cameras(0)
 	current_frame=ImageToMat(cam.capture_frame())
-	cv2.imwrite('rgb.jpg',current_frame)
+	cv2.imwrite('rgb7.jpg',current_frame)
 	#Connect the pipe FrameStream to get the PipeEndpoint p
 	cam=Multi_Cam_obj.get_cameras(1)
 	current_frame=ImageToMat(cam.capture_frame())
-	cv2.imwrite('depth.jpg',current_frame)
+	cv2.imwrite('depth7.jpg',current_frame)
 	
 
 

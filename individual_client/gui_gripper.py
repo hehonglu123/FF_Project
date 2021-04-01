@@ -38,48 +38,85 @@ state_w = tool_sub.SubscribeWire("tool_state")
 top=Tk()
 top.title(tool_name)
 jobid = None
-def gripper_ctrl(tool):
+def gripper_ctrl1(tool):
 
-	if gripper.config('relief')[-1] == 'sunken':
-		tool.open()
-		gripper.config(relief="raised")
-		gripper.configure(bg='red')
-		gripper.configure(text='gripper off')
+	if gripper1.config('relief')[-1] == 'sunken':
+		tool.setf_param('grip1',RR.VarValue(False,'bool'))
+		gripper1.config(relief="raised")
+		gripper1.configure(bg='red')
+		gripper1.configure(text='gripper off')
 
 	else:
-		tool.close()
-		gripper.config(relief="sunken")
-		gripper.configure(bg='green')
-		gripper.configure(text='gripper on')
+		tool.setf_param('grip1',RR.VarValue(True,'bool'))
+		gripper1.config(relief="sunken")
+		gripper1.configure(bg='green')
+		gripper1.configure(text='gripper on')
 	return
-def roller_ctrl(tool):
+def roller_ctrl1(tool):
 
-	if roller.config('relief')[-1] == 'sunken':
+	if roller1.config('relief')[-1] == 'sunken':
 		tool.setf_param('roll1',RR.VarValue(False,'bool'))
-		roller.config(relief="raised")
-		roller.configure(bg='red')
-		roller.configure(text='roller off')
+		roller1.config(relief="raised")
+		roller1.configure(bg='red')
+		roller1.configure(text='roller off')
 
 	else:
 		tool.setf_param('roll1',RR.VarValue(True,'bool'))
-		roller.config(relief="sunken")
-		roller.configure(bg='green')
-		roller.configure(text='roller on')
+		roller1.config(relief="sunken")
+		roller1.configure(bg='green')
+		roller1.configure(text='roller on')
 	return
+def gripper_ctrl2(tool):
 
+	if gripper2.config('relief')[-1] == 'sunken':
+		tool.setf_param('grip2',RR.VarValue(False,'bool'))
+		gripper2.config(relief="raised")
+		gripper2.configure(bg='red')
+		gripper2.configure(text='gripper off')
+
+	else:
+		tool.setf_param('grip2',RR.VarValue(True,'bool'))
+		gripper2.config(relief="sunken")
+		gripper2.configure(bg='green')
+		gripper2.configure(text='gripper on')
+	return
+def roller_ctrl2(tool):
+
+	if roller2.config('relief')[-1] == 'sunken':
+		tool.setf_param('roll2',RR.VarValue(False,'bool'))
+		roller2.config(relief="raised")
+		roller2.configure(bg='red')
+		roller2.configure(text='roller off')
+
+	else:
+		tool.setf_param('roll2',RR.VarValue(True,'bool'))
+		roller2.config(relief="sunken")
+		roller2.configure(bg='green')
+		roller2.configure(text='roller on')
+	return
 
 ##RR part
 def update_label():
 	tool_state=state_w.TryGetInValue()
 	flags_text = "Tool State Flags:\n\n"
 	if tool_state[0]:
-		flags_text += 'sensor: '
+		flags_text += 'sensor1: '
 		if tool_state[1].sensor[0] != 0:
 			flags_text += 'blocked' + "\n"
 		else:
 			flags_text += 'unblocked' + "\n"
-		flags_text += 'switch: '
+		flags_text += 'switch1: '
 		if tool_state[1].sensor[1] != 0:
+			flags_text += 'pushed' + "\n"
+		else:
+			flags_text += 'released' + "\n"
+		flags_text += 'sensor2: '
+		if tool_state[1].sensor[2] != 0:
+			flags_text += 'blocked' + "\n"
+		else:
+			flags_text += 'unblocked' + "\n"
+		flags_text += 'switch2: '
+		if tool_state[1].sensor[3] != 0:
 			flags_text += 'pushed' + "\n"
 		else:
 			flags_text += 'released' + "\n"
@@ -98,11 +135,14 @@ label.after(250,update_label)
 
 
 
-gripper=Button(top,text='gripper off',command=lambda: gripper_ctrl(tool),bg='red')
-roller=Button(top,text='roller off',command=lambda: roller_ctrl(tool),bg='red')
+gripper1=Button(top,text='gripper1 off',command=lambda: gripper_ctrl1(tool),bg='red')
+roller1=Button(top,text='roller1 off',command=lambda: roller_ctrl1(tool),bg='red')
+gripper2=Button(top,text='gripper2 off',command=lambda: gripper_ctrl2(tool),bg='red')
+roller2=Button(top,text='roller2 off',command=lambda: roller_ctrl2(tool),bg='red')
 
-
-gripper.pack()
-roller.pack()
+gripper1.pack()
+roller1.pack()
+gripper2.pack()
+roller2.pack()
 
 top.mainloop()
