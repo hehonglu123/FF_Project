@@ -73,8 +73,8 @@ vel_ctrl = EmulatedVelocityControl(robot,state_w, cmd_w)
 vel_ctrl.enable_velocity_mode()
 
 orientation=R_ee.R_ee(np.pi/2.)
-fabric_position=np.array([0,0.6,0.])
-place_position=np.array([-0.3,0.6,0.])
+fabric_position=np.array([-0,0.65,0.])
+place_position=np.array([0.0,0.65,0.])
 
 def jog_joint(q):
 	while np.linalg.norm(q-vel_ctrl.joint_position())>0.1:
@@ -109,10 +109,16 @@ def move_cartesian(vd):
 	vel_ctrl.set_velocity_command(qdot)
 
 def grip(idx):	#idx=1 or 2 first or second gripper
-	tool.setf_param('roll'+str(idx),RR.VarValue(True,'bool'))
+	print('here1')
+	try:
+		tool.setf_param('roll'+str(idx),RR.VarValue(True,'bool'))
+	except:
+		traceback.print_exc()
+	print('here2')
 	time.sleep(0.5)
 	while not tool_state_w.InValue.sensor[2*(idx-1)]:
 		time.sleep(0.001)
+
 	tool.setf_param('roll'+str(idx),RR.VarValue(False,'bool'))
 	tool.setf_param('grip'+str(idx),RR.VarValue(True,'bool'))
 
@@ -130,10 +136,10 @@ def move_till_switch(qd):
 		if not (robot_state[0] and tool_state[0]):
 			sys.exit("robot/sensor not ready")
 		vel_ctrl.set_velocity_command(0.1*(qd-q_cur))
-		if tool_state[1].sensor[1] and tool_state[1].sensor[3]:
+		if tool_state[1].sensor[1] or tool_state[1].sensor[3]:
 			vel_ctrl.set_velocity_command(np.zeros(n))
 			return
-	while not (tool_state[1].sensor[1] and tool_state[1].sensor[3]):
+	while not (tool_state[1].sensor[1] or tool_state[1].sensor[3]):
 		move_cartesian(robot,[0,0,-0.05])
 		if tool_state[1].sensor[1] and tool_state[1].sensor[3]:
 			vel_ctrl.set_velocity_command(np.zeros(n))
@@ -147,7 +153,7 @@ def pick(fabric_position,tool):
 
 	p1 = Process(target=grip,args=(1,))
 	p1.start()
-	p2 = Process(target=grip,args=(1,))
+	p2 = Process(target=grip,args=(2,))
 	p2.start()
 	p1.join()
 	p2.join()
@@ -167,6 +173,7 @@ def place(place_position,tool):
 while True:
 	#reset tool default state
 	tool.setf_param('roll1',RR.VarValue(False,'bool'))
+	tool.setf_param('roll2',RR.VarValue(False,'bool'))
 	tool.open()
 	time.sleep(0.5)
 	pick(fabric_position,tool)
