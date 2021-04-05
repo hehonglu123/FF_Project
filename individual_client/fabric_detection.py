@@ -1,4 +1,4 @@
-import cv2
+import cv2, copy
 import numpy as np
 def filter(image,color,tolerance):
 	hsv_color=cv2.cvtColor(np.array([[color]],dtype=np.uint8), cv2.COLOR_BGR2HSV)
@@ -15,16 +15,19 @@ def bw2cl(image,color):
 def detection(image,palette,tolerance=np.array([20,20,50])):
 	image_size=len(image)*len(image[0]) #get image size
 	image_dimension=np.array([len(image),len(image[0])])    #get image dimension
-
+	final=np.zeros((len(image),len(image[0]),3), np.uint8)
 	for color in palette:
 		#adaptive palette
 		filtered=filter(image,color,tolerance)
+
 		#run color connected components to filter the counts and centroid
 		retval, labels, stats, centroids=cv2.connectedComponentsWithStats(filtered) #run CCC on the filtered image
-		idx=np.where(np.logical_and(stats[:,4]>=0.01*image_size, stats[:,4]<=0.99*image_size))[0]   #threshold the components to find the best one
+		idx=np.where(np.logical_and(stats[:,4]>=0.005*image_size, stats[:,4]<=0.99*image_size))[0]   #threshold the components to find the best one
+		
 		for i in idx:
 			pixels=np.where(labels == i)
 			if filtered[pixels[0][0],pixels[1][0]]==255:
+
 				#show filtered image
 				temp=bw2cl(get_label_image(labels,i),[255,255,255])
 
@@ -35,13 +38,15 @@ def detection(image,palette,tolerance=np.array([20,20,50])):
 				break
 		#use average color to filter
 		filtered=filter(image,color,tolerance)
+
 		#run color connected components to filter the counts and centroid
 		retval, labels, stats, centroids=cv2.connectedComponentsWithStats(filtered) #run CCC on the filtered image
-		idx=np.where(np.logical_and(stats[:,4]>=0.01*image_size, stats[:,4]<=0.99*image_size))[0]   #threshold the components to find the best one
+		idx=np.where(np.logical_and(stats[:,4]>=0.005*image_size, stats[:,4]<=0.99*image_size))[0]   #threshold the components to find the best one
 
 		for i in idx:
 			pixels=np.where(labels == i)
 			if filtered[pixels[0][0],pixels[1][0]]==255:
+
 				#show filtered image
 				temp=get_label_image(labels,i)
 				contours=cv2.findContours(temp.astype(np.uint8), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)[0]
@@ -57,16 +62,17 @@ def detection(image,palette,tolerance=np.array([20,20,50])):
 				color = ( int (color [ 0 ]), int (color [ 1 ]), int (color [ 2 ])) 
 				cv2.drawContours(temp, hull_list, -1, color)
 				# cv2.imwrite('images/6_'+str(i)+'.jpg',temp.astype(np.uint8))
-				# Show in a window
-				cv2.namedWindow("Image")
-				cv2.imshow("Image",temp.astype(np.uint8))
-				cv2.waitKey()
+				final+=temp.astype(np.uint8)
+	# Show in a window
+	cv2.namedWindow("Image")
+	cv2.imshow("Image",final)
+	cv2.waitKey()
 	# return labels[idx]
 
-image=cv2.imread("images/2.jpg")        #read in image
+image=cv2.imread("image_data/rgb3.jpg")        #read in image
 #palette in BGR
-# palette=np.array([[63,109,113],[27,63,136],[81,82,92]])
-# palette=np.array([[200,90,50],[160,200,190],[130,140,250]])
-palette=np.array([[28,31,33],[98,74,74]])
+
+palette=np.array([[29,27,19],[57,37,20]])
+# palette=np.array([[18,15,10]])
 
 detection(image,palette,tolerance=np.array([30,30,100]))
