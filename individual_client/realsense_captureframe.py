@@ -39,12 +39,15 @@ def main():
 	#Connect the pipe FrameStream to get the PipeEndpoint p
 	cam=Multi_Cam_obj.get_cameras(0)
 	current_frame=ImageToMat(cam.capture_frame())
-	cv2.imwrite('rgb7.jpg',current_frame)
+	cv2.imwrite('image_data/rgb8.jpg',current_frame)
 	#Connect the pipe FrameStream to get the PipeEndpoint p
 	cam=Multi_Cam_obj.get_cameras(1)
-	current_frame=ImageToMat(cam.capture_frame())
-	cv2.imwrite('depth7.jpg',current_frame)
-	
+	depth_data=cam.capture_frame()
+	current_frame=ImageToMat(depth_data)
+	cv2.imwrite('image_data/depth8.jpg',current_frame)
+
+	np.save('image_data/depth8.npy', depth_data.data.view(dtype=np.uint16).reshape([depth_data.image_info.height, depth_data.image_info.width], order='C'))
+	# np.savetxt('image_data/depth5.csv', depth_data.data.view(dtype=np.uint16).reshape([depth_data.image_info.height, depth_data.image_info.width], order='C'), delimiter=',')
 
 
 

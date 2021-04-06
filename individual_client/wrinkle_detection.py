@@ -2,10 +2,10 @@ import cv2, copy
 import numpy as np
 
 
-image=cv2.imread("image_data/depth7.jpg")        #read in image
-roi=image[270:534,420:887,:]
-roi = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+depth_data=np.load("image_data/depth5.npy")        #read in image
+print(depth_data)
+# roi=image[270:534,420:887,:]
 
-cv2.imshow('Gray image', roi)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+# cv2.imshow('Gray image', roi)
+# cv2.waitKey(0)
+# cv2.destroyAllWindows()
