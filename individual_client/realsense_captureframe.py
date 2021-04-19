@@ -13,7 +13,7 @@ import numpy as np
 #and convert it to an OpenCV array
 def ImageToMat(image):
 
-	if image.image_info.encoding == image_consts["ImageEncoding"]["rgb8"]:
+	if image.image_info.encoding == image_consts["ImageEncoding"]["bgr888"]:
 		frame2=image.data.reshape([image.image_info.height, image.image_info.width, int(len(image.data)/(image.image_info.height*image.image_info.width))], order='C')
 	elif image.image_info.encoding == image_consts["ImageEncoding"]["depth_u16"]:
 		depth_img =image.data.view(dtype=np.uint16).reshape([image.image_info.height, image.image_info.width], order='C')
@@ -39,14 +39,14 @@ def main():
 	#Connect the pipe FrameStream to get the PipeEndpoint p
 	cam=Multi_Cam_obj.get_cameras(0)
 	current_frame=ImageToMat(cam.capture_frame())
-	cv2.imwrite('image_data/rgb8.jpg',current_frame)
+	cv2.imwrite('image_data/rgb0.jpg',current_frame)
 	#Connect the pipe FrameStream to get the PipeEndpoint p
 	cam=Multi_Cam_obj.get_cameras(1)
 	depth_data=cam.capture_frame()
 	current_frame=ImageToMat(depth_data)
-	cv2.imwrite('image_data/depth8.jpg',current_frame)
+	cv2.imwrite('image_data/depth0.jpg',current_frame)
 
-	np.save('image_data/depth8.npy', depth_data.data.view(dtype=np.uint16).reshape([depth_data.image_info.height, depth_data.image_info.width], order='C'))
+	np.save('image_data/depth0.npy', depth_data.data.view(dtype=np.uint16).reshape([depth_data.image_info.height, depth_data.image_info.width], order='C'))
 	# np.savetxt('image_data/depth5.csv', depth_data.data.view(dtype=np.uint16).reshape([depth_data.image_info.height, depth_data.image_info.width], order='C'), delimiter=',')
 
 

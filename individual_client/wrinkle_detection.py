@@ -2,7 +2,7 @@ import cv2, copy
 import numpy as np
 
 
-depth_data=np.load("image_data/depth5.npy")        #read in image
+depth_data=np.load("image_data/depth0.npy")        #read in image
 print(depth_data)
 # roi=image[270:534,420:887,:]
 
