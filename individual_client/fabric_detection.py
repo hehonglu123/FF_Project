@@ -16,8 +16,8 @@ def get_orientation(bn_image):
 	idx=np.vstack(idx_tp)
 	cov=np.cov(idx)
 	w,v=np.linalg.eig(cov)
-	eigv=v[np.argmax(w)]
-	orientation=np.arctan2(eigv[1],eigv[0])
+	eigv=v[np.argmax(w)]	##(r,c)=>(y,x)
+	orientation=np.arctan2(eigv[0],eigv[1])
 	return orientation
 
 def bw2cl(image,color):
@@ -42,7 +42,6 @@ def detection(image,palette,tolerance=np.array([20,20,50])):
 				#show filtered image
 				bn_image=get_label_image(labels,i)
 				temp=bw2cl(bn_image,[255,255,255])
-				orientation=get_orientation(bn_image)
 
 				num=stats[i,4]
 				result = cv2.bitwise_and(image, temp.astype(np.uint8))
@@ -56,15 +55,21 @@ def detection(image,palette,tolerance=np.array([20,20,50])):
 		retval, labels, stats, centroids=cv2.connectedComponentsWithStats(filtered) #run CCC on the filtered image
 		idx=np.where(np.logical_and(stats[:,4]>=0.005*image_size, stats[:,4]<=0.99*image_size))[0]   #threshold the components to find the best one
 
+		orientation=[]
+		centroid=[]
 		for i in idx:
 			pixels=np.where(labels == i)
 			if filtered[pixels[0][0],pixels[1][0]]==255:
 
 				#show filtered image
-				temp=get_label_image(labels,i)
-				contours=cv2.findContours(temp.astype(np.uint8), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)[0]
-				temp=bw2cl(temp,color)
-				
+				bn_image=get_label_image(labels,i)
+				contours=cv2.findContours(bn_image.astype(np.uint8), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)[0]
+				temp=bw2cl(bn_image,color)
+
+				orientation.append(get_orientation(bn_image))
+				centroid.append(np.flip(centroids[i]))
+				print(orientation,centroid)
+
 				hull_list = []
 				for contour in contours:
 					#filter out small noise area
