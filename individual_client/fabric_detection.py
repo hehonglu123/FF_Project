@@ -9,6 +9,17 @@ def get_label_image(labels,idx):
 	image=np.where(labels != idx, 0, labels)
 	image=np.where(image == idx,1, image)
 	return image
+
+#calculate orientation of binary image
+def get_orientation(bn_image):
+	idx_tp=np.nonzero(bn_image)
+	idx=np.vstack(idx_tp)
+	cov=np.cov(idx)
+	w,v=np.linalg.eig(cov)
+	eigv=v[np.argmax(w)]
+	orientation=np.arctan2(eigv[1],eigv[0])
+	return orientation
+
 def bw2cl(image,color):
 	return np.expand_dims(image, axis=-1)*np.array(color)
 
@@ -29,7 +40,9 @@ def detection(image,palette,tolerance=np.array([20,20,50])):
 			if filtered[pixels[0][0],pixels[1][0]]==255:
 
 				#show filtered image
-				temp=bw2cl(get_label_image(labels,i),[255,255,255])
+				bn_image=get_label_image(labels,i)
+				temp=bw2cl(bn_image,[255,255,255])
+				orientation=get_orientation(bn_image)
 
 				num=stats[i,4]
 				result = cv2.bitwise_and(image, temp.astype(np.uint8))
