@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 from RobotRaconteur.Client import *
-import sys, os, time, argparse, traceback
+import sys, os, time, argparse, traceback, cv2, copy
 from qpsolvers import solve_qp
 import numpy as np
 from importlib import import_module
@@ -10,11 +10,54 @@ from vel_emulate_sub import EmulatedVelocityControl
 from general_robotics_toolbox import *    
 inv = import_module(robot_name+'_ik')
 R_ee = import_module('R_'+robot_name)
-
+sys.path.append('individual_client/')
+from fabric_detection import detection
 
 def normalize_dq(q):
 	q=0.5*q/(np.linalg.norm(q)) 
 	return q   
+def ImageToMat(image):
+	global image_consts
+	if image.image_info.encoding == image_consts["ImageEncoding"]["bgr888"]:
+		frame2=image.data.reshape([image.image_info.height, image.image_info.width, int(len(image.data)/(image.image_info.height*image.image_info.width))], order='C')
+	elif image.image_info.encoding == image_consts["ImageEncoding"]["depth_u16"]:
+		depth_img =image.data.view(dtype=np.uint16).reshape([image.image_info.height, image.image_info.width], order='C')
+		frame2 = cv2.applyColorMap(cv2.convertScaleAbs(depth_img, alpha=0.1), cv2.COLORMAP_JET)
+	else:
+		assert False, "Unexpected data type"
+	return frame2
+
+current_frame=None
+#This function is called when a new pipe packet arrives
+def new_frame(pipe_ep):
+	global current_frame
+	#Loop to get the newest frame
+	while (pipe_ep.Available > 0):
+		#Receive the packet
+		
+		image=pipe_ep.ReceivePacket()
+		#Convert the packet to an image and set the global variable
+		current_frame=ImageToMat(image)
+
+		return
+###realsense connect
+url='rr+tcp://localhost:25415?service=Multi_Cam_Service'
+
+#Startup, connect, and pull out the camera from the objref    
+Multi_Cam_obj=RRN.ConnectService(url)
+image_consts = RRN.GetConstants('com.robotraconteur.image', Multi_Cam_obj)
+
+#Connect the pipe FrameStream to get the PipeEndpoint p
+rgb_cam=Multi_Cam_obj.get_cameras(0)
+p=rgb_cam.frame_stream.Connect(-1)
+#Set the callback for when a new pipe packet is received to the
+#new_frame function
+p.PacketReceivedEvent+=new_frame
+try:
+	rgb_cam.start_streaming()
+except: 
+	traceback.print_exc()
+	pass
 
 
 #auto discovery
@@ -73,8 +116,10 @@ vel_ctrl.enable_velocity_mode()
 
 orientation=R_ee.R_ee(np.pi/2.)
 # fabric_position=np.array([0,0.5,0.122])
-fabric_position=np.array([-0.2,0.6,0.19])
+fabric_position=np.array([-0.2,0.6,0.18])
 place_position=np.array([0.3,0.5,0.19])
+
+
 
 def jog_joint(q):
 	while np.linalg.norm(q-vel_ctrl.joint_position())>0.1:
@@ -162,14 +207,29 @@ def place(place_position,tool):
 	while time.time()-now<2:
 		move_cartesian(np.array([0,0,0.1]),0.2)
 
-i=0
-# fabric_height=0.00025
+
 fabric_height=0.0001
-for i in range(1):
+
+while True:
 	#reset tool default state
 	tool.open()
-	# time.sleep(0.5)
-	pick(fabric_position-i*np.array([0,0,fabric_height]),tool)
-	# shake(fabric_position)
-	place(place_position,tool)
+	if (not current_frame is None):
+		(orientation,centroid)=detection(current_frame,[52,35,0])
+		draw_img=copy.deepcopy(current_frame)
+		for i in range(len(orientation)):
+			cv2.arrowedLine(draw_img, (int(centroid[i][1]),int(centroid[i][0])), (int(centroid[i][1]+50*np.cos(orientation[i])),int(centroid[i][0]+50*np.sin(orientation[i]))),
+	                                     (122,122,122), 9) 
+
+		(orientation,centroid)=detection(current_frame,[57,37,20])
+		for i in range(len(orientation)):
+			cv2.arrowedLine(draw_img, (int(centroid[i][1]),int(centroid[i][0])), (int(centroid[i][1]+50*np.cos(orientation[i])),int(centroid[i][0]+50*np.sin(orientation[i]))),
+	                                     (122,122,122), 9) 
+		(orientation,centroid)=detection(current_frame,[29,27,19])
+		for i in range(len(orientation)):
+			cv2.arrowedLine(draw_img, (int(centroid[i][1]),int(centroid[i][0])), (int(centroid[i][1]+50*np.cos(orientation[i])),int(centroid[i][0]+50*np.sin(orientation[i]))),
+	                                     (122,122,122), 9) 
+
+		cv2.imshow("Image",draw_img)
+	if cv2.waitKey(50)!=-1:
+		break
 
