@@ -43,19 +43,32 @@ def new_frame(pipe_ep):
 		return
 
 def aruco_process(frame):
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        aruco_dict = aruco.Dictionary_get(aruco.DICT_6X6_250)
-        parameters =  aruco.DetectorParameters_create()
-        # parameters.minMarkerPerimeterRate=0.00001
-        # parameters.adaptiveThreshConstant=20
-        # # parameters.minMarkerDistanceRate=0.005
-        # parameters.adaptiveThreshWinSizeMin=5
-        # parameters.adaptiveThreshWinSizeMax=10
-        # parameters.adaptiveThreshWinSizeStep=1
+		gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+		aruco_dict = aruco.Dictionary_get(aruco.DICT_6X6_250)
+		parameters =  aruco.DetectorParameters_create()
+		# parameters.minMarkerPerimeterRate=0.00001
+		# parameters.adaptiveThreshConstant=20
+		# # parameters.minMarkerDistanceRate=0.005
+		# parameters.adaptiveThreshWinSizeMin=5
+		# parameters.adaptiveThreshWinSizeMax=10
+		# parameters.adaptiveThreshWinSizeStep=1
 
-        corners, ids, rejectedImgPoints = aruco.detectMarkers(gray, aruco_dict, parameters=parameters)
-        frame_markers = aruco.drawDetectedMarkers(frame.copy(), corners, ids)
-        return frame_markers
+		corners, ids, rejectedImgPoints = aruco.detectMarkers(gray, aruco_dict, parameters=parameters)
+		
+		mtx = np.array([[619.2761976372756, 0.0, 627.5195124302711], [0.0, 621.8554000164497, 365.43715114848584], [0.0, 0.0, 1.0]])
+		dist = np.array([0.14427901138348698, -0.12900760977423306, -0.004546426966392718, -0.006581787821436462, 0.08251106563246118] )
+		aruco_markersize = 1.5*0.0254
+		detected_tags = dict()
+		display_img = frame.copy()
+		for corners1, id1 in zip(corners,ids):
+			rvec, tvec, markerPoints = cv2.aruco.estimatePoseSingleMarkers(corners1, aruco_markersize, mtx, dist)
+			display_img = cv2.aruco.drawAxis(display_img, mtx, dist, rvec, tvec, aruco_markersize*0.75)  # Draw Axis
+			detected_tags[id1[0]] = tvec.flatten()   
+
+		
+		display_img = aruco.drawDetectedMarkers(display_img, corners, ids)
+		
+		return display_img
 
 def main():
 	#Accept the names of the webcams and the nodename from command line
