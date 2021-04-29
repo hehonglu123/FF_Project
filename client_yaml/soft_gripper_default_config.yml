@@ -1,0 +1,40 @@
+﻿device_info:
+  device:
+    name: soft_gripper
+  manufacturer:
+    name: Soft Robotics
+    uuid: 6bf18775-6c7e-4269-8c67-e9e5516f5262
+  model:
+    name: mGrip_P2
+    uuid: 91c1b50a-8347-4c1c-87e1-4f8af479b02f
+  user_description: mGrip P2 Soft Gripper
+  serial_number: 123456789
+  device_classes:
+    - class_identifier:
+        name: gripper
+        uuid: ee974ee5-a5de-49c4-8fe6-831df8f2821c
+      subclasses: 
+        - soft
+  implemented_types:
+    - com.robotraconteur.robotics.tool.Tool
+tool_type: soft_gripper
+tool_capabilities:
+- open_close_command
+tcp:
+  translation:
+    x: 0
+    y: 0
+    z: 0.1577
+  rotation:
+    x: 0
+    y: 0
+    z: 0
+    w: 1
+close_position: 0
+open_position: 1
+command_min: 0
+command_max: 1
+command_close: 0
+command_open: 1
+sensor_min:
+sensor_max:

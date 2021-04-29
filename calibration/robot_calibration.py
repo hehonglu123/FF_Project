@@ -4,6 +4,8 @@ from RobotRaconteur.Client import *
 import sys, time, yaml, argparse
 from scipy.optimize import leastsq
 from importlib import import_module
+from cv2 import aruco
+import cv2
 sys.path.append('../toolbox')
 from general_robotics_toolbox import Robot, fwdkin
 from pixel2coord import convert
@@ -11,7 +13,44 @@ from autodiscovery import autodiscover
 from jog_joint import jog_joint
 from vel_emulate_sub import EmulatedVelocityControl
 
+def ImageToMat(image):
 
+	if image.image_info.encoding == image_consts["ImageEncoding"]["bgr888"]:
+		frame2=image.data.reshape([image.image_info.height, image.image_info.width, int(len(image.data)/(image.image_info.height*image.image_info.width))], order='C')
+	elif image.image_info.encoding == image_consts["ImageEncoding"]["depth_u16"]:
+		depth_img =image.data.view(dtype=np.uint16).reshape([image.image_info.height, image.image_info.width], order='C')
+		frame2 = cv2.applyColorMap(cv2.convertScaleAbs(depth_img, alpha=0.1), cv2.COLORMAP_JET)
+	else:
+		assert False, "Unexpected data type"
+	return frame2
+
+image_consts=None
+current_frame=None
+
+def aruco_process(frame):
+	gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+	aruco_dict = aruco.Dictionary_get(aruco.DICT_6X6_250)
+	parameters =  aruco.DetectorParameters_create()
+	corners, ids, rejectedImgPoints = aruco.detectMarkers(gray, aruco_dict, parameters=parameters)
+	idx=np.where(ids==207)
+
+	return corners[idx]
+
+
+#This function is called when a new pipe packet arrives
+def new_frame_rgb(pipe_ep):
+	global current_frame, now
+	# print('fps= ', 1/(time.time()-now))
+	now=time.time()
+	#Loop to get the newest frame
+	while (pipe_ep.Available > 0):
+		#Receive the packet
+		
+		image=pipe_ep.ReceivePacket()
+		#Convert the packet to an image and set the global variable
+		current_frame=ImageToMat(image)
+
+		return
 def my_func(x,obj,ref):
 
     R=np.array([[np.cos(x[0]),-np.sin(x[0])],[np.sin(x[0]),np.cos(x[0])]])
@@ -53,6 +92,37 @@ inv = import_module(robot_name+'_ik')
 #########read in yaml file for robot client
 with open(r'../client_yaml/client_'+robot_name+'.yaml') as file:
     robot_yaml = yaml.load(file, Loader=yaml.FullLoader)
+
+
+#connect to camera
+cam_dict={'rgb':0,'depth':1}
+
+url='rr+tcp://localhost:25415?service=Multi_Cam_Service'
+
+#Startup, connect, and pull out the camera from the objref    
+Multi_Cam_obj=RRN.ConnectService(url)
+
+global image_consts
+image_consts = RRN.GetConstants('com.robotraconteur.image', Multi_Cam_obj)
+
+#Connect the pipe FrameStream to get the PipeEndpoint p
+cam_rgb=Multi_Cam_obj.get_cameras(0)
+cam_depth=Multi_Cam_obj.get_cameras(1)
+
+
+p_rgb=cam_rgb.frame_stream.Connect(-1)
+p_depth=cam_depth.frame_stream.Connect(-1)
+#Set the callback for when a new pipe packet is received to the
+#new_frame function
+p_rgb.PacketReceivedEvent+=new_frame_rgb
+p_depth.PacketReceivedEvent+=new_frame_depth
+
+try:
+	cam_rgb.start_streaming()
+	cam_depth.start_streaming()
+except: 
+	traceback.print_exc()
+	pass
 
 
 

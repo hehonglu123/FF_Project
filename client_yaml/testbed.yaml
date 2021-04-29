@@ -1,0 +1,7 @@
+pf: 0.015
+tp: 0.01
+sp: 0.015
+bt: 0.05
+conveyor_height: 0.86
+bin_height: 0.8
+conveyor_speed: 0.04

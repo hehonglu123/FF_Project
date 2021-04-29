@@ -1,0 +1,40 @@
+calibration_R:
+- 0.0
+- 0.80901699437
+- -0.58778525229
+- -1.0
+- 0.0
+- 0.0
+- 0.0
+- 0.58778525229
+- 0.80901699437
+speed: 2.
+joint_threshold: 0.05
+calibration_speed: 0.02
+calibration_start:
+- 0.4
+- -0.4
+- 0.11
+gripper_orientation: 0.7853981633974483
+height: 0.79
+home:
+- 0.35
+- -0.1
+- 0.4
+obj_namelists:
+- pf
+- tp
+pick_height: 0.16
+place_height: 0.12
+robot_command: position_command
+robot_name: abb
+tag_position:
+- 0.05
+- 0.0
+- 0.0
+tool_length:
+- 0.16
+- 0.0
+- 0.0
+tool_url: rr+tcp://[fe80::52bc:6ecd:f7a3:bd86]:50500/?nodeid=53c24ae0-cb22-4235-ab44-f4fd6803602f&service=tool
+url: rr+tcp://[fe80::16ff:3758:dcde:4e15]:58651/?nodeid=16a22280-7458-4ce9-bd4d-29b55782a2e1&service=robot
