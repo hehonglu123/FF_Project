@@ -13,19 +13,17 @@ from autodiscovery import autodiscover
 from jog_joint import jog_joint
 from vel_emulate_sub import EmulatedVelocityControl
 
+current_frame_rgb=None
+current_frame_depth=None
+new_val=False
+R_realsense=None
+p_realsense=None
 def ImageToMat(image):
 
-	if image.image_info.encoding == image_consts["ImageEncoding"]["bgr888"]:
-		frame2=image.data.reshape([image.image_info.height, image.image_info.width, int(len(image.data)/(image.image_info.height*image.image_info.width))], order='C')
-	elif image.image_info.encoding == image_consts["ImageEncoding"]["depth_u16"]:
-		depth_img =image.data.view(dtype=np.uint16).reshape([image.image_info.height, image.image_info.width], order='C')
-		frame2 = cv2.applyColorMap(cv2.convertScaleAbs(depth_img, alpha=0.1), cv2.COLORMAP_JET)
-	else:
-		assert False, "Unexpected data type"
+	frame2=image.data.reshape([image.image_info.height, image.image_info.width, int(len(image.data)/(image.image_info.height*image.image_info.width))], order='C')
+
 	return frame2
 
-image_consts=None
-current_frame=None
 
 def aruco_process(frame):
 	gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -33,48 +31,67 @@ def aruco_process(frame):
 	parameters =  aruco.DetectorParameters_create()
 	corners, ids, rejectedImgPoints = aruco.detectMarkers(gray, aruco_dict, parameters=parameters)
 	idx=np.where(ids==207)
-
 	return corners[idx]
 
+def calc_coord(rgb_frame,depth_frame):
+	global R_realsense, p_realsense
+	(c,r)=aruco_process(rgb_frame)
+	z=p_realsense[-1]-depth_frame[r][c]
+	coord=convert(R,p,(c,r),z)
+	return coord[:2].tolist()
 
 #This function is called when a new pipe packet arrives
 def new_frame_rgb(pipe_ep):
-	global current_frame, now
-	# print('fps= ', 1/(time.time()-now))
-	now=time.time()
+	global current_frame_rgb, new_val
+
 	#Loop to get the newest frame
 	while (pipe_ep.Available > 0):
 		#Receive the packet
 		
 		image=pipe_ep.ReceivePacket()
 		#Convert the packet to an image and set the global variable
-		current_frame=ImageToMat(image)
+		current_frame_rgb=ImageToMat(image)
+		new_val=True
 
 		return
+def new_frame_depth(pipe_ep):
+	global current_frame_depth
+
+	#Loop to get the newest frame
+	while (pipe_ep.Available > 0):
+		#Receive the packet
+		
+		depth_data=pipe_ep.ReceivePacket()
+		#Convert the packet to an image and set the global variable
+		current_frame_depth=depth_data.data.view(dtype=np.uint16).reshape([depth_data.image_info.height, depth_data.image_info.width], order='C')
+
+		return
+
+
 def my_func(x,obj,ref):
 
-    R=np.array([[np.cos(x[0]),-np.sin(x[0])],[np.sin(x[0]),np.cos(x[0])]])
-    result=np.dot(R,ref)-obj+np.array([[x[1]],[x[2]]])
-    return result.flatten()
+	R=np.array([[np.cos(x[0]),-np.sin(x[0])],[np.sin(x[0]),np.cos(x[0])]])
+	result=np.dot(R,ref)-obj+np.array([[x[1]],[x[2]]])
+	return result.flatten()
 
 def calibrate(obj,ref): 
-    result,r = leastsq(func=my_func,x0=[0,0,0],args=(np.transpose(np.array(obj)),np.transpose(np.array(ref))))
-    H=np.zeros((4,4))
-    H[0][0]=np.cos(result[0])
-    H[0][1]=-np.sin(result[0])
-    H[1][0]=np.sin(result[0])
-    H[1][1]=np.cos(result[0])
-    H[2][2]=1
-    H[0][-1]=result[1]
-    H[1][-1]=result[2]
-    H[-1][-1]=1
-    return H
+	result,r = leastsq(func=my_func,x0=[0,0,0],args=(np.transpose(np.array(obj)),np.transpose(np.array(ref))))
+	H=np.zeros((4,4))
+	H[0][0]=np.cos(result[0])
+	H[0][1]=-np.sin(result[0])
+	H[1][0]=np.sin(result[0])
+	H[1][1]=np.cos(result[0])
+	H[2][2]=1
+	H[0][-1]=result[1]
+	H[1][-1]=result[2]
+	H[-1][-1]=1
+	return H
 
 
 
 
 def connect_failed(s, client_id, url, err):
-    print ("Client connect failed: " + str(client_id.NodeID) + " url: " + str(url) + " error: " + str(err))
+	print ("Client connect failed: " + str(client_id.NodeID) + " url: " + str(url) + " error: " + str(err))
 
 #Accept the names of the webcams and the nodename from command line
 parser = argparse.ArgumentParser(description="RR plug and play client")
@@ -91,9 +108,15 @@ inv = import_module(robot_name+'_ik')
 
 #########read in yaml file for robot client
 with open(r'../client_yaml/client_'+robot_name+'.yaml') as file:
-    robot_yaml = yaml.load(file, Loader=yaml.FullLoader)
+	robot_yaml = yaml.load(file, Loader=yaml.FullLoader)
+with open('camera_intrinsic.yaml') as file:
+	realsense_param = yaml.load(file, Loader=yaml.FullLoader)
 
 
+
+###realsense part
+p_realsense=realsense_param['p']
+R_realsense=realsense_param['R']
 #connect to camera
 cam_dict={'rgb':0,'depth':1}
 
@@ -101,9 +124,6 @@ url='rr+tcp://localhost:25415?service=Multi_Cam_Service'
 
 #Startup, connect, and pull out the camera from the objref    
 Multi_Cam_obj=RRN.ConnectService(url)
-
-global image_consts
-image_consts = RRN.GetConstants('com.robotraconteur.image', Multi_Cam_obj)
 
 #Connect the pipe FrameStream to get the PipeEndpoint p
 cam_rgb=Multi_Cam_obj.get_cameras(0)
@@ -126,7 +146,7 @@ except:
 
 
 
-
+###robot part
 robot_sub=RRN.SubscribeService(robot_yaml['url'])
 ####get client object
 robot=robot_sub.GetDefaultClientWait(1)
@@ -154,9 +174,9 @@ length=np.linalg.norm(P[1])+np.linalg.norm(P[2])+np.linalg.norm(P[3])
 H=np.transpose(np.array(robot.robot_info.chains[0].H.tolist()))
 
 if np.linalg.norm(P[-1])!=0.:
-    P[-1]+=robot_yaml['tag_position']
+	P[-1]+=robot_yaml['tag_position']
 else:
-    P[-2]+=robot_yaml['tag_position']
+	P[-2]+=robot_yaml['tag_position']
 
 robot_def=Robot(H,np.transpose(P),np.zeros(num_joints))
 
@@ -179,21 +199,20 @@ vel_ctrl.enable_velocity_mode()
 
 #initialize coordinate list
 joint_angles=[state_w.InValue.joint_position]
-cam_coordinates=[[detection_wire.InValue[key].x,detection_wire.InValue[key].y]]
+cam_coordinates=[calc_coord(current_frame_rgb,current_frame_depth)]
 
 print("calibrating")
 timestamp=None
 now=time.time()
 while time.time()-now<60:
-    qdot=[robot_yaml['calibration_speed']]+[0]*(num_joints-1)
-    vel_ctrl.set_velocity_command(np.array(qdot))
+	qdot=[robot_yaml['calibration_speed']]+[0]*(num_joints-1)
+	vel_ctrl.set_velocity_command(np.array(qdot))
 
-    cognex_wire=detection_wire.TryGetInValue()
-    if cognex_wire[1][key].detected==True and cognex_wire[0] and cognex_wire[2]!=timestamp:
-        timestamp=cognex_wire[2]
-        joint_angles.append(state_w.InValue.joint_position)
-        cam_coordinates.append([detection_wire.InValue[key].x,detection_wire.InValue[key].y])
-    
+	if new_val:
+		joint_angles.append(state_w.InValue.joint_position)
+		cam_coordinates.append(calc_coord(current_frame_rgb,current_frame_depth))
+		new_val=False
+	
 vel_ctrl.set_velocity_command(np.zeros((num_joints,)))
 vel_ctrl.disable_velocity_mode() 
 
@@ -202,17 +221,14 @@ eef=[]
 num_samples=len(cam_coordinates)
 print("num samples: ",num_samples)
 for i in range(num_samples):
-    if robot_name=='ur':
-        joint_angles[i][0]+=np.pi
-    transform=fwdkin(robot_def,joint_angles[i])
-    p=transform.p
-    eef.append(p.tolist()[:2])
+	transform=fwdkin(robot_def,joint_angles[i])
+	p=transform.p
+	eef.append(p.tolist()[:2])
 H=calibrate(cam_coordinates, eef)
 H[2][-1]=robot_yaml['height']
 print(H)
 dict_file={'H':H.tolist()}
-# directory='/home/rpi/RR_Project/calibration'
-# os.chdir(directory)
+
 with open('/home/rpi/RR_Project/calibration/'+robot_name+'.yaml', 'w') as file:
-    yaml.dump(dict_file, file)
+	yaml.dump(dict_file, file)
 
