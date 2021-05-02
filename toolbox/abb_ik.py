@@ -23,10 +23,15 @@ ABB_def=Robot(H,P,joint_type,joint_lower_limit = lowerer_limit, joint_upper_limi
 def fwd(q):
     return fwdkin(ABB_def,q)
 
-def inv(p,R=np.array([[0,0,1],[0,1,0],[-1,0,0]])):
+def inv(p,R=np.array([[0,0,1],[0,1,0],[-1,0,0]]),up=False):
 	pose=Transform(R,p)
 	q_all=robot6_sphericalwrist_invkin(ABB_def,pose)
-	for q in q_all:
-		if q[1]>0 and q[2]>-np.pi/2 and np.abs(q[3])<np.pi/3.:
-			return q
+	if up:
+		for q in q_all:
+			if q[1]>0 and q[2]<-np.pi/2 and np.abs(q[3])<np.pi/3.:
+				return q
+	else:
+		for q in q_all:
+			if q[1]>0 and q[2]>-np.pi/2 and np.abs(q[3])<np.pi/3.:
+				return q
 	return q
