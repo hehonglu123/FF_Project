@@ -13,7 +13,7 @@ sys.path.append('../toolbox')
 inv = import_module(robot_name+'_ik')
 R_ee = import_module('R_'+robot_name)
 
-
+url='rr+tcp://localhost:11111?service=robot'
 robot_sub=RRN.SubscribeService(url)
 robot=robot_sub.GetDefaultClientWait(1)
 
