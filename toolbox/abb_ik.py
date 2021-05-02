@@ -29,6 +29,7 @@ def inv(p,R=np.array([[0,0,1],[0,1,0],[-1,0,0]]),up=False):
 	if up:
 		for q in q_all:
 			if q[1]>0 and q[2]<-np.pi/2 and np.abs(q[3])<np.pi/3.:
+
 				return q
 	else:
 		for q in q_all:

@@ -105,9 +105,6 @@ args, _ = parser.parse_known_args()
 robot_name=args.robot_name
 url=args.url
 
-sys.path.append('../toolbox')
-inv = import_module(robot_name+'_ik')
-
 #########read in yaml file for robot client
 with open(r'../client_yaml/client_'+robot_name+'.yaml') as file:
 	robot_yaml = yaml.load(file, Loader=yaml.FullLoader)
@@ -185,8 +182,8 @@ robot_def=Robot(H,np.transpose(P),np.zeros(num_joints))
 
 #######move to start point
 print("moving to start point")
-R=np.array(robot_yaml['calibration_R']).reshape((3,3))
-start_joints=inv.inv(robot_yaml['calibration_start'],R)
+
+start_joints=robot_yaml['calibration_q']
 
 
 robot.command_mode = halt_mode 
