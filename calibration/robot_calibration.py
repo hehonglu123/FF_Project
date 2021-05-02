@@ -8,10 +8,11 @@ from cv2 import aruco
 import cv2
 sys.path.append('../toolbox')
 from general_robotics_toolbox import Robot, fwdkin
+from vel_emulate_sub import EmulatedVelocityControl
+
 from pixel2coord import convert
 from autodiscovery import autodiscover
 from jog_joint import jog_joint
-from vel_emulate_sub import EmulatedVelocityControl
 
 current_frame_rgb=None
 current_frame_depth=None
@@ -31,6 +32,7 @@ def aruco_process(frame):
 	parameters =  aruco.DetectorParameters_create()
 	corners, ids, rejectedImgPoints = aruco.detectMarkers(gray, aruco_dict, parameters=parameters)
 	idx=np.where(ids==207)
+	print(idx)
 	return corners[idx]
 
 def calc_coord(rgb_frame,depth_frame):
@@ -109,7 +111,7 @@ inv = import_module(robot_name+'_ik')
 #########read in yaml file for robot client
 with open(r'../client_yaml/client_'+robot_name+'.yaml') as file:
 	robot_yaml = yaml.load(file, Loader=yaml.FullLoader)
-with open('camera_intrinsic.yaml') as file:
+with open('camera_extrinsic.yaml') as file:
 	realsense_param = yaml.load(file, Loader=yaml.FullLoader)
 
 
@@ -185,7 +187,6 @@ robot_def=Robot(H,np.transpose(P),np.zeros(num_joints))
 print("moving to start point")
 R=np.array(robot_yaml['calibration_R']).reshape((3,3))
 start_joints=inv.inv(robot_yaml['calibration_start'],R)
-
 
 
 robot.command_mode = halt_mode 

@@ -1,4 +1,3 @@
-from vel_emulate import EmulatedVelocityControl
 import time
 import numpy as np
 def jog_joint(robot,vel_ctrl,q,t):
