@@ -4,7 +4,7 @@ calibration_q:
 - 0.37090054
 - 0
 - -1.51037652
-- 0.78
+- -0.785
 speed: 2.
 joint_threshold: 0.05
 calibration_speed: 0.02

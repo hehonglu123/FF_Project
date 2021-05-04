@@ -88,9 +88,8 @@ robot_sub=RRN.SubscribeService(url)
 robot=robot_sub.GetDefaultClientWait(1)
 state_w = robot_sub.SubscribeWire("robot_state")
 
-# tool_sub=RRN.SubscribeService(url_gripper)
-# tool=tool_sub.GetDefaultClientWait(1)
-# tool_state_w = tool_sub.SubscribeWire("tool_state")
+tool_sub=RRN.SubscribeService(url_gripper)
+tool=tool_sub.GetDefaultClientWait(1)
 
 
 ##########Initialize robot constants
@@ -115,15 +114,16 @@ vel_ctrl = EmulatedVelocityControl(robot,state_w, cmd_w)
 vel_ctrl.enable_velocity_mode()
 
 orientation=R_ee.R_ee(np.pi/2.)
-# fabric_position=np.array([0,0.5,0.122])
-fabric_position=np.array([-0.2,0.6,0.18])
-place_position=np.array([0.3,0.5,0.19])
-roller_position=np.array([-0.6,0.3,0.9])
+fabric_position=np.array([-0.3,0.6,0.2])
+place_position=np.array([0.3,0.5,0.15])
+roller_position=np.array([-0.8,0,0.6])
 
 
 def jog_joint(q):
 	while np.linalg.norm(q-vel_ctrl.joint_position())>0.01:
 		qdot=1	*(q-vel_ctrl.joint_position())
+		qdot[qdot>0.8]=0.8
+		qdot[qdot<-0.8]=-0.8
 		vel_ctrl.set_velocity_command(qdot)
 	vel_ctrl.set_velocity_command(np.zeros((n,)))
 	return
@@ -155,51 +155,69 @@ def move_cartesian(vd,factor):
 def pick_roller(p):
 	R=R_ee.R_ee_up(np.pi/4)
 	#down
-	q=inv.inv(p+np.array([0.1,0,-0.1]),R)
+	q=inv.inv(p+np.array([0.15,0,-0.1]),R)
 	jog_joint(q)
 	q=inv.inv(p+np.array([0,0,-0.1]),R)
 	jog_joint(q)
 	#pick
 	q=inv.inv(p,R)
 	jog_joint(q)
-	# tool.close()
+	tool.close()
 	time.sleep(0.5)
 	# get out
-	q=inv.inv(p+np.array([0.1,0,0]),R)
+	q=inv.inv(p+np.array([0.15,0,0]),R)
 	jog_joint(q)
 	return
 
 def place_roller(p):
 	R=R_ee.R_ee_up(np.pi/4)
 	#front
-	q=inv.inv(p+np.array([0.1,0,0]),R)
+	q=inv.inv(p+np.array([0.15,0,0]),R)
 	jog_joint(q)
 	#drop
 	q=inv.inv(p,R)
 	jog_joint(q)
-	# tool.open()
+	tool.open()
 	time.sleep(0.5)
 	# get down
 	q=inv.inv(p+np.array([0,0,-0.1]),R)
 	jog_joint(q)
-	q=inv.inv(p+np.array([0.1,0,-0.1]),R)
+	q=inv.inv(p+np.array([0.15,0,-0.1]),R)
 	jog_joint(q)
 	return
 
+def roll_roller(p):
+	R=np.array([[-1, 0,0],
+			[0, -1, 0],
+			[0,0,1]])
+	q=inv.inv(p+np.array([0.2,0,0]),R)
+	jog_joint(q)
+	q=inv.inv(p+np.array([0.1,0,0]),R)
+	jog_joint(q)
+	tool.close()
+	R=np.array([[-1, 0,0],
+			[0, 1, 0],
+			[0,0,-1]])
+	q=inv.inv(p+np.array([0.1,0,0]),R)
+	jog_joint(q)
+	tool.open()
+	q=inv.inv(p+np.array([0.2,0,0]),R)
+	jog_joint(q)
+
+
 def pick_fabric_roller(p):
-	R=R_ee.R_ee(np.pi/4)
+	R=R_ee.R_ee(-np.pi/4)
 	#start joggging to initial pose
 	q=inv.inv(p+np.array([0,0,0.1]),R)
 	jog_joint(q)
 	qd=inv.inv(p,R)
 	move_till_switch(qd)
 
-	# tool.close()
+	tool.close()
 	time.sleep(0.5)
 	#move up
-	now=time.time()
-	while time.time()-now<2:
-		move_cartesian(np.array([0,0,0.1]),0.2)
+	q=inv.inv(p+np.array([0,0,0.1]),R)
+	jog_joint(q)
 
 
 def pick_fabric_soft(p):
@@ -210,22 +228,26 @@ def pick_fabric_soft(p):
 	#pick
 	q=inv.inv(p,R)
 	jog_joint(q)
-	# tool.close()
+	tool.close()
 	time.sleep(0.5)
 	return
 	
 def place_fabric(p):
-	R=R_ee.R_ee_tilt_y(np.pi/4)
+	R=R_ee.R_ee_tilt_y(-np.pi/4)
 	#down
-	q=inv.inv(p+np.array([-0.2,0,0.1]),R)
+	q=inv.inv(p+np.array([-0.3,0,0.1]),R)
 	jog_joint(q)
 	#drop
-	q=inv.inv(p+np.array([-0.1,0,0]),R)
+	q=inv.inv(p+np.array([-0.15,0,0]),R)
 	jog_joint(q)
 	q=inv.inv(p,R)
 	jog_joint(q)
-	# tool.open()
+	tool.open()
 	time.sleep(0.5)
+	#drop
+	q=inv.inv(p+np.array([0.1,0,0]),R)
+	jog_joint(q)
+
 	return
 	
 
@@ -253,13 +275,15 @@ fabric_height=0.0001
 
 while True:
 	#reset tool default state
-	# tool.open()
+	tool.open()
 	print('pick roller')
 	pick_roller(roller_position)
 	print('pick fabric1')
 	pick_fabric_roller(fabric_position)
 	print('place roller')
 	place_roller(roller_position)
+	print('roll roller')
+	roll_roller(roller_position)
 	print('pick fabric2')
 	pick_fabric_soft(roller_position-np.array([0,0,0.2]))
 	print('place fabric')
