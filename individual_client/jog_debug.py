@@ -37,17 +37,17 @@ robot_state_wire=state_w.TryGetInValue()
 robot_state = robot_state_wire[1]
 p=robot_state.kin_chain_tcp[0]['position'] 
 R=robot_state.kin_chain_tcp[0]['orientation']
-print(q2R(list(R))) 
+# print(q2R(list(R))) 
 # print(p)
-# print(robot_state_wire[1].joint_position)
+print(robot_state_wire[1].joint_position)
 
 
 
-R=R_ee.R_ee_tilt_y(np.pi/4)
+# R=R_ee.R_ee_tilt_y(np.pi/4)
 
+# q=inv.inv(np.array([-0.6,0.3,0.9])+np.array([0.2,0,0]),R)
+q=[ 1.55299516,  1.83282743, -3.02658648,  0.00757938, -0.32599355,  2.89831902]
 
-q=inv.inv(np.array([0.3,0.5,0.19]),R)
-# q=[0.78539816, 1.10961653, 0.37090054, 0, -1.51037652, 0.78]
 print(q)
 robot.jog_freespace(q, np.ones(num_joints), True)
 
