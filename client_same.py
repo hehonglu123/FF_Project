@@ -193,10 +193,10 @@ def pick(p,orientation):
 	move_till_switch(qd)
 
 	tool.close()
+	time.sleep(0.5)
 	#move up
-	now=time.time()
-	while time.time()-now<2:
-		move_cartesian(np.array([0,0,0.1]),0.2)
+	q=inv.inv(p+np.array([0,0,0.1]),orientation)
+	jog_joint(q)
 
 def shake(p):
 	qd=inv.inv(p,orientation)
@@ -217,14 +217,14 @@ def place(p,orientation):
 	tool.open()
 	time.sleep(0.5)
 	#move up
-	now=time.time()
-	while time.time()-now<2:
-		move_cartesian(np.array([0,0,0.1]),0.2)
+	q=inv.inv(p+np.array([0,0,0.2]),orientation)
+	jog_joint(q)
 
 def pick_fabric(color,frame):
 	(orientation,centroid)=detection(frame,color)
 	p=convert(R_realsense,p_realsense,centroid,0)
-	pick(p,orientation)
+	print(p)
+	# pick(p,orientation)
 
 
 
@@ -235,5 +235,7 @@ while True:
 	tool.open()
 	if (not current_frame is None):
 		pick_fabric([],current_frame)
-		place(place_position,orientation)
+		# place(place_position,orientation)
+		# pick_fabric([],current_frame)
+		# place(place_position,orientation)
 
