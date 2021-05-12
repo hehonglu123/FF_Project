@@ -130,7 +130,6 @@ vel_ctrl = EmulatedVelocityControl(robot,state_w, cmd_w)
 vel_ctrl.enable_velocity_mode()
 
 orientation=R_ee.R_ee(np.pi/2.)
-# fabric_position=np.array([0,0.5,0.122])
 fabric_position=np.array([-0.2,0.6,0.18])
 place_position=np.array([0.3,0.5,0.19])
 
