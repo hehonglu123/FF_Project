@@ -8,24 +8,10 @@ robot_name='abb'
 sys.path.append('toolbox/')
 from vel_emulate_sub import EmulatedVelocityControl
 from general_robotics_toolbox import *    
-from pixel2coord import convert
 inv = import_module(robot_name+'_ik')
 R_ee = import_module('R_'+robot_name)
 sys.path.append('individual_client/')
 from fabric_detection import detection
-
-with open('calibration/abb.yaml') as file:
-	H_ABB 	= np.array(yaml.load(file)['H'],dtype=np.float64)
-with open('calibration/camera_extrinsic.yaml') as file:
-	realsense_param = yaml.load(file, Loader=yaml.FullLoader)
-p_realsense=np.array(realsense_param['p'])
-R_realsense=np.array(realsense_param['R'])
-
-def H42H3(H):
-	H3=np.linalg.inv(H[:2,:2])
-	H3=np.hstack((H3,-np.dot(H3,np.array([[H[0][-1]],[H[1][-1]]]))))
-	H3=np.vstack((H3,np.array([0,0,1])))
-	return H3
 
 def normalize_dq(q):
 	q=0.5*q/(np.linalg.norm(q)) 
@@ -55,24 +41,23 @@ def new_frame(pipe_ep):
 
 		return
 ###realsense connect
-url='rr+tcp://localhost:25415?service=Multi_Cam_Service'
+# url='rr+tcp://localhost:25415?service=Multi_Cam_Service'
 
+# #Startup, connect, and pull out the camera from the objref    
+# Multi_Cam_obj=RRN.ConnectService(url)
+# image_consts = RRN.GetConstants('com.robotraconteur.image', Multi_Cam_obj)
 
-#Startup, connect, and pull out the camera from the objref    
-Multi_Cam_obj=RRN.ConnectService(url)
-image_consts = RRN.GetConstants('com.robotraconteur.image', Multi_Cam_obj)
-
-#Connect the pipe FrameStream to get the PipeEndpoint p
-rgb_cam=Multi_Cam_obj.get_cameras(0)
-p=rgb_cam.frame_stream.Connect(-1)
-#Set the callback for when a new pipe packet is received to the
-#new_frame function
-p.PacketReceivedEvent+=new_frame
-try:
-	rgb_cam.start_streaming()
-except: 
-	traceback.print_exc()
-	pass
+# #Connect the pipe FrameStream to get the PipeEndpoint p
+# rgb_cam=Multi_Cam_obj.get_cameras(0)
+# p=rgb_cam.frame_stream.Connect(-1)
+# #Set the callback for when a new pipe packet is received to the
+# #new_frame function
+# p.PacketReceivedEvent+=new_frame
+# try:
+# 	rgb_cam.start_streaming()
+# except: 
+# 	traceback.print_exc()
+# 	pass
 
 
 #auto discovery
@@ -131,13 +116,13 @@ vel_ctrl.enable_velocity_mode()
 
 orientation=R_ee.R_ee(np.pi/2.)
 # fabric_position=np.array([0,0.5,0.122])
-fabric_position=np.array([-0.2,0.6,0.18])
-place_position=np.array([0.3,0.5,0.19])
+fabric_position=np.array([-0.3,0.6,0.2])
+place_position=np.array([0.3,0.5,0.15])
+roller_position=np.array([-0.6,0.3,0.9])
 
-transformation=H42H3(H_ABB)
 
 def jog_joint(q):
-	while np.linalg.norm(q-vel_ctrl.joint_position())>0.1:
+	while np.linalg.norm(q-vel_ctrl.joint_position())>0.01:
 		qdot=1	*(q-vel_ctrl.joint_position())
 		vel_ctrl.set_velocity_command(qdot)
 	vel_ctrl.set_velocity_command(np.zeros((n,)))
@@ -167,7 +152,82 @@ def move_cartesian(vd,factor):
 	qdot=factor*normalize_dq(solve_qp(H, f))
 	vel_ctrl.set_velocity_command(qdot)
 
+def pick_roller(p):
+	R=R_ee.R_ee_up(np.pi/4)
+	#down
+	q=inv.inv(p+np.array([0.1,0,-0.1]),R)
+	jog_joint(q)
+	q=inv.inv(p+np.array([0,0,-0.1]),R)
+	jog_joint(q)
+	#pick
+	q=inv.inv(p,R)
+	jog_joint(q)
+	tool.close()
+	time.sleep(0.5)
+	# get out
+	q=inv.inv(p+np.array([0.1,0,0]),R)
+	jog_joint(q)
+	return
 
+def place_roller(p):
+	R=R_ee.R_ee_up(np.pi/4)
+	#front
+	q=inv.inv(p+np.array([0.1,0,0]),R)
+	jog_joint(q)
+	#drop
+	q=inv.inv(p,R)
+	jog_joint(q)
+	tool.open()
+	time.sleep(0.5)
+	# get down
+	q=inv.inv(p+np.array([0,0,-0.1]),R)
+	jog_joint(q)
+	q=inv.inv(p+np.array([0.1,0,-0.1]),R)
+	jog_joint(q)
+	return
+
+def pick_fabric_roller(p):
+	R=R_ee.R_ee(-np.pi/4)
+	#start joggging to initial pose
+	q=inv.inv(p+np.array([0,0,0.1]),R)
+	jog_joint(q)
+	qd=inv.inv(p,R)
+	move_till_switch(qd)
+
+	tool.close()
+	time.sleep(0.5)
+	#move up
+	q=inv.inv(p+np.array([0,0,0.1]),R)
+	jog_joint(q)
+
+
+def pick_fabric_soft(p):
+	R=R_ee.R_ee_up(np.pi/4)
+	#down
+	q=inv.inv(p-np.array([0,0,0.1]),R)
+	jog_joint(q)
+	#pick
+	q=inv.inv(p,R)
+	jog_joint(q)
+	tool.close()
+	time.sleep(0.5)
+	return
+	
+def place_fabric(p):
+	R=R_ee.R_ee_tilt_y(-np.pi/4)
+	#down
+	q=inv.inv(p+np.array([-0.3,0,0.1]),R)
+	jog_joint(q)
+	#drop
+	q=inv.inv(p+np.array([-0.13,0,0]),R)
+	jog_joint(q)
+	q=inv.inv(p,R)
+	jog_joint(q)
+	tool.open()
+	time.sleep(0.5)
+	q=inv.inv(p+np.array([0.03,0,0]),R)
+	jog_joint(q)
+	
 
 def move_till_switch(qd):
 	#start performing fabric picking
@@ -180,51 +240,12 @@ def move_till_switch(qd):
 	while np.linalg.norm(q_cur-qd)>0.01:
 		robot_state=state_w.TryGetInValue()
 		q_cur=robot_state[1].joint_position
-		tool_state=tool_state_w.TryGetInValue()	
 		vel_ctrl.set_velocity_command(0.5*(qd-q_cur))
 	vel_ctrl.set_velocity_command(np.zeros(n))
 	return
 
-def pick(p,orientation):
-	#start joggging to initial pose
-	q=inv.inv(p+np.array([0,0,0.1]),orientation)
-	jog_joint(q)
-	qd=inv.inv(p,orientation)
-	move_till_switch(qd)
+	
 
-	tool.close()
-	#move up
-	now=time.time()
-	while time.time()-now<2:
-		move_cartesian(np.array([0,0,0.1]),0.2)
-
-def shake(p):
-	qd=inv.inv(p,orientation)
-	qdot=qd-vel_ctrl.joint_position()
-	vel_ctrl.set_velocity_command(10*qdot)
-	time.sleep(0.15)
-	vel_ctrl.set_velocity_command(-10*qdot)
-	time.sleep(0.15)
-	vel_ctrl.set_velocity_command(np.zeros(n))
-
-
-def place(p,orientation):
-	#start joggging to initial pose
-	q=inv.inv(p+np.array([0,0,0.2]),orientation)
-	jog_joint(q)
-	qd=inv.inv(p,orientation)
-	move_till_switch(qd)
-	tool.open()
-	time.sleep(0.5)
-	#move up
-	now=time.time()
-	while time.time()-now<2:
-		move_cartesian(np.array([0,0,0.1]),0.2)
-
-def pick_fabric(color,frame):
-	(orientation,centroid)=detection(frame,color)
-	p=convert(R_realsense,p_realsense,centroid,0)
-	pick(p,orientation)
 
 
 
@@ -233,7 +254,13 @@ fabric_height=0.0001
 while True:
 	#reset tool default state
 	tool.open()
-	if (not current_frame is None):
-		pick_fabric([],current_frame)
-		place(place_position,orientation)
-
+	print('pick roller')
+	pick_roller(roller_position)
+	print('pick fabric1')
+	pick_fabric_roller(fabric_position)
+	print('place roller')
+	place_roller(roller_position)
+	print('pick fabric2')
+	pick_fabric_soft(roller_position-np.array([0,0,0.2]))
+	print('place fabric')
+	place_fabric(place_position)

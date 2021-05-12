@@ -249,7 +249,7 @@ def main():
 	print(H)
 	dict_file={'H':H.tolist()}
 
-	with open('/home/rpi/RR_Project/calibration/'+robot_name+'.yaml', 'w') as file:
+	with open('/home/rpi/FF_Project/calibration/'+robot_name+'.yaml', 'w') as file:
 		yaml.dump(dict_file, file)
 
 	cv2.namedWindow("Image")

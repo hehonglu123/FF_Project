@@ -25,31 +25,6 @@ def ImageToMat(image):
 
 	return frame2
 
-
-def aruco_process(frame):
-	gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-	aruco_dict = aruco.Dictionary_get(aruco.DICT_6X6_250)
-	parameters =  aruco.DetectorParameters_create()
-	corners, ids, rejectedImgPoints = aruco.detectMarkers(gray, aruco_dict, parameters=parameters)
-	print(ids)
-	idx=np.where(ids[0]==165)[0]
-	if len(idx)==0:
-		return False, None
-	else:
-		return True, np.mean(np.array(corners[idx[0]]),axis=0)
-
-def calc_coord(rgb_frame,depth_frame):
-	global R_realsense, p_realsense
-	rtval, center=aruco_process(rgb_frame)
-	if rtval:
-		r=center[1]
-		c=center[0]
-		z=p_realsense[-1]-depth_frame[r][c]
-		coord=convert(R,p,(c,r),z)
-		return rtval, coord[:2].tolist()
-	else:
-		return rtval, None
-
 #This function is called when a new pipe packet arrives
 def new_frame_rgb(pipe_ep):
 	global current_frame_rgb, new_val
@@ -78,41 +53,12 @@ def new_frame_depth(pipe_ep):
 		return
 
 
-def my_func(x,obj,ref):
-
-	R=np.array([[np.cos(x[0]),-np.sin(x[0])],[np.sin(x[0]),np.cos(x[0])]])
-	result=np.dot(R,ref)-obj+np.array([[x[1]],[x[2]]])
-	return result.flatten()
-
-def calibrate(obj,ref): 
-	result,r = leastsq(func=my_func,x0=[0,0,0],args=(np.transpose(np.array(obj)),np.transpose(np.array(ref))))
-	H=np.zeros((4,4))
-	H[0][0]=np.cos(result[0])
-	H[0][1]=-np.sin(result[0])
-	H[1][0]=np.sin(result[0])
-	H[1][1]=np.cos(result[0])
-	H[2][2]=1
-	H[0][-1]=result[1]
-	H[1][-1]=result[2]
-	H[-1][-1]=1
-	return H
-
-
 
 
 def connect_failed(s, client_id, url, err):
 	print ("Client connect failed: " + str(client_id.NodeID) + " url: " + str(url) + " error: " + str(err))
 
 
-#########read in yaml file for robot client
-with open('camera_extrinsic.yaml') as file:
-	realsense_param = yaml.load(file, Loader=yaml.FullLoader)
-
-
-
-###realsense part
-p_realsense=realsense_param['p']
-R_realsense=realsense_param['R']
 
 url='rr+tcp://localhost:25415?service=Multi_Cam_Service'
 
@@ -140,8 +86,6 @@ except:
 
 
 while True:
-	#Just loop resetting the frame
-	#This is not ideal but good enough for demonstration
 
 	if (not current_frame_rgb is None):
 
@@ -150,7 +94,7 @@ while True:
 		break
 cv2.destroyAllWindows()
 
-p_rgb.close()
-p_depth.close()
+# p_rgb.close()
+# p_depth.close()
 cam_rgb.stop_streaming()
 cam_depth.stop_streaming()

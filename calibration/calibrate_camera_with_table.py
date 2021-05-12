@@ -16,7 +16,7 @@ table_tags = [
 
 def main():
 
-    img = cv2.imread('extrinsic_calib0.jpg')
+    img = cv2.imread('rgb0.jpg')
 
     aruco_markersize = 1.5*0.0254
 
