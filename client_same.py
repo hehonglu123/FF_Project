@@ -194,8 +194,8 @@ def move_till_switch(qd):
 
 def pick(p,orientation):
 	#start joggging to initial pose
-	print(p+np.array([0,0,0.1]),orientation)
-	q=inv.inv(p+np.array([0,0,0.1]),orientation)
+	temp=np.array(p+np.array([0,0,0.1])).astype(np.float64)
+	q=inv.inv(temp,orientation.tolist())
 	jog_joint(q)
 	qd=inv.inv(p,orientation)
 	move_till_switch(qd)
