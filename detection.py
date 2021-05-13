@@ -24,6 +24,7 @@ def bw2cl(image,color):
 	return np.expand_dims(image, axis=-1)*np.array(color)
 
 def detection(image,color,tolerance=np.array([20,20,50])):
+	#return (row,column)
 	image_size=len(image)*len(image[0]) #get image size
 	image_dimension=np.array([len(image),len(image[0])])    #get image dimension
 	final=np.zeros((len(image),len(image[0]),3), np.uint8)

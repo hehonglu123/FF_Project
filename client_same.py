@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 from RobotRaconteur.Client import *
-import sys, os, time, argparse, traceback, cv2, copy
+import sys, os, time, argparse, traceback, cv2, copy, yaml
 from qpsolvers import solve_qp
 import numpy as np
 from importlib import import_module
@@ -20,6 +20,11 @@ with open('calibration/camera_extrinsic.yaml') as file:
 	realsense_param = yaml.load(file, Loader=yaml.FullLoader)
 p_realsense=np.array(realsense_param['p'])
 R_realsense=np.array(realsense_param['R'])
+table_height=0.15
+with open(r'client_yaml/client_'+robot_name+'.yaml') as file:
+	robot_yaml = yaml.load(file, Loader=yaml.FullLoader)
+home=robot_yaml['home']
+
 
 def H42H3(H):
 	H3=np.linalg.inv(H[:2,:2])
@@ -129,7 +134,8 @@ vel_ctrl = EmulatedVelocityControl(robot,state_w, cmd_w)
 #enable velocity mode
 vel_ctrl.enable_velocity_mode()
 
-orientation=R_ee.R_ee(np.pi/2.)
+eef_angle=np.pi/2.
+eef_orientation=R_ee.R_ee(np.pi/2.)
 fabric_position=np.array([-0.2,0.6,0.18])
 place_position=np.array([0.3,0.5,0.19])
 
@@ -141,7 +147,9 @@ def jog_joint(q):
 		vel_ctrl.set_velocity_command(qdot)
 	vel_ctrl.set_velocity_command(np.zeros((n,)))
 	return
-
+def jog_home():
+	q=inv.inv(home,eef_orientation)
+	jog_joint(q)
 def move_cartesian(vd,factor):
 	w=1.
 	Kq=.01*np.eye(n)    #small value to make sure positive definite
@@ -186,6 +194,7 @@ def move_till_switch(qd):
 
 def pick(p,orientation):
 	#start joggging to initial pose
+	print(p+np.array([0,0,0.1]),orientation)
 	q=inv.inv(p+np.array([0,0,0.1]),orientation)
 	jog_joint(q)
 	qd=inv.inv(p,orientation)
@@ -221,20 +230,26 @@ def place(p,orientation):
 
 def pick_fabric(color,frame):
 	(orientation,centroid)=detection(frame,color)
-	p=convert(R_realsense,p_realsense,centroid,0)
-	print(p)
-	# pick(p,orientation)
+	try:
+		centroid[0]
+	except: 
+		return
+	p=convert(R_realsense,p_realsense,np.flip(centroid[0]),0)
+	p=np.dot(transformation,np.array([[p[0]],[p[1]],[1]]))
+	p[2]=table_height
+	pick(p.flatten(),R_ee.R_ee(orientation[0]))
 
 
 
 fabric_height=0.0001
 
 while True:
+	jog_home()
 	#reset tool default state
 	tool.open()
 	if (not current_frame is None):
-		pick_fabric([],current_frame)
-		# place(place_position,orientation)
-		# pick_fabric([],current_frame)
+		pick_fabric([112,55,0],current_frame)
+		place(place_position,orientation)
+		# pick_fabric([30,51,1],current_frame)
 		# place(place_position,orientation)
 

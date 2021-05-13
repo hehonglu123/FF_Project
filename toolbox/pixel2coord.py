@@ -5,13 +5,13 @@ import sympy as sym
 
 
 def convert(R,p,pixel,z):
-	with open(r'../calibration/camera_extrinsic.yaml') as file:
+	with open(r'/home/rpi/FF_Project/calibration/camera_extrinsic.yaml') as file:
 		dict_file = yaml.load(file, Loader=yaml.FullLoader)
 
 	R=sym.Matrix(dict_file['R'])
 	p=sym.Matrix(dict_file['p'])
 
-	with open(r'../calibration/camera_intrinsic.yaml') as file:
+	with open(r'/home/rpi/FF_Project/calibration/camera_intrinsic.yaml') as file:
 		dict_file = yaml.load(file, Loader=yaml.FullLoader)
 
 	mtx=sym.Matrix(dict_file['mtx'])
