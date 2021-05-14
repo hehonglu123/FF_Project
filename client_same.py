@@ -237,7 +237,8 @@ def pick_fabric(color,frame):
 	p=convert(R_realsense,p_realsense,np.flip(centroid[0]),0)
 	p=np.dot(transformation,np.array([[p[0]],[p[1]],[1]]))
 	p[2]=table_height
-	pick(p.flatten(),R_ee.R_ee(orientation[0]))
+
+	# pick(p.flatten(),R_ee.R_ee(orientation[0]))
 
 
 
@@ -249,7 +250,7 @@ while True:
 	tool.open()
 	if (not current_frame is None):
 		pick_fabric([112,55,0],current_frame)
-		place(place_position,orientation)
+		# place(place_position,orientation)
 		# pick_fabric([30,51,1],current_frame)
 		# place(place_position,orientation)
 
