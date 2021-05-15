@@ -2,12 +2,11 @@ import numpy as np
 import sys, cv2, yaml
 sys.path.append('toolbox/')
 
-from pixel2coord import convert
+from pixel2coord import pixel2coord
 
 from RobotRaconteur.Client import *
 sys.path.append('individual_client/')
 from fabric_detection import detection
-from pixel2coord import convert
 
 def ImageToMat(image):
 	global image_consts
@@ -64,7 +63,7 @@ while True:
 	#This is not ideal but good enough for demonstration
 	if (not current_frame is None):
 		(orientation,centroid)=detection(current_frame,[112,55,0])
-		p=convert(R_realsense,p_realsense,np.flip(centroid[0]),0)
+		p=pixel2coord(R_realsense,p_realsense,np.flip(centroid[0]),0)
 		#draw dots
 		cv2.circle(current_frame, tuple(np.flip(centroid[0]).astype(int)), 10,(0,0,255), -1)
 		current_frame = cv2.putText(current_frame, str(p[0])+','+str(p[1]), org = (50, 50), 

@@ -4,7 +4,7 @@ import sympy as sym
 
 
 
-def convert(R,p,pixel,z):
+def pixel2coord(R,p,pixel,z):
 	with open(r'/home/rpi/FF_Project/calibration/camera_extrinsic.yaml') as file:
 		dict_file = yaml.load(file, Loader=yaml.FullLoader)
 
