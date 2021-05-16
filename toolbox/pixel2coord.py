@@ -38,15 +38,13 @@ def pixel2coord2(R,p,pixel,z):
 	with open(r'/home/rpi/FF_Project/calibration/camera_extrinsic.yaml') as file:
 		dict_file = yaml.load(file, Loader=yaml.FullLoader)
 
-	R=sym.Matrix(dict_file['R'])
-	p=sym.Matrix(dict_file['p'])
+	R=dict_file['R']
+	p=dict_file['p']
 	with open(r'/home/rpi/FF_Project/calibration/camera_intrinsic.yaml') as file:
 		dict_file = yaml.load(file, Loader=yaml.FullLoader)
 
-	mtx=sym.Matrix(dict_file['mtx'])
-    dist = sym.Matrix(dict_file['dist'])
-
-    T_cam = self._geom_util.named_pose_to_rox_transform(extrinsic_calib.pose)
+	mtx=dict_file['mtx']
+    dist = dict_file['dist']
 
     #TODO: Figure out a better value for this
     object_z_cam_dist = p[-1]
@@ -62,4 +60,4 @@ def pixel2coord2(R,p,pixel,z):
     Zc = float(z)
     T = np.asarray([Xc,Yc,Zc])
 
-    return T
+    return np.dot(R,T)+p
