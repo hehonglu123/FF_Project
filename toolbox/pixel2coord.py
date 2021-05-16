@@ -47,7 +47,7 @@ def pixel2coord2(R,p,pixel,z):
     dist = dict_file['dist']
 
     #TODO: Figure out a better value for this
-    object_z_cam_dist = p[-1]
+    object_z_cam_dist = p[-1]-z
 
     # Find the corresponding world pose of the detected pose in camera frame
     dst = cv2.undistortPoints(pixel,mtx,dist) # dst is Xc/Zc and Yc/Zc in the same shape of src
