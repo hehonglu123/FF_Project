@@ -18,7 +18,8 @@ def get_orientation(bn_image):
 	w,v=np.linalg.eig(cov)
 	eigv=v[np.argmax(w)]	##(r,c)=>(y,x)
 	orientation=np.arctan2(eigv[0],eigv[1])
-	return np.pi-orientation
+	# return np.pi-orientation
+	return orientation-np.pi/2
 
 def bw2cl(image,color):
 	return np.expand_dims(image, axis=-1)*np.array(color)

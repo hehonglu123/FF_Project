@@ -8,7 +8,7 @@ robot_name='abb'
 sys.path.append('toolbox/')
 from vel_emulate_sub import EmulatedVelocityControl
 from general_robotics_toolbox import *    
-from pixel2coord import convert
+from pixel2coord import pixel2coord
 inv = import_module(robot_name+'_ik')
 R_ee = import_module('R_'+robot_name)
 sys.path.append('individual_client/')
@@ -20,7 +20,7 @@ with open('calibration/camera_extrinsic.yaml') as file:
 	realsense_param = yaml.load(file, Loader=yaml.FullLoader)
 p_realsense=np.array(realsense_param['p'])
 R_realsense=np.array(realsense_param['R'])
-table_height=0.15
+table_height=0.18
 with open(r'client_yaml/client_'+robot_name+'.yaml') as file:
 	robot_yaml = yaml.load(file, Loader=yaml.FullLoader)
 home=robot_yaml['home']
@@ -136,6 +136,7 @@ vel_ctrl.enable_velocity_mode()
 
 eef_angle=np.pi/2.
 eef_orientation=R_ee.R_ee(np.pi/2.)
+place_orientation=R_ee.R_ee(np.pi/2.)
 fabric_position=np.array([-0.2,0.6,0.18])
 place_position=np.array([0.3,0.5,0.19])
 
@@ -194,8 +195,7 @@ def move_till_switch(qd):
 
 def pick(p,orientation):
 	#start joggging to initial pose
-	temp=np.array(p+np.array([0,0,0.1])).astype(np.float64)
-	q=inv.inv(temp,orientation.tolist())
+	q=inv.inv(p+np.array([0,0,0.1]),orientation.tolist())
 	jog_joint(q)
 	qd=inv.inv(p,orientation)
 	move_till_switch(qd)
@@ -234,11 +234,10 @@ def pick_fabric(color,frame):
 		centroid[0]
 	except: 
 		return
-	p=convert(R_realsense,p_realsense,np.flip(centroid[0]),0)
+	p=pixel2coord(R_realsense,p_realsense,np.flip(centroid[0]),0)
 	p=np.dot(transformation,np.array([[p[0]],[p[1]],[1]]))
 	p[2]=table_height
-
-	# pick(p.flatten(),R_ee.R_ee(orientation[0]))
+	pick(p.flatten(),R_ee.R_ee(orientation[0]))
 
 
 
@@ -250,7 +249,7 @@ while True:
 	tool.open()
 	if (not current_frame is None):
 		pick_fabric([112,55,0],current_frame)
-		# place(place_position,orientation)
-		# pick_fabric([30,51,1],current_frame)
-		# place(place_position,orientation)
+		place(place_position,place_orientation)
+		pick_fabric([30,51,1],current_frame)
+		place(place_position,place_orientation)
 

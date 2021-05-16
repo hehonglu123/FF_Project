@@ -68,6 +68,7 @@ def calibrate_camera(allCorners,allIds,imsize):
     return ret, camera_matrix, distortion_coefficients0, rotation_vectors, translation_vectors
 
 
-images = glob.glob('kinect/*.jpg')
+images = glob.glob('intrinsic_calibration/*.jpg')
 allCorners,allIds,imsize=read_chessboards(images)
 ret, mtx, dist, rvecs, tvecs = calibrate_camera(allCorners,allIds,imsize)
+print(mtx,dist)

@@ -12,8 +12,8 @@ calibration_speed: 0.02
 gripper_orientation: 0.7853981633974483
 height: 0.79
 home:
-- 0.35
-- 0.1
+- 0.4
+- 0.2
 - 0.4
 obj_namelists:
 - pf

@@ -2,7 +2,7 @@ import numpy as np
 import sys, cv2, yaml
 sys.path.append('toolbox/')
 
-from pixel2coord import pixel2coord
+from pixel2coord import *
 
 from RobotRaconteur.Client import *
 sys.path.append('individual_client/')
@@ -62,11 +62,15 @@ while True:
 	#Just loop resetting the frame
 	#This is not ideal but good enough for demonstration
 	if (not current_frame is None):
-		(orientation,centroid)=detection(current_frame,[112,55,0])
-		p=pixel2coord(R_realsense,p_realsense,np.flip(centroid[0]),0)
+		(orientation,centroid)=detection(current_frame,[30,51,1])
+		try:
+			centroid[0]
+		except:
+			continue
+		p=pixel2coord2(R_realsense,p_realsense,np.flip(centroid[0]),0)
 		#draw dots
 		cv2.circle(current_frame, tuple(np.flip(centroid[0]).astype(int)), 10,(0,0,255), -1)
-		current_frame = cv2.putText(current_frame, str(p[0])+','+str(p[1]), org = (50, 50), 
+		current_frame = cv2.putText(current_frame, str(p[0])+','+str(p[1])+str(orientation), org = (50, 50), 
                fontScale = 1, fontFace=cv2.FONT_HERSHEY_COMPLEX_SMALL,color = (255, 0, 0), thickness = 2, lineType=cv2.LINE_AA)
 		cv2.imshow("Image",current_frame)
 	if cv2.waitKey(50)!=-1:
