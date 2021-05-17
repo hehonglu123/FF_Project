@@ -47,7 +47,7 @@ while current_frame_rgb is None:
 print('started')
 for i in range(50):
 	time.sleep(3)
-	cv2.imwrite('intrinsic_calibration/'+str(i)+'.jpg',current_frame_rgb)
+	cv2.imwrite('intrinsic_calibration/chessboard/'+str(i)+'.jpg',current_frame_rgb)
 	
 
 

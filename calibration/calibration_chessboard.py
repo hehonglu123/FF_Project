@@ -13,7 +13,7 @@ objp[:,:2] = np.mgrid[0:9,0:6].T.reshape(-1,2)
 objpoints = [] # 3d point in real world space
 imgpoints = [] # 2d points in image plane.
 
-images = glob.glob('kinect/*.jpg')
+images = glob.glob('intrinsic_calibration/chessboard/*.jpg')
 
 for fname in images:
     img = cv2.imread(fname)
