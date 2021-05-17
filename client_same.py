@@ -20,11 +20,11 @@ with open('calibration/camera_extrinsic.yaml') as file:
 	realsense_param = yaml.load(file, Loader=yaml.FullLoader)
 p_realsense=np.array(realsense_param['p'])
 R_realsense=np.array(realsense_param['R'])
-table_height=0.18
+
 with open(r'client_yaml/client_'+robot_name+'.yaml') as file:
 	robot_yaml = yaml.load(file, Loader=yaml.FullLoader)
 home=robot_yaml['home']
-
+table_height=0.005
 
 def H42H3(H):
 	H3=np.linalg.inv(H[:2,:2])
@@ -138,7 +138,7 @@ eef_angle=np.pi/2.
 eef_orientation=R_ee.R_ee(np.pi/2.)
 place_orientation=R_ee.R_ee(np.pi/2.)
 fabric_position=np.array([-0.2,0.6,0.18])
-place_position=np.array([0.3,0.5,0.19])
+place_position=np.array([0.3,0.5,0.02])
 
 transformation=H42H3(H_ABB)
 
