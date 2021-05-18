@@ -1,6 +1,5 @@
 import numpy as np
-import cv2
-import glob
+import cv2, glob, yaml
 
 # termination criteria
 criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
@@ -37,6 +36,11 @@ for fname in images:
 
 
 ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1],None,None)
-print(mtx)
+print(mtx,dist)
+dict_file={'mtx':mtx.tolist(),'dist':dist.tolist()}
+with open('camera_intrinsic.yaml', 'w') as file:
+    yaml.dump(dict_file, file)
+
+
 
 cv2.destroyAllWindows()
