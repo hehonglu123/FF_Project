@@ -9,10 +9,10 @@ sys.path.append('toolbox/')
 from vel_emulate_sub import EmulatedVelocityControl
 from general_robotics_toolbox import *    
 from pixel2coord import pixel2coord
+from fabric_detection import detection
+
 inv = import_module(robot_name+'_ik')
 R_ee = import_module('R_'+robot_name)
-sys.path.append('individual_client/')
-from fabric_detection import detection
 
 with open('calibration/abb.yaml') as file:
 	H_ABB 	= np.array(yaml.load(file)['H'],dtype=np.float64)
@@ -25,6 +25,7 @@ with open(r'client_yaml/client_'+robot_name+'.yaml') as file:
 	robot_yaml = yaml.load(file, Loader=yaml.FullLoader)
 home=robot_yaml['home']
 table_height=0.005
+ROI=[[100,600],[100,1100]]	#ROI [[r1,r2],[c1,c2]]
 
 def H42H3(H):
 	H3=np.linalg.inv(H[:2,:2])
@@ -139,6 +140,7 @@ eef_orientation=R_ee.R_ee(np.pi/2.)
 place_orientation=R_ee.R_ee(np.pi/2.)
 fabric_position=np.array([-0.2,0.6,0.18])
 place_position=np.array([0.3,0.5,0.02])
+place_offset=[0,0.02,0]	#offset wrt bottom fabric, [orientation angle, distance, placing orientation]
 
 transformation=H42H3(H_ABB)
 
@@ -229,17 +231,28 @@ def place(p,orientation):
 	jog_joint(q)
 
 def pick_fabric(color,frame):
-	(orientation,centroid)=detection(frame,color)
+	roi_frame=frame[ROI[0][0]:ROI[0][1],ROI[1][0]:ROI[1][1]]
+	(orientation,centroid)=detection(roi_frame,color)
 	try:
 		centroid[0]
 	except: 
 		return
-	p=pixel2coord(R_realsense,p_realsense,np.flip(centroid[0]),0)
+	center=centoid[0]+ROI[:,0]
+	p=pixel2coord(R_realsense,p_realsense,np.flip(center),0)
 	p=np.dot(transformation,np.array([[p[0]],[p[1]],[1]]))
 	p[2]=table_height
 	pick(p.flatten(),R_ee.R_ee(orientation[0]))
 
-
+# def place_fabric_fusable(bottom_color,place_offset):
+# 	roi_frame=frame[ROI[0][0]:ROI[0][1],ROI[1][0]:ROI[1][1]]
+# 	(orientation,centroid)=detection(roi_frame,color)
+# 	try:
+# 		centroid[0]
+# 	except: 
+# 		return
+# 	center=centoid[0]+ROI[:,0]
+# 	p=pixel2coord(R_realsense,p_realsense,np.flip(center),0)
+	
 
 fabric_height=0.0001
 

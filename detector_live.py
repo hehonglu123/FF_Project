@@ -38,6 +38,7 @@ def new_frame(pipe_ep):
 url='rr+tcp://localhost:25415?service=Multi_Cam_Service'  
 Multi_Cam_obj=RRN.ConnectService(url)
 image_consts = RRN.GetConstants('com.robotraconteur.image', Multi_Cam_obj)
+ROI=[[100,600],[100,1100]]	#ROI [[r1,r2],[c1,c2]]
 
 #Connect the pipe FrameStream to get the PipeEndpoint p
 rgb_cam=Multi_Cam_obj.get_cameras(0)
@@ -62,30 +63,31 @@ while True:
 	#Just loop resetting the frame
 	#This is not ideal but good enough for demonstration
 	if (not current_frame is None):
-		(orientation,centroid)=detection(current_frame,[30,51,1])
-		(orientation2,centroid2)=detection(current_frame,[112,55,0])
-		try:
-			centroid[0]
-		except:
-			continue
-		p=pixel2coord2(R_realsense,p_realsense,np.flip(centroid[0]),0)
-		#draw dots
-		cv2.circle(current_frame, tuple(np.flip(centroid[0]).astype(int)), 10,(0,0,255), -1)		
-		current_frame = cv2.putText(current_frame, str(p[0])+','+str(p[1])+str(orientation), org = tuple(np.flip(centroid[0]).astype(int)), 
-               fontScale = 1, fontFace=cv2.FONT_HERSHEY_COMPLEX_SMALL,color = (255, 0, 0), thickness = 2, lineType=cv2.LINE_AA)
-		
+		roi_frame=frame[ROI[0][0]:ROI[0][1],ROI[1][0]:ROI[1][1]]
 
+		(orientation,centroid)=detection(roi_frame,[30,51,1])
+		(orientation2,centroid2)=detection(roi_frame,[112,55,0])
+		try:
+			center=centoid[0]+ROI[:,0]
+			p=pixel2coord2(R_realsense,p_realsense,np.flip(center),0)
+			#draw dots
+			cv2.circle(current_frame, tuple(np.flip(center).astype(int)), 10,(0,0,255), -1)		
+			current_frame = cv2.putText(current_frame, str(p[0])+','+str(p[1])+str(orientation), org = tuple(np.flip(center).astype(int)), 
+	               fontScale = 1, fontFace=cv2.FONT_HERSHEY_COMPLEX_SMALL,color = (255, 0, 0), thickness = 2, lineType=cv2.LINE_AA)
+		except:
+			pass
 		
 		try:
-			centroid2[0]
+			center2=centoid2[0]+ROI[:,0]
+			p=pixel2coord2(R_realsense,p_realsense,np.flip(center2),0)
+			#draw dots
+			cv2.circle(current_frame, tuple(np.flip(centroid2[0]).astype(int)), 10,(0,0,255), -1)		
+			current_frame = cv2.putText(current_frame, str(p[0])+','+str(p[1])+str(orientation2), org = tuple(np.flip(center2).astype(int)), 
+	               fontScale = 1, fontFace=cv2.FONT_HERSHEY_COMPLEX_SMALL,color = (255, 0, 0), thickness = 2, lineType=cv2.LINE_AA)
 		except:
 			continue
-		p=pixel2coord2(R_realsense,p_realsense,np.flip(centroid2[0]),0)
-		#draw dots
-		cv2.circle(current_frame, tuple(np.flip(centroid2[0]).astype(int)), 10,(0,0,255), -1)		
-		current_frame = cv2.putText(current_frame, str(p[0])+','+str(p[1])+str(orientation2), org = tuple(np.flip(centroid2[0]).astype(int)), 
-               fontScale = 1, fontFace=cv2.FONT_HERSHEY_COMPLEX_SMALL,color = (255, 0, 0), thickness = 2, lineType=cv2.LINE_AA)
 		
+		current_frame = cv2.rectangle(current_frame, (ROI[0][0],ROI[1][0]), (ROI[0][1],ROI[1][1]), color = (255, 0, 0), thickness=2)
 
 
 		cv2.imshow("Image",current_frame)
