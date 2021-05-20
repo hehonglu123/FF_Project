@@ -25,7 +25,7 @@ with open(r'client_yaml/client_'+robot_name+'.yaml') as file:
 	robot_yaml = yaml.load(file, Loader=yaml.FullLoader)
 home=robot_yaml['home']
 table_height=0.005
-ROI=[[100,600],[100,1100]]	#ROI [[r1,r2],[c1,c2]]
+ROI=np.array([[160,600],[165,1153]])	#ROI [[r1,r2],[c1,c2]]
 
 def H42H3(H):
 	H3=np.linalg.inv(H[:2,:2])
@@ -237,7 +237,7 @@ def pick_fabric(color,frame):
 		centroid[0]
 	except: 
 		return
-	center=centoid[0]+ROI[:,0]
+	center=centroid[0]+ROI[:,0]
 	p=pixel2coord(R_realsense,p_realsense,np.flip(center),0)
 	p=np.dot(transformation,np.array([[p[0]],[p[1]],[1]]))
 	p[2]=table_height
@@ -250,7 +250,7 @@ def pick_fabric(color,frame):
 # 		centroid[0]
 # 	except: 
 # 		return
-# 	center=centoid[0]+ROI[:,0]
+# 	center=centroid[0]+ROI[:,0]
 # 	p=pixel2coord(R_realsense,p_realsense,np.flip(center),0)
 	
 
@@ -261,8 +261,10 @@ while True:
 	#reset tool default state
 	tool.open()
 	if (not current_frame is None):
-		pick_fabric([112,55,0],current_frame)
+		pick_fabric([220,203,190],current_frame)
 		place(place_position,place_orientation)
-		pick_fabric([30,51,1],current_frame)
+		# pick_fabric([30,51,1],current_frame)
+		pick_fabric([112,55,0],current_frame)
+		
 		place(place_position,place_orientation)
 
