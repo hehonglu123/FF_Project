@@ -115,7 +115,7 @@ def gripper_ctrl(tool):
 def move(n, robot_def,vel_ctrl,vd):
 	global jobid
 	try:
-		w=0.2
+		w=10
 		Kq=.01*np.eye(n)    #small value to make sure positive definite
 		KR=np.eye(3)        #gains for position and orientation error
 
