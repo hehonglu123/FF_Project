@@ -1,7 +1,8 @@
 import numpy as np
 import sys, cv2, yaml
 sys.path.append('toolbox/')
-
+sys.path.append('../toolbox/')
+from temp_match import match
 from pixel2coord import *
 
 from RobotRaconteur.Client import *
@@ -59,42 +60,48 @@ with open('calibration/camera_extrinsic.yaml') as file:
 p_realsense=np.array(realsense_param['p'])
 R_realsense=np.array(realsense_param['R'])
 
+
+green=[30,51,1]
+blue=[112,55,0]
+white=[220,203,190]
+template_white=cv2.imread('../client_yaml/temp1.jpg',cv2.IMREAD_GRAYSCALE)
+
 while True:
 	#Just loop resetting the frame
 	#This is not ideal but good enough for demonstration
 	if (not current_frame is None):
 		roi_frame=current_frame[ROI[0][0]:ROI[0][1],ROI[1][0]:ROI[1][1]]
 
-		(orientation,centroid)=detection(roi_frame,[30,51,1])
-		(orientation2,centroid2)=detection(roi_frame,[112,55,0])
-		(orientation3,centroid3)=detection(roi_frame,[220,203,190])
-		try:
-			center=centroid[0]+ROI[:,0]
-			p=pixel2coord2(R_realsense,p_realsense,np.flip(center),0)
-			#draw dots
-			cv2.circle(current_frame, tuple(np.flip(center).astype(int)), 10,(0,0,255), -1)		
-			current_frame = cv2.putText(current_frame, str(p[0])+','+str(p[1])+str(orientation), org = tuple(np.flip(center).astype(int)), 
-	               fontScale = 1, fontFace=cv2.FONT_HERSHEY_COMPLEX_SMALL,color = (255, 0, 0), thickness = 2, lineType=cv2.LINE_AA)
-		except:
-			traceback.print_exc()
-			pass
+		(orientation_green,centroid_green)=detection(roi_frame,green)
+		(orientation_blue,centroid_blue)=detection(roi_frame,blue)
+		(orientation_white,centroid_white)=detection(roi_frame,white)
+		# try:
+		# 	center_green=centroid_green[0]+ROI[:,0]
+		# 	p=pixel2coord2(R_realsense,p_realsense,np.flip(center_green),0)
+		# 	#draw dots
+		# 	cv2.circle(current_frame, tuple(np.flip(center_green).astype(int)), 10,(0,0,255), -1)		
+		# 	current_frame = cv2.putText(current_frame, str(p[0])+','+str(p[1])+str(orientation_green), org = tuple(np.flip(center_green).astype(int)), 
+	 #               fontScale = 1, fontFace=cv2.FONT_HERSHEY_COMPLEX_SMALL,color = (255, 0, 0), thickness = 2, lineType=cv2.LINE_AA)
+		# except:
+		# 	traceback.print_exc()
+		# 	pass
 		
-		try:
-			center2=centroid2[0]+ROI[:,0]
-			p=pixel2coord2(R_realsense,p_realsense,np.flip(center2),0)
-			#draw dots	
-			cv2.circle(current_frame, tuple(np.flip(center2).astype(int)), 10,(0,0,255), -1)		
-			current_frame = cv2.putText(current_frame, str(p[0])+','+str(p[1])+str(orientation2), org = tuple(np.flip(center2).astype(int)), 
-	               fontScale = 1, fontFace=cv2.FONT_HERSHEY_COMPLEX_SMALL,color = (255, 0, 0), thickness = 2, lineType=cv2.LINE_AA)
-		except:
-			pass
+		# try:
+		# 	center_blue=centroid_blue[0]+ROI[:,0]
+		# 	p=pixel2coord2(R_realsense,p_realsense,np.flip(center_blue),0)
+		# 	#draw dots	
+		# 	cv2.circle(current_frame, tuple(np.flip(center_blue).astype(int)), 10,(0,0,255), -1)		
+		# 	current_frame = cv2.putText(current_frame, str(p[0])+','+str(p[1])+str(orientation_blue), org = tuple(np.flip(center_blue).astype(int)), 
+	 #               fontScale = 1, fontFace=cv2.FONT_HERSHEY_COMPLEX_SMALL,color = (255, 0, 0), thickness = 2, lineType=cv2.LINE_AA)
+		# except:
+		# 	pass
 
 		try:
-			center3=centroid3[0]+ROI[:,0]
-			p=pixel2coord2(R_realsense,p_realsense,np.flip(center3),0)
+			center_white=centroid_white[0]+ROI[:,0]
+			p=pixel2coord2(R_realsense,p_realsense,np.flip(center_white),0)
 			#draw dots	
-			cv2.circle(current_frame, tuple(np.flip(center3).astype(int)), 10,(0,0,255), -1)		
-			current_frame = cv2.putText(current_frame, str(p[0])+','+str(p[1])+str(orientation3), org = tuple(np.flip(center3).astype(int)), 
+			cv2.circle(current_frame, tuple(np.flip(center_white).astype(int)), 10,(0,0,255), -1)		
+			current_frame = cv2.putText(current_frame, str(p[0])+','+str(p[1])+str(orientation_white), org = tuple(np.flip(center_white).astype(int)), 
 	               fontScale = 1, fontFace=cv2.FONT_HERSHEY_COMPLEX_SMALL,color = (255, 0, 0), thickness = 2, lineType=cv2.LINE_AA)
 		except:
 			continue
