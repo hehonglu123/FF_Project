@@ -64,6 +64,7 @@ def match(image,template):
 			act_angle=angle
 			loc=min_loc
 
+	print(min_loc)
 	return act_angle,(min_loc[0]+w/2,min_loc[1]+h/2)
 
 
