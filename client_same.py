@@ -26,6 +26,10 @@ with open(r'client_yaml/client_'+robot_name+'.yaml') as file:
 home=robot_yaml['home']
 table_height=0.005
 ROI=np.array([[160,600],[165,1153]])	#ROI [[r1,r2],[c1,c2]]
+green=[30,51,1]
+blue=[112,55,0]
+white=[220,203,190]
+
 
 def H42H3(H):
 	H3=np.linalg.inv(H[:2,:2])
@@ -230,7 +234,7 @@ def place(p,orientation):
 	q=inv.inv(p+np.array([0,0,0.2]),orientation)
 	jog_joint(q)
 
-def pick_fabric(color,frame):
+def pick_fabric(color,frame,shift=False):
 	roi_frame=frame[ROI[0][0]:ROI[0][1],ROI[1][0]:ROI[1][1]]
 	(orientation,centroid)=detection(roi_frame,color)
 	try:
@@ -238,10 +242,37 @@ def pick_fabric(color,frame):
 	except: 
 		return
 	center=centroid[0]+ROI[:,0]
+
+	#temp script
+	if shift:
+		offset_white=125		#100 in pixel
+		center+=[offset_white*np.cos(orientation[0]),offset_white*np.sin(orientation[0])]
+		orientation[0]+=np.pi/2
+	#temp end
+	if color==blue:
+		orientation[0]+=np.pi
 	p=pixel2coord(R_realsense,p_realsense,np.flip(center),0)
 	p=np.dot(transformation,np.array([[p[0]],[p[1]],[1]]))
 	p[2]=table_height
 	pick(p.flatten(),R_ee.R_ee(orientation[0]))
+
+def drag_place(p,orientation):
+	#start joggging to initial pose
+	q=inv.inv(p+np.array([0,0.3,0.2]),orientation)
+	jog_joint(q)
+	q=inv.inv(p+np.array([0,0.3,0.05]),orientation)
+	jog_joint(q)
+	q=inv.inv(p+np.array([0,0,0.05]),orientation)
+	jog_joint(q)
+	qd=inv.inv(p,orientation)
+	move_till_switch(qd)
+	tool.open()
+	time.sleep(0.5)
+	#move up
+	q=inv.inv(p+np.array([0,0,0.2]),orientation)
+	jog_joint(q)
+
+
 
 # def place_fabric_fusable(bottom_color,place_offset):
 # 	roi_frame=frame[ROI[0][0]:ROI[0][1],ROI[1][0]:ROI[1][1]]
@@ -255,16 +286,50 @@ def pick_fabric(color,frame):
 	
 
 fabric_height=0.0001
-
+tool.open()
 while True:
 	jog_home()
 	#reset tool default state
-	tool.open()
+	
 	if (not current_frame is None):
-		pick_fabric([220,203,190],current_frame)
-		place(place_position,place_orientation)
-		# pick_fabric([30,51,1],current_frame)
-		pick_fabric([112,55,0],current_frame)
+		pick_fabric(white,current_frame,True)
+		# place(place_position,place_orientation)
+		drag_place(place_position,place_orientation)
+		pick_fabric(green,current_frame)
 		
-		place(place_position,place_orientation)
+		# place(place_position,place_orientation)
+
+
+		roi_frame=current_frame[ROI[0][0]:ROI[0][1],ROI[1][0]:ROI[1][1]]
+		(orientation,centroid)=detection(roi_frame,[220,203,190])
+		try:
+			centroid[0]
+		except: 
+			traceback.print_exc()
+			sys.exit()
+		center=centroid[0]+ROI[:,0]
+		#temp script
+		offset_green=[110,40]		#100 in pixel
+		center+=[offset_green[0]*np.cos(orientation[0])-offset_green[1]*np.sin(orientation[0]),offset_green[0]*np.sin(orientation[0])+offset_green[1]*np.cos(orientation[0])]
+		#temp end
+
+		p=pixel2coord(R_realsense,p_realsense,np.flip(center),0)
+		p=np.dot(transformation,np.array([[p[0]],[p[1]],[1]]))
+		p[2]=table_height
+		place(p.flatten(),R_ee.R_ee(orientation[0]-np.pi/45))
+
+
+
+		pick_fabric(blue,current_frame)
+		center=centroid[0]+ROI[:,0]
+		#temp script
+		offset_blue=[100,-75]		#100 in pixel
+		center+=[offset_blue[0]*np.cos(orientation[0])-offset_blue[1]*np.sin(orientation[0]),offset_blue[0]*np.sin(orientation[0])+offset_blue[1]*np.cos(orientation[0])]
+		#temp end
+
+		p=pixel2coord(R_realsense,p_realsense,np.flip(center),0)
+		p=np.dot(transformation,np.array([[p[0]],[p[1]],[1]]))
+		p[2]=table_height
+		place(p.flatten(),R_ee.R_ee(orientation[0]-np.pi/45))
+		
 
