@@ -1,7 +1,7 @@
 import numpy as np
 import cv2
-BACKGROUND=[50,98,155]
-# BACKGROUND=110
+BACKGROUND=[0,0,0]
+
 def rotate_image(mat, angle):
 	"""
 	Rotates an image (angle in degrees) and expands image to avoid cropping
@@ -50,28 +50,52 @@ def color_temp_match(image,template):
 	diff=np.zeros((len(image)-len(template),len(image[0])-len(template[0])))
 	for r in range(len(image)-len(template)):
 		for c in range(len(image[0])-len(template[0])):
-			diff[r][c]=np.linalg.norm(image[r:r+len(template),c:c+len(template[0])]-template)
+			img_diff=image[r:r+len(template),c:c+len(template[0])]-template
+				
+			diff[r][c]=np.linalg.norm(img_diff)
 
 	return diff.min(), np.flip(np.unravel_index(diff.argmin(), diff.shape))
+
+def edge_temp_match(image,template):
+	
+	cv2.imshow("image", image)
+	cv2.imshow("template", template)
+	cv2.waitKey(0)
+	# cv2.destroyAllWindows()
+
+	#matching
+	res = cv2.matchTemplate(template, image, cv2.TM_SQDIFF)
+	min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
+
+	return min_val, min_loc
+
 def match(image,template):
 	min_error=9999999999
 	act_angle=0
-	w=len(template[0])
-	h=len(template)
+	
+	tEdged = cv2.Canny(template, 50, 200)
+	edged = cv2.Canny(image, 50, 200)
 
 	for angle in range(0,360,5):
-		print(angle)
-		template_rt=rotate_image(template,angle)
+			
+		template_rt=rotate_image(tEdged,angle)
 		template_rt=square(template_rt,np.max(np.shape(template_rt)))
-		#matching
-		# res = cv2.matchTemplate(image,template_rt,eval('cv2.TM_SQDIFF'))
-		# min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
-		min_val, min_loc=color_temp_match(image,template)
+		min_val, min_loc=edge_temp_match(edged,template_rt)
+		
+		# template_rt=rotate_image(template,angle)
+		# template_rt=square(template_rt,np.max(np.shape(template_rt)))
+		# min_val, min_loc=color_temp_match(image,template)
+		
 
 		if min_val<min_error:
 			min_error=min_val
 			act_angle=angle
 			loc=min_loc
+			w=len(template_rt[0])
+			h=len(template_rt)
+			loc=(min_loc[0]+w/2,min_loc[1]+h/2)
 
-	return act_angle,(min_loc[0]+w/2,min_loc[1]+h/2)
+
+		print(angle,min_loc,min_val)
+	return act_angle,loc
 
