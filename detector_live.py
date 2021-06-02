@@ -1,7 +1,7 @@
 import numpy as np
 import sys, cv2, yaml
 sys.path.append('toolbox/')
-from temp_match import match
+from temp_match import match, match_w_ori
 from pixel2coord import *
 
 from RobotRaconteur.Client import *
@@ -63,9 +63,11 @@ R_realsense=np.array(realsense_param['R'])
 green=[30,51,1]
 blue=[112,55,0]
 white=[220,203,190]
-offset_white=[125,0]		#100 in pixel
+offset_white_right=[90,50]		#100 in pixel
+offset_white_left=[90,-50]		#100 in pixel
+
 ###fabric template
-template_left=cv2.imread('client_yaml/piece0_left.png',cv2.IMREAD_UNCHANGED)
+template_left=cv2.imread('client_yaml/piece0.png',cv2.IMREAD_UNCHANGED)
 template_right=cv2.imread('client_yaml/piece0_right.png',cv2.IMREAD_UNCHANGED)
 
 while True:
@@ -78,16 +80,18 @@ while True:
 		(orientation_green,centroid_green)=detection(roi_frame,green)
 		(orientation_blue,centroid_blue)=detection(roi_frame,blue)
 		(orientation_white,centroid_white)=detection(roi_frame,white)
-		try:
-			center_green=centroid_green[0]+ROI[:,0]
-			p=pixel2coord2(R_realsense,p_realsense,np.flip(center_green),0)
-			#draw dots
-			cv2.circle(current_frame, tuple(np.flip(center_green).astype(int)), 10,(0,0,255), -1)		
-			current_frame = cv2.putText(current_frame, str(p[0])+','+str(p[1])+' ,'+str(orientation_green[0]), org = tuple(np.flip(center_green).astype(int)), 
-	               fontScale = 1, fontFace=cv2.FONT_HERSHEY_COMPLEX_SMALL,color = (255, 0, 0), thickness = 2, lineType=cv2.LINE_AA)
-		except:
-			traceback.print_exc()
-			pass
+
+
+		# try:
+		# 	center_green=centroid_green[0]+ROI[:,0]
+		# 	p=pixel2coord2(R_realsense,p_realsense,np.flip(center_green),0)
+		# 	#draw dots
+		# 	cv2.circle(current_frame, tuple(np.flip(center_green).astype(int)), 10,(0,0,255), -1)		
+		# 	current_frame = cv2.putText(current_frame, str(p[0])+','+str(p[1])+' ,'+str(orientation_green[0]), org = tuple(np.flip(center_green).astype(int)), 
+	 #               fontScale = 1, fontFace=cv2.FONT_HERSHEY_COMPLEX_SMALL,color = (255, 0, 0), thickness = 2, lineType=cv2.LINE_AA)
+		# except:
+		# 	traceback.print_exc()
+		# 	pass
 		
 		# try:
 		# 	center_blue=centroid_blue[0]+ROI[:,0]
@@ -101,9 +105,13 @@ while True:
 
 		try:
 			center_left=centroid_white[0]+ROI[:,0]
-			center_left+=[offset_white[0]*np.cos(orientation_white[0])-offset_white[1]*np.sin(orientation_white[0]),offset_white[0]*np.sin(orientation_white[0])+offset_white[1]*np.cos(orientation_white[0])]
-			angle,center_left=match(current_frame[center_left[1]-150:center_left[1]+150,center_left[0]-150:center_left[0]+150,:],template_left)
+			# center_left+=[offset_white_left[0]*np.cos(orientation_white[0])-offset_white_left[1]*np.sin(orientation_white[0]),offset_white_left[0]*np.sin(orientation_white[0])+offset_white_left[1]*np.cos(orientation_white[0])]
+			center_left=center_left.astype(int)
 			
+			# angle,center_left_temp=match(current_frame[center_left[0]-300:center_left[0]+300,center_left[1]-300:center_left[1]+300,:],template_left)
+			angle,center_left_temp=match_w_ori(current_frame[center_left[0]-300:center_left[0]+300,center_left[1]-300:center_left[1]+300,:],template_left,orientation_white)
+			center_left=(center_left[0]-300+center_left_temp[0],center_left[1]-300+center_left_temp[1])
+
 			# test_region=current_frame[max(int(center_white[0]-200),0):min(int(center_white[0]+200),720),max(int(center_white[1]-200),0):min(int(center_white[1]+200),1280),:]
 			# # cv2.imshow("Image",cv2.cvtColor(test_region,cv2.COLOR_BGR2GRAY))
 			# cv2.imwrite('test.jpg', test_region)
@@ -117,10 +125,10 @@ while True:
 	  #              fontScale = 1, fontFace=cv2.FONT_HERSHEY_COMPLEX_SMALL,color = (255, 0, 0), thickness = 2, lineType=cv2.LINE_AA)
 
 
-			p=pixel2coord2(R_realsense,p_realsense,np.flip(center_left),0)
+			p=pixel2coord2(R_realsense,p_realsense,np.flip(center_left).astype(float),0)
 			#draw dots	
 			cv2.circle(current_frame, tuple(np.flip(center_left).astype(int)), 10,(0,0,255), -1)		
-			current_frame = cv2.putText(current_frame, str(p[0])+','+str(p[1])+' ,'+str(orientation_white[0]), org = tuple(np.flip(center_left).astype(int)), 
+			current_frame = cv2.putText(current_frame, str(p[0])+','+str(p[1])+' ,'+str(angle), org = tuple(np.flip(center_left).astype(int)), 
 	               fontScale = 1, fontFace=cv2.FONT_HERSHEY_COMPLEX_SMALL,color = (255, 0, 0), thickness = 2, lineType=cv2.LINE_AA)
 		except:
 			traceback.print_exc()

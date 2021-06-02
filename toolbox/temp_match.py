@@ -77,11 +77,10 @@ def color_temp_match2(image,template):
 	mask = np.moveaxis(np.tile(np.array(channels[3]),(3,1,1)),0,-1)
 	template=cv2.cvtColor(template,cv2.COLOR_RGBA2BGR)
 
-	print(mask.shape,template.shape)
 	# cv2.imshow("image", image)
 	# cv2.imshow("template",template)
 	# cv2.imshow("mask", mask)
-	cv2.waitKey(0)
+	# cv2.waitKey(0)
 	#matching
 	res = cv2.matchTemplate(image, template, cv2.TM_SQDIFF,mask=mask)
 	min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
@@ -95,7 +94,7 @@ def bw_temp_match(image,template):
 	template=cv2.cvtColor(template,cv2.COLOR_BGRA2GRAY)
 	template[np.where(template==0)]=122
 	# cv2.imshow("image", image)
-	# cv2.imshow("template", template)
+	cv2.imshow("template", template)
 	# cv2.waitKey(0)
 	#matching
 	res = cv2.matchTemplate(image, template, cv2.TM_SQDIFF)
@@ -134,16 +133,16 @@ def match(image,template):
 		# min_val, min_loc=color_temp_match(image,template_rt)
 
 		###hsv based
-		template_rt=rotate_image(template,angle,[0,0,0,0])
-		min_val, min_loc=hsv_temp_match(image,template_rt)
+		# template_rt=rotate_image(template,angle,[0,0,0,0])
+		# min_val, min_loc=hsv_temp_match(image,template_rt)
 
 		###color based2
 		# template_rt=rotate_image(template,angle,[0,0,0,0])
 		# min_val, min_loc=color_temp_match2(image,template_rt)
 		
 		###bw 	
-		# template_rt=rotate_image(template,angle,0)
-		# min_val, min_loc=bw_temp_match(image,template_rt)
+		template_rt=rotate_image(template,angle,0)
+		min_val, min_loc=bw_temp_match(image,template_rt)
 
 
 
@@ -156,6 +155,52 @@ def match(image,template):
 			loc=(min_loc[0]+w/2,min_loc[1]+h/2)
 
 
-		print(angle,min_loc,min_val)
+		# print(angle,min_loc,min_val)
 	return act_angle,loc
 
+def match_w_ori(image,template,orientation):
+	min_error=9999999999
+	act_angle=0
+
+	orientation=round(np.degrees(orientation)[0])
+
+	tEdged = cv2.Canny(template, 50, 200)
+	edged = cv2.Canny(image, 50, 200)
+	for i in range(0,181,180):
+		for angle in range(orientation+i-3,orientation+i+3):
+			###edge based
+			# template_rt=rotate_image(tEdged,angle,[0,0,0])
+			# min_val, min_loc=edge_temp_match(edged,template_rt)
+
+			###color based
+			# template_rt=rotate_image(template,angle,[0,0,0,0])
+			# min_val, min_loc=color_temp_match(image,template_rt)
+
+			###hsv based
+			template_rt=rotate_image(template,angle,[0,0,0,0])
+			min_val, min_loc=hsv_temp_match(image,template_rt)
+
+			###color based2
+			# template_rt=rotate_image(template,angle,[0,0,0,0])
+			# min_val, min_loc=color_temp_match2(image,template_rt)
+
+			###bw 	
+			# template_rt=rotate_image(template,angle,0)
+			# min_val, min_loc=bw_temp_match(image,template_rt)
+
+			if min_val<min_error:
+				min_error=min_val
+				act_angle=angle
+				loc=min_loc
+				w=len(template_rt[0])
+				h=len(template_rt)
+				loc=(min_loc[0]+w/2,min_loc[1]+h/2)
+
+	template=cv2.cvtColor(template,cv2.COLOR_RGBA2BGR)
+	template[np.where((template==[0,0,0]).all(axis=2))] = [93,121,155]
+	template_rt=rotate_image(template,act_angle,[93,121,155])
+
+	cv2.imshow("template", template_rt)
+
+
+	return act_angle,loc
