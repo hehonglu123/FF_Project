@@ -10,6 +10,7 @@ from vel_emulate_sub import EmulatedVelocityControl
 from general_robotics_toolbox import *    
 from pixel2coord import pixel2coord
 from fabric_detection import detection
+from temp_match import match
 
 inv = import_module(robot_name+'_ik')
 R_ee = import_module('R_'+robot_name)
@@ -147,6 +148,11 @@ place_position=np.array([0.3,0.5,0.02])
 place_offset=[0,0.02,0]	#offset wrt bottom fabric, [orientation angle, distance, placing orientation]
 
 transformation=H42H3(H_ABB)
+
+
+###fabric template
+template_left=cv2.imread('client_yaml/piece0_left.png',cv2.IMREAD_UNCHANGED)
+template_right=cv2.imread('client_yaml/piece0_right.png',cv2.IMREAD_UNCHANGED)
 
 def jog_joint(q):
 	while np.linalg.norm(q-vel_ctrl.joint_position())>0.1:
@@ -311,6 +317,9 @@ while True:
 		#temp script
 		offset_green=[110,40]		#100 in pixel
 		center+=[offset_green[0]*np.cos(orientation[0])-offset_green[1]*np.sin(orientation[0]),offset_green[0]*np.sin(orientation[0])+offset_green[1]*np.cos(orientation[0])]
+		angle,center=match(current_frame[center[1]-150:center[1]+150,center[0]-150:center[0]+150,:],template_left)
+
+
 		#temp end
 
 		p=pixel2coord(R_realsense,p_realsense,np.flip(center),0)
