@@ -4,24 +4,27 @@ import numpy as np
 
 
 table_tags = [
-    [150, -0.635, -0.3048],
-    [151, -0.635, 0],
-    [152, -0.635, 0.254],
-    [153, 0, 0.254],
-    [154, 0.7112, 0.254],
-    [155, 0.7112, 0],
-    [156, 0.7112, -0.3048],
-    [157, 0, -0.3048]
+    [163, 0.533, -0.229],
+    [168, 0.533, 0],
+    [164, 0.533, 0.229],
+    [167, 0, -0.229],
+    [171, 0, 0],
+    [170, 0, 0.229],
+    [166, -0.533, -0.229],
+    [162, -0.533, 0],
+    [172, -0.533, 0.229]
 ]
 
 def main():
 
-    img = cv2.imread('rgb0.jpg')
+    img = cv2.imread('extrinsic_calibration/extrinsic_calib1.jpg')
 
     aruco_markersize = 1.5*0.0254
 
-    mtx = np.array([[916.628, 0.0, 634.419], [0.0, 914.508, 362.394], [0.0, 0.0, 1.0]])
-    dist = np.array([0.14427901138348698, -0.12900760977423306, -0.004546426966392718, -0.006581787821436462, 0.08251106563246118] )
+    with open('camera_intrinsic.yaml') as file:
+        intrinsics=yaml.load(file, Loader=yaml.FullLoader)
+    mtx = np.array(intrinsics['mtx'])
+    dist = np.array(intrinsics['dist'])
 
     aruco_dict = aruco.DICT_6X6_250
     aruco_dict = cv2.aruco.Dictionary_get(aruco_dict)
@@ -70,10 +73,6 @@ def main():
 
     dict_file={'R':R_cam.tolist(),'p':p_cam.tolist()}
     with open('camera_extrinsic.yaml','w') as file:
-        yaml.dump(dict_file,file)
-
-    dict_file={'mtx':mtx.tolist(),'dist':dist.tolist()}
-    with open('camera_intrinsic.yaml','w') as file:
         yaml.dump(dict_file,file)
 
 
