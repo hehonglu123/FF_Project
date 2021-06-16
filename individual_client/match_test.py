@@ -3,24 +3,48 @@ from matplotlib import pyplot as plt
 import numpy as np
 sys.path.append('../toolbox/')
 from temp_match import match
+from fabric_detection import detection
 
-im_pth = "image_data/white0.jpg"
-# im_pth = "image_data/test.jpg"
+#table ROI
+ROI=np.array([[160,600],[165,1153]])	#ROI [[r1,r2],[c1,c2]]
+#template size
+template_size=360*1.414
+#load template
+template=cv2.imread('../client_yaml/template0.png',cv2.IMREAD_UNCHANGED)
+mask=np.where(template[:,:,-1]>0, 1, 0)
+#calc avg template color
+non_zeros=np.count_nonzero(template[:,:,-1])
+B=np.sum(template[:,:,0]*mask[:,:])/non_zeros
+G=np.sum(template[:,:,1]*mask[:,:])/non_zeros
+R=np.sum(template[:,:,2]*mask[:,:])/non_zeros
+avg_color=[B,G,R]
 
-image = cv2.imread(im_pth)#,cv2.IMREAD_GRAYSCALE)
-template=cv2.imread('../client_yaml/piece0_left.png',cv2.IMREAD_UNCHANGED)
 
+#load test image
+test_image=cv2.imread('image_data/temp_test1.jpg',cv2.IMREAD_UNCHANGED)
 
-test_region=image[350:652,250:500]
-# test_region=image[300:650,700:1050]
-# test_region=image[80:305,:]
+#test test image within ROI
+roi_frame=test_image[ROI[0][0]:ROI[0][1],ROI[1][0]:ROI[1][1]]
+(orientation,centroid)=detection(roi_frame,avg_color)
+center=centroid[0]+ROI[:,0]
+cv2.circle(test_image, tuple(np.flip(center).astype(int)), 10,(0,0,255), -1)	
 
+# cv2.namedWindow("Image")
+# cv2.imshow("Image",test_image)
+# cv2.waitKey(0) 
+# cv2.destroyAllWindows() 
+
+test_region=test_image[int(center[0]-template_size/2):int(center[0]+template_size/2),int(center[1]-template_size/2):int(center[1]+template_size/2)]
+cv2.namedWindow("Image")
+cv2.imshow("Image",test_region)
+cv2.waitKey(0) 
+cv2.destroyAllWindows() 
 angle,center=match(test_region,template)
-print(angle,center)
-cv2.circle(test_region, (int(center[0]),int(center[1])),10,(0,0,255), -1)		
-cv2.imshow("image", test_region)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+# print(angle,center)
+# cv2.circle(test_region, (int(center[0]),int(center[1])),10,(0,0,255), -1)		
+# cv2.imshow("image", test_region)
+# cv2.waitKey(0)
+# cv2.destroyAllWindows()
 
 
 
