@@ -86,8 +86,8 @@ def detection(image,color,tolerance=np.array([20,20,50])):
 
 	###Show in a window
 	# cv2.namedWindow("Image")
-	# cv2.imshow("Image",final)
-	# cv2.waitKey()
+	# cv2.imshow("Image",filtered)
+	# cv2.waitKey(0)
 	return (orientation,centroid)
 
 # image=cv2.imread("image_data/rgb3.jpg")        #read in image

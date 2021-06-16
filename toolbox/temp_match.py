@@ -1,7 +1,8 @@
 import numpy as np
 import cv2
-BACKGROUND=[0,0,0]
-# BACKGROUND=[0,0,0,0]
+BACKGROUND=[170,166,161]
+
+
 def rotate_image(mat, angle, background):
 	"""
 	Rotates an image (angle in degrees) and expands image to avoid cropping
@@ -46,11 +47,12 @@ def square(im,desired_size, background):
 	new_im = cv2.copyMakeBorder(im, top, bottom, left, right, cv2.BORDER_CONSTANT,value=background)
 	return new_im
 
-def color_temp_match(image,template):
-	template=cv2.cvtColor(template,cv2.COLOR_RGBA2BGR)
-	template[np.where((template==[0,0,0]).all(axis=2))] = [93,121,155]
+def color_temp_match(image,template):	#rgb based match with background
+	template=cv2.cvtColor(template,cv2.COLOR_BGRA2BGR)
+	template[np.where((template==[0,0,0]).all(axis=2))] = BACKGROUND
+	template[np.where((template==[255,255,255]).all(axis=2))] = BACKGROUND
 	# cv2.imshow("image", image)
-	cv2.imshow("template", template)
+	# cv2.imshow("template", template)
 	# cv2.waitKey(0)
 	#matching
 	res = cv2.matchTemplate(image, template, cv2.TM_SQDIFF)
@@ -58,9 +60,13 @@ def color_temp_match(image,template):
 
 	return min_val, min_loc
 
-def hsv_temp_match(image,template):
-	template=cv2.cvtColor(template,cv2.COLOR_RGBA2BGR)
-	template[np.where((template==[0,0,0]).all(axis=2))] = [93,121,155]
+def hsv_temp_match(image,template):		#hsv based match with background, 0.5 weight on value
+	template=cv2.cvtColor(template,cv2.COLOR_BGRA2BGR)
+	template[np.where((template==[0,0,0]).all(axis=2))] = BACKGROUND
+	template[np.where((template==[255,255,255]).all(axis=2))] = BACKGROUND
+
+	# cv2.imshow("template",template)
+	# cv2.waitKey(0)
 
 	template=cv2.cvtColor(template,cv2.COLOR_BGR2HSV)
 	image=cv2.cvtColor(image,cv2.COLOR_BGR2HSV)
@@ -72,10 +78,30 @@ def hsv_temp_match(image,template):
 
 	return min_val, min_loc
 
-def color_temp_match2(image,template):
+def hsv_temp_match2(image,template):		#color based match with alpha channel
 	channels = cv2.split(template)
 	mask = np.moveaxis(np.tile(np.array(channels[3]),(3,1,1)),0,-1)
-	template=cv2.cvtColor(template,cv2.COLOR_RGBA2BGR)
+	template=cv2.cvtColor(template,cv2.COLOR_BGRA2BGR)
+
+
+	# cv2.imshow("image", image)
+	# cv2.imshow("template",template)
+	# cv2.imshow("mask", mask)
+	# cv2.waitKey(0)
+
+	image=cv2.cvtColor(image,cv2.COLOR_BGR2HSV)
+	template=cv2.cvtColor(template,cv2.COLOR_BGR2HSV)
+	mask[:,:,-1]=0.5		#0.5 weight on value
+	#matching
+	res = cv2.matchTemplate(image, template, cv2.TM_SQDIFF,mask=mask)
+	min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
+
+	return min_val, min_loc
+
+def color_temp_match2(image,template):		#color based match with alpha channel
+	channels = cv2.split(template)
+	mask = np.moveaxis(np.tile(np.array(channels[3]),(3,1,1)),0,-1)
+	template=cv2.cvtColor(template,cv2.COLOR_BGRA2BGR)
 
 	# cv2.imshow("image", image)
 	# cv2.imshow("template",template)
@@ -89,12 +115,13 @@ def color_temp_match2(image,template):
 
 
 
-def bw_temp_match(image,template):
+def bw_temp_match(image,template):		#binary based match with background
 	image=cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 	template=cv2.cvtColor(template,cv2.COLOR_BGRA2GRAY)
-	template[np.where(template==0)]=122
+	template[np.where(template==0)]=sum(BACKGROUND)/len(BACKGROUND)
+	template[np.where(template==255)]=sum(BACKGROUND)/len(BACKGROUND)
 	# cv2.imshow("image", image)
-	cv2.imshow("template", template)
+	# cv2.imshow("template", template)
 	# cv2.waitKey(0)
 	#matching
 	res = cv2.matchTemplate(image, template, cv2.TM_SQDIFF)
@@ -102,11 +129,31 @@ def bw_temp_match(image,template):
 
 	return min_val, min_loc
 
-
-def edge_temp_match(image,template):
+def bw_temp_match2(image,template):		#binary based match with alpha channel
+	#convert to bw
+	image=cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 	
+
+	#create mask
+	channels = cv2.split(template)
+	mask = np.moveaxis(np.tile(np.array(channels[-1]),(1,1,1)),0,-1)
+	#convert to bw
+	template=cv2.cvtColor(template,cv2.COLOR_BGRA2GRAY)
+
 	# cv2.imshow("image", image)
 	# cv2.imshow("template", template)
+	# cv2.imshow("mask", mask)
+	# cv2.waitKey(0)
+	#matching
+	res = cv2.matchTemplate(image, template, cv2.TM_SQDIFF, mask=mask)
+	min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
+
+	return min_val, min_loc
+
+
+def edge_temp_match(image,template):	#edge based match with alpha channel
+	# cv2.imshow("image", template)
+	# cv2.imshow("template", image)
 	# cv2.waitKey(0)
 	# cv2.destroyAllWindows()
 
@@ -116,34 +163,19 @@ def edge_temp_match(image,template):
 
 	return min_val, min_loc
 
-def match(image,template):
+temp_alg={'edge':edge_temp_match,'rgb':color_temp_match,'hsv':hsv_temp_match,'rgba':color_temp_match2,'hsva':hsv_temp_match2,'bw':bw_temp_match,'bwa':bw_temp_match2}
+
+
+def match(image,template,alg='hsva'):
 	min_error=9999999999
 	act_angle=0
 	
-	# tEdged = cv2.Canny(template, 50, 200)
-	# edged = cv2.Canny(image, 50, 200)
+	
+
 
 	for angle in range(0,360,2):
-		###edge based
-		# template_rt=rotate_image(tEdged,angle,[0,0,0])
-		# min_val, min_loc=edge_temp_match(edged,template_rt)
-		
-		###color based
 		template_rt=rotate_image(template,angle,[0,0,0,0])
-		min_val, min_loc=color_temp_match(image,template_rt)
-
-		###hsv based
-		# template_rt=rotate_image(template,angle,[0,0,0,0])
-		# min_val, min_loc=hsv_temp_match(image,template_rt)
-
-		###color based2
-		# template_rt=rotate_image(template,angle,[0,0,0,0])
-		# min_val, min_loc=color_temp_match2(image,template_rt)
-		
-		###bw 	
-		# template_rt=rotate_image(template,angle,0)
-		# min_val, min_loc=bw_temp_match(image,template_rt)
-
+		min_val, min_loc=temp_alg['hsva'](image,template_rt)
 
 
 		if min_val<min_error:
@@ -158,7 +190,7 @@ def match(image,template):
 		# print(angle,min_loc,min_val)
 	return act_angle,loc
 
-def match_w_ori(image,template,orientation):
+def match_w_ori(image,template,orientation,alg='hsva'):
 	min_error=9999999999
 	act_angle=0
 
@@ -167,26 +199,12 @@ def match_w_ori(image,template,orientation):
 	tEdged = cv2.Canny(template, 50, 200)
 	edged = cv2.Canny(image, 50, 200)
 	for i in range(0,181,180):
-		for angle in range(orientation+i-3,orientation+i+3):
-			###edge based
-			# template_rt=rotate_image(tEdged,angle,[0,0,0])
-			# min_val, min_loc=edge_temp_match(edged,template_rt)
-
-			###color based
-			# template_rt=rotate_image(template,angle,[0,0,0,0])
-			# min_val, min_loc=color_temp_match(image,template_rt)
-
-			###hsv based
+		for angle in range(orientation+i-5,orientation+i+5):
 			template_rt=rotate_image(template,angle,[0,0,0,0])
-			min_val, min_loc=hsv_temp_match(image,template_rt)
-
-			###color based2
-			# template_rt=rotate_image(template,angle,[0,0,0,0])
-			# min_val, min_loc=color_temp_match2(image,template_rt)
-
-			###bw 	
-			# template_rt=rotate_image(template,angle,0)
-			# min_val, min_loc=bw_temp_match(image,template_rt)
+			min_val, min_loc=temp_alg[alg](image,template_rt)
+			# template_rt=rotate_image(tEdged,angle,[0,0,0])
+			# min_val, min_loc=temp_alg['edge'](edged,template_rt)
+			
 
 			if min_val<min_error:
 				min_error=min_val
@@ -196,11 +214,10 @@ def match_w_ori(image,template,orientation):
 				h=len(template_rt)
 				loc=(min_loc[0]+w/2,min_loc[1]+h/2)
 
-	template=cv2.cvtColor(template,cv2.COLOR_RGBA2BGR)
-	template[np.where((template==[0,0,0]).all(axis=2))] = [93,121,155]
-	template_rt=rotate_image(template,act_angle,[93,121,155])
+	template=cv2.cvtColor(template,cv2.COLOR_BGRA2BGR)
+	template[np.where((template==[0,0,0]).all(axis=2))] = BACKGROUND
+	template_rt=rotate_image(template,act_angle,BACKGROUND)
 
-	cv2.imshow("template", template_rt)
 
 
 	return act_angle,loc
