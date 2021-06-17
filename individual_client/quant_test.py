@@ -14,7 +14,7 @@ temp_alg=['rgb','hsv','rgba','hsva','bw','bwa']
 error_mtx=np.zeros((6,6))
 
 for i in range(6):
-	if i==3:
+	if i==3 or i==1:
 		continue
 	template=cv2.imread('../client_yaml/template'+str(i)+'.png',cv2.IMREAD_UNCHANGED)
 	mask=np.where(template[:,:,-1]>0, 1, 0)
@@ -53,6 +53,7 @@ for i in range(6):
 				angle,center2=match(test_region,template)
 
 
-error_mtx/=7
+error_mtx/=6
+print(error_mtx)
 
 
