@@ -10,7 +10,7 @@ ROI=np.array([[160,600],[165,1153]])	#ROI [[r1,r2],[c1,c2]]
 #template size
 template_size=360*1.414
 #load template
-template=cv2.imread('../client_yaml/template1.png',cv2.IMREAD_UNCHANGED)
+template=cv2.imread('../client_yaml/template3_1.png',cv2.IMREAD_UNCHANGED)
 mask=np.where(template[:,:,-1]>0, 1, 0)
 #calc avg template color
 non_zeros=np.count_nonzero(template[:,:,-1])
@@ -20,30 +20,30 @@ R=np.sum(template[:,:,2]*mask[:,:])/non_zeros
 avg_color=[B,G,R]
 
 #load test image
-test_image=cv2.imread('image_data/temp1_test1.jpg',cv2.IMREAD_UNCHANGED)
+test_image=cv2.imread('image_data/temp3_test10.jpg',cv2.IMREAD_UNCHANGED)
 
-try:
-	#test test image within ROI
-	roi_frame=test_image[ROI[0][0]:ROI[0][1],ROI[1][0]:ROI[1][1]]
-	(orientation,centroid1)=detection(roi_frame,avg_color)
-	center1=centroid1[0]+ROI[:,0]
-	test_region=test_image[int(center1[0]-template_size/2):int(center1[0]+template_size/2),int(center1[1]-template_size/2):int(center1[1]+template_size/2)]
+# try:
+# 	#test test image within ROI
+# 	roi_frame=test_image[ROI[0][0]:ROI[0][1],ROI[1][0]:ROI[1][1]]
+# 	(orientation,centroid1)=detection(roi_frame,avg_color)
+# 	center1=centroid1[0]+ROI[:,0]
+# 	test_region=test_image[int(center1[0]-template_size/2):int(center1[0]+template_size/2),int(center1[1]-template_size/2):int(center1[1]+template_size/2)]
 
-	# cv2.circle(test_image, tuple(np.flip(center1).astype(int)), 10,(0,0,255), -1)	
-	# cv2.namedWindow("Image")
-	# cv2.imshow("Image",test_image)
-	# cv2.waitKey(0) 
-	# cv2.destroyAllWindows()
+# 	# cv2.circle(test_image, tuple(np.flip(center1).astype(int)), 10,(0,0,255), -1)	
+# 	# cv2.namedWindow("Image")
+# 	# cv2.imshow("Image",test_image)
+# 	# cv2.waitKey(0) 
+# 	# cv2.destroyAllWindows()
 
-	temp_alg=['rgb','hsv','rgba','hsva','bw','bwa']
-	angle,centroid2=match_w_ori(test_region,template, orientation)
-	center2=centroid2[0]+np.array([int(center1[0]-template_size/2),int(center1[1]-template_size/2)])
-	print(np.linalg.norm(center2-center1))
-except:
-	print('filtered failed')
-	test_region=test_image[ROI[0][0]:ROI[0][1],ROI[1][0]:ROI[1][1]]
-	angle,center2=match(test_region,template,'bwa')
-	center2=np.flip(center2+ROI[:,0])
+# 	temp_alg=['rgb','hsv','rgba','hsva','bw','bwa']
+# 	angle,centroid2=match_w_ori(test_region,template, orientation)
+# 	center2=centroid2[0]+np.array([int(center1[0]-template_size/2),int(center1[1]-template_size/2)])
+# 	print(np.linalg.norm(center2-center1))
+# except:
+print('filtered failed')
+test_region=test_image[ROI[0][0]:ROI[0][1],ROI[1][0]:ROI[1][1]]
+angle,center2=match(test_region,template,'rgba')
+center2=np.flip(center2+ROI[:,0])
 	
 
 ###show final results
