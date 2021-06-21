@@ -9,7 +9,7 @@ sys.path.append('../toolbox')
 from general_robotics_toolbox import Robot, fwdkin
 from vel_emulate_sub import EmulatedVelocityControl
 
-from pixel2coord import convert
+from pixel2coord import pixel2coord2
 from autodiscovery import autodiscover
 from jog_joint import jog_joint
 
@@ -31,7 +31,7 @@ def aruco_process(frame):
 	aruco_dict = aruco.Dictionary_get(aruco.DICT_6X6_250)
 	parameters =  aruco.DetectorParameters_create()
 	corners, ids, rejectedImgPoints = aruco.detectMarkers(gray, aruco_dict, parameters=parameters)
-	idx=np.where(ids==165)
+	idx=np.where(ids==169)
 	if len(idx[0])==0:
 		return False, None
 	else:
@@ -47,7 +47,7 @@ def calc_coord(rgb_frame,depth_frame):
 		c=int(center[0])
 		z=(p_realsense[-1]-depth_frame[r][c]/1000)[0]
 
-		coord=convert(R_realsense,p_realsense,(c,r),z)
+		coord=pixel2coord2(R_realsense,p_realsense,(c,r),z)
 		# print(coord[:2].tolist(),z)
 		return rtval, coord[:2].tolist()
 	else:
@@ -109,7 +109,7 @@ def main():
 	global new_val, p_realsense, R_realsense
 	#Accept the names of the webcams and the nodename from command line
 	parser = argparse.ArgumentParser(description="RR plug and play client")
-	parser.add_argument("--robot-name",type=str,help="List of camera names separated with commas")
+	parser.add_argument("--robot-name",type=str,default='abb',help="List of camera names separated with commas")
 	parser.add_argument("--url",type=str,default='rr+tcp://[fe80::922f:c9e6:5fe5:51d1]:52222/?nodeid=87518815-d3a3-4e33-a1be-13325da2461f&service=cognex',
 	help="List of camera names separated with commas")
 	args, _ = parser.parse_known_args()
@@ -214,7 +214,7 @@ def main():
 	print("calibrating")
 	timestamp=None
 	now=time.time()
-	while time.time()-now<60:
+	while time.time()-now<30:
 		qdot=[robot_yaml['calibration_speed']]+[0]*(num_joints-1)
 		vel_ctrl.set_velocity_command(np.array(qdot))
 

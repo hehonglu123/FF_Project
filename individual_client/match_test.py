@@ -10,7 +10,7 @@ ROI=np.array([[160,600],[165,1153]])	#ROI [[r1,r2],[c1,c2]]
 #template size
 template_size=360*1.414
 #load template
-template=cv2.imread('../client_yaml/template3_1.png',cv2.IMREAD_UNCHANGED)
+template=cv2.imread('../client_yaml/template1_1.png',cv2.IMREAD_UNCHANGED)
 mask=np.where(template[:,:,-1]>0, 1, 0)
 #calc avg template color
 non_zeros=np.count_nonzero(template[:,:,-1])
@@ -20,7 +20,7 @@ R=np.sum(template[:,:,2]*mask[:,:])/non_zeros
 avg_color=[B,G,R]
 
 #load test image
-test_image=cv2.imread('image_data/temp3_test10.jpg',cv2.IMREAD_UNCHANGED)
+test_image=cv2.imread('image_data/temp1_test10.jpg',cv2.IMREAD_UNCHANGED)
 
 # try:
 # 	#test test image within ROI
@@ -42,7 +42,7 @@ test_image=cv2.imread('image_data/temp3_test10.jpg',cv2.IMREAD_UNCHANGED)
 # except:
 print('filtered failed')
 test_region=test_image[ROI[0][0]:ROI[0][1],ROI[1][0]:ROI[1][1]]
-angle,center2=match(test_region,template,'rgba')
+angle,center2=match(test_region,template,'contour')
 center2=np.flip(center2+ROI[:,0])
 	
 

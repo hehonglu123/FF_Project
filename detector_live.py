@@ -60,15 +60,15 @@ p_realsense=np.array(realsense_param['p'])
 R_realsense=np.array(realsense_param['R'])
 
 
-green=[30,51,1]
-blue=[112,55,0]
-white=[220,203,190]
-offset_white_right=[90,50]		#100 in pixel
-offset_white_left=[90,-50]		#100 in pixel
-
 ###fabric template
-template_left=cv2.imread('client_yaml/piece0.png',cv2.IMREAD_UNCHANGED)
-template_right=cv2.imread('client_yaml/piece0_right.png',cv2.IMREAD_UNCHANGED)
+template=cv2.imread('client_yaml/template1_1.png',cv2.IMREAD_UNCHANGED)
+mask=np.where(template[:,:,-1]>0, 1, 0)
+#calc avg template color
+non_zeros=np.count_nonzero(template[:,:,-1])
+B=np.sum(template[:,:,0]*mask[:,:])/non_zeros
+G=np.sum(template[:,:,1]*mask[:,:])/non_zeros
+R=np.sum(template[:,:,2]*mask[:,:])/non_zeros
+avg_color=[B,G,R]
 
 while True:
 
@@ -77,63 +77,31 @@ while True:
 	if (not current_frame is None):
 		roi_frame=current_frame[ROI[0][0]:ROI[0][1],ROI[1][0]:ROI[1][1]]
 
-		(orientation_green,centroid_green)=detection(roi_frame,green)
-		(orientation_blue,centroid_blue)=detection(roi_frame,blue)
-		(orientation_white,centroid_white)=detection(roi_frame,white)
-
-
-		# try:
-		# 	center_green=centroid_green[0]+ROI[:,0]
-		# 	p=pixel2coord2(R_realsense,p_realsense,np.flip(center_green),0)
-		# 	#draw dots
-		# 	cv2.circle(current_frame, tuple(np.flip(center_green).astype(int)), 10,(0,0,255), -1)		
-		# 	current_frame = cv2.putText(current_frame, str(p[0])+','+str(p[1])+' ,'+str(orientation_green[0]), org = tuple(np.flip(center_green).astype(int)), 
-	 #               fontScale = 1, fontFace=cv2.FONT_HERSHEY_COMPLEX_SMALL,color = (255, 0, 0), thickness = 2, lineType=cv2.LINE_AA)
-		# except:
-		# 	traceback.print_exc()
-		# 	pass
-		
-		# try:
-		# 	center_blue=centroid_blue[0]+ROI[:,0]
-		# 	p=pixel2coord2(R_realsense,p_realsense,np.flip(center_blue),0)
-		# 	#draw dots	
-		# 	cv2.circle(current_frame, tuple(np.flip(center_blue).astype(int)), 10,(0,0,255), -1)		
-		# 	current_frame = cv2.putText(current_frame, str(p[0])+','+str(p[1])+' ,'+str(orientation_blue[0]), org = tuple(np.flip(center_blue).astype(int)), 
-	 #               fontScale = 1, fontFace=cv2.FONT_HERSHEY_COMPLEX_SMALL,color = (255, 0, 0), thickness = 2, lineType=cv2.LINE_AA)
-		# except:
-		# 	pass
+		(orientation,centroid)=detection(roi_frame,avg_color)
 
 		try:
-			center_left=centroid_white[0]+ROI[:,0]
-			# center_left+=[offset_white_left[0]*np.cos(orientation_white[0])-offset_white_left[1]*np.sin(orientation_white[0]),offset_white_left[0]*np.sin(orientation_white[0])+offset_white_left[1]*np.cos(orientation_white[0])]
-			center_left=center_left.astype(int)
+			center=centroid[0]+ROI[:,0]
+			# center+=[offset_white_left[0]*np.cos(orientation_white[0])-offset_white_left[1]*np.sin(orientation_white[0]),offset_white_left[0]*np.sin(orientation_white[0])+offset_white_left[1]*np.cos(orientation_white[0])]
+			center=center.astype(int)
 			
-			# angle,center_left_temp=match(current_frame[center_left[0]-300:center_left[0]+300,center_left[1]-300:center_left[1]+300,:],template_left)
-			angle,center_left_temp=match_w_ori(current_frame[center_left[0]-300:center_left[0]+300,center_left[1]-300:center_left[1]+300,:],template_left,orientation_white)
-			center_left=(center_left[0]-300+center_left_temp[0],center_left[1]-300+center_left_temp[1])
+			# angle,center_temp=match(current_frame[center[0]-300:center[0]+300,center[1]-300:center[1]+300,:],template_left)
+			angle,center_temp=match_w_ori(current_frame[center[0]-300:center[0]+300,center[1]-300:center[1]+300,:],template,orientation,'contour')
+			center=(center[0]-300+center_temp[0],center[1]-300+center_temp[1])
 
-			# test_region=current_frame[max(int(center_white[0]-200),0):min(int(center_white[0]+200),720),max(int(center_white[1]-200),0):min(int(center_white[1]+200),1280),:]
-			# # cv2.imshow("Image",cv2.cvtColor(test_region,cv2.COLOR_BGR2GRAY))
-			# cv2.imwrite('test.jpg', test_region)
-			# angle,center_temp=match(cv2.cvtColor(test_region,cv2.COLOR_BGR2GRAY),template_white)
-			# # print(center_temp)
-			# cetner=(int(center_temp[0]+int(center_white[1]-200)),int(center_temp[1]+int(center_white[0]-200)))
-			# p=pixel2coord2(R_realsense,p_realsense,cetner,0)
-			# #draw dots	
-			# cv2.circle(current_frame, cetner, 10,(0,0,255), -1)		
-			# current_frame = cv2.putText(current_frame, str(p[0])+','+str(p[1])+' ,'+str(angle), org = cetner, 
-	  #              fontScale = 1, fontFace=cv2.FONT_HERSHEY_COMPLEX_SMALL,color = (255, 0, 0), thickness = 2, lineType=cv2.LINE_AA)
-
-
-			p=pixel2coord2(R_realsense,p_realsense,np.flip(center_left).astype(float),0)
-			#draw dots	
-			cv2.circle(current_frame, tuple(np.flip(center_left).astype(int)), 10,(0,0,255), -1)		
-			current_frame = cv2.putText(current_frame, str(p[0])+','+str(p[1])+' ,'+str(angle), org = tuple(np.flip(center_left).astype(int)), 
-	               fontScale = 1, fontFace=cv2.FONT_HERSHEY_COMPLEX_SMALL,color = (255, 0, 0), thickness = 2, lineType=cv2.LINE_AA)
+			
 		except:
-			traceback.print_exc()
+			angle,center_temp=match(roi_frame,template,'contour')
+			print(center_temp)
+			center=center_temp[0]+ROI[:,0]
 			# continue
 		
+		p=pixel2coord2(R_realsense,p_realsense,np.flip(center).astype(float),0)
+		#draw dots	
+		cv2.circle(current_frame, tuple(np.flip(center).astype(int)), 10,(0,0,255), -1)		
+		current_frame = cv2.putText(current_frame, str(p[0])+','+str(p[1])+' ,'+str(angle), org = tuple(np.flip(center).astype(int)), 
+               fontScale = 1, fontFace=cv2.FONT_HERSHEY_COMPLEX_SMALL,color = (255, 0, 0), thickness = 2, lineType=cv2.LINE_AA)
+
+
 		current_frame = cv2.rectangle(current_frame, (ROI[1][0],ROI[0][0]), (ROI[1][1],ROI[0][1]), color = (255, 0, 0), thickness=2)
 
 

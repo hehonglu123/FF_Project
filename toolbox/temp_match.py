@@ -47,6 +47,31 @@ def square(im,desired_size, background):
 	new_im = cv2.copyMakeBorder(im, top, bottom, left, right, cv2.BORDER_CONSTANT,value=background)
 	return new_im
 
+def contour(img):
+	if img.shape[-1]==4:
+		img_grey = cv2.cvtColor(img,cv2.COLOR_BGRA2GRAY)
+	else:
+		img_grey = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+	#set a thresh
+	thresh = 100
+	#get threshold image
+	ret,thresh_img = cv2.threshold(img_grey, thresh, 255, cv2.THRESH_BINARY)
+	#find contours
+	contours, hierarchy = cv2.findContours(thresh_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+	# for cnt in contours:
+	#     approx = cv2.approxPolyDP(cnt,0.01*cv2.arcLength(cnt,True),True)
+	#     print (len(approx))
+
+
+	#create an empty image for contours
+	img_contours = np.zeros(img_grey.shape)
+	# draw the contours on the empty image
+	cv2.drawContours(img_contours, contours, -1, 255, 10)
+
+	return img_contours.astype(np.uint8)
+
+
 def color_temp_match(image,template):	#rgb based match with background
 	template=cv2.cvtColor(template,cv2.COLOR_BGRA2BGR)
 	template[np.where((template==[0,0,0]).all(axis=2))] = BACKGROUND
@@ -155,7 +180,6 @@ def edge_temp_match(image,template):	#edge based match with alpha channel
 	# cv2.imshow("image", template)
 	# cv2.imshow("template", image)
 	# cv2.waitKey(0)
-	# cv2.destroyAllWindows()
 
 	#matching
 	res = cv2.matchTemplate(image, template , cv2.TM_SQDIFF)
@@ -163,7 +187,18 @@ def edge_temp_match(image,template):	#edge based match with alpha channel
 
 	return min_val, min_loc
 
-temp_alg={'edge':edge_temp_match,'rgb':color_temp_match,'hsv':hsv_temp_match,'rgba':color_temp_match2,'hsva':hsv_temp_match2,'bw':bw_temp_match,'bwa':bw_temp_match2}
+def contour_temp_match(image,template):
+	
+	
+	# cv2.imshow("image", template)
+	# cv2.waitKey(0)
+	#matching
+	res = cv2.matchTemplate(image, template , cv2.TM_SQDIFF)
+	min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
+
+	return min_val, min_loc
+
+temp_alg={'edge':edge_temp_match,'rgb':color_temp_match,'hsv':hsv_temp_match,'rgba':color_temp_match2,'hsva':hsv_temp_match2,'bw':bw_temp_match,'bwa':bw_temp_match2,'contour':contour_temp_match}
 
 
 def match(image,template,alg='hsva'):
@@ -172,10 +207,18 @@ def match(image,template,alg='hsva'):
 	
 	
 
-
+	image_contour=contour(image)
+	template_contour=contour(template)
+	template_contour=template_contour[3:-3,3:-3]
+	cv2.imshow("image", image_contour)
+	cv2.waitKey(0)
 	for angle in range(0,360,2):
-		template_rt=rotate_image(template,angle,[0,0,0,0])
-		min_val, min_loc=temp_alg['hsva'](image,template_rt)
+		if alg=='contour':
+			template_rt=rotate_image(template_contour,angle,0)
+			min_val, min_loc=temp_alg['contour'](image_contour,template_rt)
+		else:
+			template_rt=rotate_image(template,angle,[0,0,0,0])
+			min_val, min_loc=temp_alg[alg](image,template_rt)
 
 
 		if min_val<min_error:
@@ -198,8 +241,11 @@ def match_w_ori(image,template,orientation,alg='hsva'):
 
 	tEdged = cv2.Canny(template, 50, 200)
 	edged = cv2.Canny(image, 50, 200)
+	image_contour=contour(image)
+	template_contour=contour(template)
 	for i in range(0,181,180):
 		for angle in range(orientation+i-5,orientation+i+5):
+			
 			template_rt=rotate_image(template,angle,[0,0,0,0])
 			min_val, min_loc=temp_alg[alg](image,template_rt)
 			# template_rt=rotate_image(tEdged,angle,[0,0,0])
