@@ -62,4 +62,7 @@ def pixel2coord2(R,p,pixel,z):
 
 # R=np.array(dict_file['R'])
 # p=np.array(dict_file['p'])
-# print(pixel2coord(R,p,(640,360),0))
+# print(pixel2coord2(R,p,(1033,541),0.0))
+# print(pixel2coord2(R,p,(306,537),0.0))
+# print(pixel2coord2(R,p,(303,537),0.0))
+# print(pixel2coord2(R,p,(1030,228),0.0))

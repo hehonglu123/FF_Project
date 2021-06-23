@@ -8,7 +8,7 @@ table_tags = [
     [168, 0.533, 0],
     [164, 0.533, 0.229],
     [167, 0, -0.229],
-    [171, 0, 0],
+    # [171, 0, 0],
     [170, 0, 0.229],
     [166, -0.533, -0.229],
     [162, -0.533, 0],
@@ -17,7 +17,7 @@ table_tags = [
 
 def main():
 
-    img = cv2.imread('extrinsic_calibration/extrinsic_calib1.jpg')
+    img = cv2.imread('extrinsic_calibration/extrinsic_calib0.jpg')
 
     aruco_markersize = 1.5*0.0254
 
