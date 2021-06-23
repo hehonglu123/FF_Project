@@ -85,14 +85,13 @@ while True:
 			center=center.astype(int)
 			
 			# angle,center_temp=match(current_frame[center[0]-300:center[0]+300,center[1]-300:center[1]+300,:],template_left)
-			angle,center_temp=match_w_ori(current_frame[center[0]-300:center[0]+300,center[1]-300:center[1]+300,:],template,orientation,'contour')
+			angle,center_temp=match_w_ori(current_frame[center[0]-300:center[0]+300,center[1]-300:center[1]+300,:],template,orientation,'edge')
 			center=(center[0]-300+center_temp[0],center[1]-300+center_temp[1])
 
 			
 		except:
-			angle,center_temp=match(roi_frame,template,'contour')
-			print(center_temp)
-			center=center_temp[0]+ROI[:,0]
+			angle,center_temp=match(roi_frame,template,'edge')
+			center=list(center_temp[::-1])+ROI[:,0]
 			# continue
 		
 		p=pixel2coord2(R_realsense,p_realsense,np.flip(center).astype(float),0)
