@@ -57,9 +57,12 @@ def pixel2coord2(R,p,pixel,z):
 
 	return np.dot(R,T)+p.flatten()
 
-# with open(r'/home/rpi/FF_Project/calibration/camera_extrinsic.yaml') as file:
-# 	dict_file = yaml.load(file, Loader=yaml.FullLoader)
+with open(r'/home/rpi/FF_Project/calibration/camera_extrinsic.yaml') as file:
+	dict_file = yaml.load(file, Loader=yaml.FullLoader)
 
-# R=np.array(dict_file['R'])
-# p=np.array(dict_file['p'])
-# print(pixel2coord(R,p,(640,360),0))
+R=np.array(dict_file['R'])
+p=np.array(dict_file['p'])
+print(pixel2coord2(R,p,(1033,541),0.0))
+print(pixel2coord2(R,p,(306,537),0.0))
+print(pixel2coord2(R,p,(303,537),0.0))
+print(pixel2coord2(R,p,(1030,228),0.0))

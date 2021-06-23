@@ -8,7 +8,7 @@ robot_name='abb'
 sys.path.append('toolbox/')
 from vel_emulate_sub import EmulatedVelocityControl
 from general_robotics_toolbox import *    
-from pixel2coord import pixel2coord
+from pixel2coord import *
 from fabric_detection import detection
 from temp_match import match
 
@@ -27,9 +27,18 @@ with open(r'client_yaml/client_'+robot_name+'.yaml') as file:
 home=robot_yaml['home']
 table_height=0.005
 ROI=np.array([[160,600],[165,1153]])	#ROI [[r1,r2],[c1,c2]]
-green=[30,51,1]
-blue=[112,55,0]
-white=[220,203,190]
+
+def read_template(im_path):
+	###fabric template
+	template=cv2.imread(im_path,cv2.IMREAD_UNCHANGED)
+	mask=np.where(template[:,:,-1]>0, 1, 0)
+	#calc avg template color
+	non_zeros=np.count_nonzero(template[:,:,-1])
+	B=np.sum(template[:,:,0]*mask[:,:])/non_zeros
+	G=np.sum(template[:,:,1]*mask[:,:])/non_zeros
+	R=np.sum(template[:,:,2]*mask[:,:])/non_zeros
+	avg_color=[B,G,R]
+	return avg_color,template
 
 
 def H42H3(H):
@@ -141,8 +150,8 @@ robot_def=Robot(H,np.transpose(P),np.zeros(n))
 eef_angle=np.pi/2.
 eef_orientation=R_ee.R_ee(np.pi/2.)
 place_orientation=R_ee.R_ee(np.pi/2.)
-fabric_position=np.array([-0.55,0.6,0.0155])
-place_position=np.array([0.3,0.6,0.03])
+fabric_position=np.array([-0.55,0.6,0.0055])
+place_position=np.array([0.3,0.6,0.02])
 place_offset=[0,0.02,0]	#offset wrt bottom fabric, [orientation angle, distance, placing orientation]
 
 transformation=H42H3(H_ABB)
@@ -156,25 +165,32 @@ template_right=cv2.imread('client_yaml/piece0_right.png',cv2.IMREAD_UNCHANGED)
 # m1k_obj = RRN.ConnectService(url)
 # m1k_obj.setmode('A', 'SVMI')
 
+#convert cognex frame to robot frame
+def conversion(x,y,height):
+	p=np.dot(transformation,np.array([[x],[y],[1]])).flatten()
+	p[2]=height
+	return p
+
+
 def pick(p,orientation):
 	#start joggging to initial pose
 	q=inv.inv(p+np.array([0,0,0.2]),orientation.tolist())
 	robot.jog_freespace(q, 0.5*np.ones(n), True)
 
-	q=inv.inv(p,orientation)
-	robot.jog_freespace(q, 0.5*np.ones(n), True)
+	# q=inv.inv(p,orientation)
+	# robot.jog_freespace(q, 0.5*np.ones(n), True)
 
-	tool.close()
-	time.sleep(2)
-	# m1k_obj.setawgconstant('A',5)
-	# m1k_obj.read(1000)
-	# 
-	# m1k_obj.setawgconstant('A',5)
-	# m1k_obj.read(1000)
+	# tool.close()
+	# time.sleep(2)
+	# # m1k_obj.setawgconstant('A',5)
+	# # m1k_obj.read(1000)
+	# # 
+	# # m1k_obj.setawgconstant('A',5)
+	# # m1k_obj.read(1000)
 
-	#move up
-	q=inv.inv(p+np.array([0,0,0.2]),orientation.tolist())
-	robot.jog_freespace(q, 0.1*np.ones(n), True)
+	# #move up
+	# q=inv.inv(p+np.array([0,0,0.2]),orientation.tolist())
+	# robot.jog_freespace(q, 0.1*np.ones(n), True)
 
 def place(p,orientation):
 	#start joggging to initial pose
@@ -195,8 +211,45 @@ def place(p,orientation):
 	robot.jog_freespace(q, np.ones(n), True)
 
 
+##home
+robot.jog_freespace(inv.inv(home,eef_orientation), 0.5*np.ones(n), True)
 
+avg_color,template=read_template('client_yaml/template1_1.png')
+
+if (not current_frame is None):
+	roi_frame=current_frame[ROI[0][0]:ROI[0][1],ROI[1][0]:ROI[1][1]]
+
+	(orientation,centroid)=detection(roi_frame,avg_color)
+
+	try:
+		center=centroid[0]+ROI[:,0]
+		# center+=[offset_white_left[0]*np.cos(orientation_white[0])-offset_white_left[1]*np.sin(orientation_white[0]),offset_white_left[0]*np.sin(orientation_white[0])+offset_white_left[1]*np.cos(orientation_white[0])]
+		center=center.astype(int)
+		
+		# angle,center_temp=match(current_frame[center[0]-300:center[0]+300,center[1]-300:center[1]+300,:],template_left)
+		angle,center_temp=match_w_ori(current_frame[center[0]-300:center[0]+300,center[1]-300:center[1]+300,:],template,orientation,'rgba')
+		center=(center[0]-300+center_temp[0],center[1]-300+center_temp[1])
+
+		
+	except:
+		angle,center_temp=match(roi_frame,template,'rgba')
+		center=list(center_temp[::-1])+ROI[:,0]
+		# continue
+	
+	p=pixel2coord2(R_realsense,p_realsense,np.flip(center).astype(float),0)
+	#draw dots	
+	cv2.circle(current_frame, tuple(np.flip(center).astype(int)), 10,(0,0,255), -1)		
+	current_frame = cv2.putText(current_frame, str(p[0])+','+str(p[1])+' ,'+str(angle), org = tuple(np.flip(center).astype(int)), 
+           fontScale = 1, fontFace=cv2.FONT_HERSHEY_COMPLEX_SMALL,color = (255, 0, 0), thickness = 2, lineType=cv2.LINE_AA)
+
+
+	current_frame = cv2.rectangle(current_frame, (ROI[1][0],ROI[0][0]), (ROI[1][1],ROI[0][1]), color = (255, 0, 0), thickness=2)
+
+
+	# cv2.imshow("Image",current_frame)
+	# cv2.waitKey(0)
+p_robot=conversion(p[0],p[1],fabric_position[-1])
+print(p_robot)
 
 pick(fabric_position,R_ee.R_ee(np.pi))	 
-
-place(place_position,place_orientation)
+# place(place_position,place_orientation)
