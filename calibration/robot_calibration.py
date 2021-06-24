@@ -184,10 +184,11 @@ def main():
 	length=np.linalg.norm(P[1])+np.linalg.norm(P[2])+np.linalg.norm(P[3])
 	H=np.transpose(np.array(robot.robot_info.chains[0].H.tolist()))
 
-	if np.linalg.norm(P[-1])!=0.:
-		P[-1]+=robot_yaml['tag_position']
-	else:
-		P[-2]+=robot_yaml['tag_position']
+	P[-1]+=robot_yaml['tag_position']
+	# if np.linalg.norm(P[-1])!=0.:
+	# 	P[-1]+=robot_yaml['tag_position']
+	# else:
+	# 	P[-2]+=robot_yaml['tag_position']
 
 	robot_def=Robot(H,np.transpose(P),np.zeros(num_joints))
 
@@ -214,7 +215,7 @@ def main():
 	print("calibrating")
 	timestamp=None
 	now=time.time()
-	while time.time()-now<30:
+	while time.time()-now<60:
 		qdot=[robot_yaml['calibration_speed']]+[0]*(num_joints-1)
 		vel_ctrl.set_velocity_command(np.array(qdot))
 

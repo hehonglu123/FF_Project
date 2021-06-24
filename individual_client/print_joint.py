@@ -7,7 +7,7 @@ from importlib import import_module
 
 #Accept the names of the webcams and the nodename from command line
 parser = argparse.ArgumentParser(description="RR plug and play client")
-parser.add_argument("--robot-name",type=str,help="List of camera names separated with commas")
+parser.add_argument("--robot-name",type=str,default='abb',help="List of camera names separated with commas")
 args, _ = parser.parse_known_args()
 robot_name=args.robot_name
 

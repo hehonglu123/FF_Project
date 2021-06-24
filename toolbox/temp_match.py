@@ -177,9 +177,9 @@ def bw_temp_match2(image,template):		#binary based match with alpha channel
 
 
 def edge_temp_match(image,template):	#edge based match with alpha channel
-	# cv2.imshow("image", image)
-	# cv2.imshow("template", template)
-	# cv2.waitKey(0)
+	cv2.imshow("image", image)
+	cv2.imshow("template", template)
+	cv2.waitKey(0)
 
 	
 	#matching

@@ -152,7 +152,7 @@ robot_def=Robot(H,np.transpose(P),np.zeros(n))
 
 
 eef_angle=np.pi/2.
-eef_orientation=R_ee.R_ee(np.pi/2.)
+eef_orientation=R_ee.R_ee(np.pi)
 place_orientation=R_ee.R_ee(np.pi)
 fabric_position=np.array([-0.55,0.6,0.0])
 place_position=np.array([0.,0.7,0.02])
@@ -182,7 +182,7 @@ def pick(p,orientation):
 	robot.jog_freespace(q, 0.5*np.ones(n), True)
 
 	tool.close()
-	time.sleep(2)
+	time.sleep(3)
 	# m1k_obj.setawgconstant('A',5)
 	# m1k_obj.read(1000)
 	# 
@@ -202,7 +202,7 @@ def place(p,orientation):
 
 
 	tool.open()
-	time.sleep(5)
+	time.sleep(2)
 	# m1k_obj.setawgconstant('A',0)
 	# time.sleep(5)
 	# m1k_obj.read(1000)
@@ -211,85 +211,57 @@ def place(p,orientation):
 	q=inv.inv(p+np.array([0,0,0.2]),orientation)
 	robot.jog_freespace(q, 0.5*np.ones(n), True)
 
+	time.sleep(5)
+
+
+	
+
+
+def pp_fabric(temp_path,ROI):
+	global current_frame
+	avg_color,template=read_template(temp_path)
+	if (not current_frame is None):
+		roi_frame=current_frame[ROI[0][0]:ROI[0][1],ROI[1][0]:ROI[1][1]]
+
+		(orientation,centroid)=detection(roi_frame,avg_color)
+
+		try:
+			center=centroid[0]+ROI[:,0]
+			# center+=[offset_white_left[0]*np.cos(orientation_white[0])-offset_white_left[1]*np.sin(orientation_white[0]),offset_white_left[0]*np.sin(orientation_white[0])+offset_white_left[1]*np.cos(orientation_white[0])]
+			center=center.astype(int)
+			
+			# angle,center_temp=match(current_frame[center[0]-300:center[0]+300,center[1]-300:center[1]+300,:],template_left)
+			angle,center_temp=match_w_ori(current_frame[center[0]-300:center[0]+300,center[1]-300:center[1]+300,:],template,orientation,'edge')
+			center=(center[0]-300+center_temp[0],center[1]-300+center_temp[1])
+
+			
+		except:
+			angle,center_temp=match(roi_frame,template,'edge')
+			center=list(center_temp[::-1])+ROI[:,0]
+			# continue
+		
+		p=pixel2coord2(R_realsense,p_realsense,np.flip(center).astype(float),0)
+		#draw dots	
+		cv2.circle(current_frame, tuple(np.flip(center).astype(int)), 10,(0,0,255), -1)		
+		current_frame = cv2.putText(current_frame, str(p[0])+','+str(p[1])+' ,'+str(angle), org = tuple(np.flip(center).astype(int)), 
+	           fontScale = 1, fontFace=cv2.FONT_HERSHEY_COMPLEX_SMALL,color = (255, 0, 0), thickness = 2, lineType=cv2.LINE_AA)
+
+
+		current_frame = cv2.rectangle(current_frame, (ROI[1][0],ROI[0][0]), (ROI[1][1],ROI[0][1]), color = (255, 0, 0), thickness=2)
+
+
+		# cv2.imshow("Image",current_frame)
+		# cv2.waitKey(0)
+
+	p_robot=conversion(p[0],p[1],fabric_position[-1])
+
+	pick(p_robot,R_ee.R_ee(np.pi))	 
+	place(place_position,place_orientation)
+
 
 ##home
 robot.jog_freespace(inv.inv(home,eef_orientation), 0.5*np.ones(n), True)
+pp_fabric('client_yaml/template1.png',ROI2)
 
-avg_color,template=read_template('client_yaml/template2.png')
-if (not current_frame is None):
-	roi_frame=current_frame[ROI1[0][0]:ROI1[0][1],ROI1[1][0]:ROI1[1][1]]
+pp_fabric('client_yaml/template2.png',ROI1)
 
-	(orientation,centroid)=detection(roi_frame,avg_color)
-
-	try:
-		center=centroid[0]+ROI1[:,0]
-		# center+=[offset_white_left[0]*np.cos(orientation_white[0])-offset_white_left[1]*np.sin(orientation_white[0]),offset_white_left[0]*np.sin(orientation_white[0])+offset_white_left[1]*np.cos(orientation_white[0])]
-		center=center.astype(int)
-		
-		# angle,center_temp=match(current_frame[center[0]-300:center[0]+300,center[1]-300:center[1]+300,:],template_left)
-		angle,center_temp=match_w_ori(current_frame[center[0]-300:center[0]+300,center[1]-300:center[1]+300,:],template,orientation,'edge')
-		center=(center[0]-300+center_temp[0],center[1]-300+center_temp[1])
-
-		
-	except:
-		angle,center_temp=match(roi_frame,template,'edge')
-		center=list(center_temp[::-1])+ROI1[:,0]
-		# continue
-	
-	p=pixel2coord2(R_realsense,p_realsense,np.flip(center).astype(float),0)
-	#draw dots	
-	cv2.circle(current_frame, tuple(np.flip(center).astype(int)), 10,(0,0,255), -1)		
-	current_frame = cv2.putText(current_frame, str(p[0])+','+str(p[1])+' ,'+str(angle), org = tuple(np.flip(center).astype(int)), 
-           fontScale = 1, fontFace=cv2.FONT_HERSHEY_COMPLEX_SMALL,color = (255, 0, 0), thickness = 2, lineType=cv2.LINE_AA)
-
-
-	current_frame = cv2.rectangle(current_frame, (ROI1[1][0],ROI1[0][0]), (ROI1[1][1],ROI1[0][1]), color = (255, 0, 0), thickness=2)
-
-
-	cv2.imshow("Image",current_frame)
-	cv2.waitKey(0)
-
-p_robot=conversion(p[0],p[1],fabric_position[-1])
-
-pick(p_robot,R_ee.R_ee(np.pi))	 
-place(place_position,place_orientation)
-
-
-avg_color,template=read_template('client_yaml/template1.png')
-if (not current_frame is None):
-	roi_frame=current_frame[ROI2[0][0]:ROI2[0][1],ROI2[1][0]:ROI2[1][1]]
-
-	(orientation,centroid)=detection(roi_frame,avg_color)
-
-	try:
-		center=centroid[0]+ROI2[:,0]
-		# center+=[offset_white_left[0]*np.cos(orientation_white[0])-offset_white_left[1]*np.sin(orientation_white[0]),offset_white_left[0]*np.sin(orientation_white[0])+offset_white_left[1]*np.cos(orientation_white[0])]
-		center=center.astype(int)
-		
-		# angle,center_temp=match(current_frame[center[0]-300:center[0]+300,center[1]-300:center[1]+300,:],template_left)
-		angle,center_temp=match_w_ori(current_frame[center[0]-300:center[0]+300,center[1]-300:center[1]+300,:],template,orientation,'edge')
-		center=(center[0]-300+center_temp[0],center[1]-300+center_temp[1])
-
-		
-	except:
-		angle,center_temp=match(roi_frame,template,'edge')
-		center=list(center_temp[::-1])+ROI2[:,0]
-		# continue
-	
-	p=pixel2coord2(R_realsense,p_realsense,np.flip(center).astype(float),0)
-	#draw dots	
-	cv2.circle(current_frame, tuple(np.flip(center).astype(int)), 10,(0,0,255), -1)		
-	current_frame = cv2.putText(current_frame, str(p[0])+','+str(p[1])+' ,'+str(angle), org = tuple(np.flip(center).astype(int)), 
-           fontScale = 1, fontFace=cv2.FONT_HERSHEY_COMPLEX_SMALL,color = (255, 0, 0), thickness = 2, lineType=cv2.LINE_AA)
-
-
-	current_frame = cv2.rectangle(current_frame, (ROI2[1][0],ROI2[0][0]), (ROI2[1][1],ROI2[0][1]), color = (255, 0, 0), thickness=2)
-
-
-	cv2.imshow("Image",current_frame)
-	cv2.waitKey(0)
-
-p_robot=conversion(p[0],p[1],fabric_position[-1])
-
-pick(p_robot,R_ee.R_ee(np.pi))	 
-place(place_position,place_orientation)
