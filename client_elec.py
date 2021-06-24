@@ -127,9 +127,9 @@ robot_sub=RRN.SubscribeService(url)
 robot=robot_sub.GetDefaultClientWait(1)
 state_w = robot_sub.SubscribeWire("robot_state")
 
-tool_sub=RRN.SubscribeService(url_gripper)
-tool=tool_sub.GetDefaultClientWait(1)
-tool_state_w = tool_sub.SubscribeWire("tool_state")
+# tool_sub=RRN.SubscribeService(url_gripper)
+# tool=tool_sub.GetDefaultClientWait(1)
+# tool_state_w = tool_sub.SubscribeWire("tool_state")
 
 
 ##########Initialize robot constants
@@ -162,9 +162,12 @@ transformation=H42H3(H_ABB)
 
 
 
-# url='rr+tcp://192.168.50.166:11111?service=m1k'
-# m1k_obj = RRN.ConnectService(url)
-# m1k_obj.setmode('A', 'SVMI')
+url='rr+tcp://192.168.50.166:11111?service=m1k'
+m1k_obj = RRN.ConnectService(url)
+m1k_obj.StartSession()
+
+m1k_obj.setmode('A', 'SVMI')
+m1k_obj.setawgconstant('A',0.)
 
 #convert cognex frame to robot frame
 def conversion(x,y,height):
@@ -181,13 +184,12 @@ def pick(p,orientation):
 	q=inv.inv(p,orientation)
 	robot.jog_freespace(q, 0.5*np.ones(n), True)
 
-	tool.close()
+	# tool.close()
+	m1k_obj.setawgconstant('A',5.)
 	time.sleep(3)
-	# m1k_obj.setawgconstant('A',5)
-	# m1k_obj.read(1000)
-	# 
-	# m1k_obj.setawgconstant('A',5)
-	# m1k_obj.read(1000)
+	
+	
+
 
 	#move up
 	q=inv.inv(p+np.array([0,0,0.2]),orientation.tolist())
@@ -200,12 +202,11 @@ def place(p,orientation):
 	q=inv.inv(p,orientation)
 	robot.jog_freespace(q, np.ones(n), True)
 
-
-	tool.open()
+	m1k_obj.setawgconstant('A',0)
+	# tool.open()
 	time.sleep(2)
-	# m1k_obj.setawgconstant('A',0)
-	# time.sleep(5)
-	# m1k_obj.read(1000)
+
+	
 
 	#move up
 	q=inv.inv(p+np.array([0,0,0.2]),orientation)
@@ -261,7 +262,10 @@ def pp_fabric(temp_path,ROI):
 
 ##home
 robot.jog_freespace(inv.inv(home,eef_orientation), 0.5*np.ones(n), True)
-pp_fabric('client_yaml/template1.png',ROI2)
+# pp_fabric('client_yaml/template1.png',ROI2)
 
 pp_fabric('client_yaml/template2.png',ROI1)
 
+
+
+m1k_obj.EndSession()
