@@ -155,7 +155,7 @@ eef_angle=np.pi/2.
 eef_orientation=R_ee.R_ee(np.pi)
 place_orientation=R_ee.R_ee(np.pi)
 fabric_position=np.array([-0.55,0.6,0.0])
-place_position=np.array([0.,0.7,0.02])
+place_position=np.array([0.,0.7,0.005])
 place_offset=[0,0.02,0]	#offset wrt bottom fabric, [orientation angle, distance, placing orientation]
 
 transformation=H42H3(H_ABB)
@@ -204,13 +204,13 @@ def place(p,orientation):
 
 	m1k_obj.setawgconstant('A',0)
 	# tool.open()
-	time.sleep(2)
+	time.sleep(600)
 
 	
 
 	#move up
 	q=inv.inv(p+np.array([0,0,0.2]),orientation)
-	robot.jog_freespace(q, 0.5*np.ones(n), True)
+	robot.jog_freespace(q, 0.2*np.ones(n), True)
 
 	time.sleep(5)
 
