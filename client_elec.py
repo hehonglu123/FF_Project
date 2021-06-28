@@ -155,6 +155,9 @@ eef_angle=np.pi/2.
 eef_orientation=R_ee.R_ee(np.pi)
 place_orientation=R_ee.R_ee(np.pi)
 fabric_position=np.array([-0.55,0.6,0.0])
+pick_position1=np.array([-0.51, 0.65, 0.])
+pick_position2=np.array([0.51, 0.65, 0.002])
+
 place_position=np.array([0.,0.7,0.005])
 place_offset=[0,0.02,0]	#offset wrt bottom fabric, [orientation angle, distance, placing orientation]
 
@@ -218,7 +221,7 @@ def place(p,orientation):
 	
 
 
-def pp_fabric(temp_path,ROI):
+def pp_fabric(temp_path,pick_position,ROI):
 	global current_frame
 	avg_color,template=read_template(temp_path)
 	if (not current_frame is None):
@@ -254,17 +257,26 @@ def pp_fabric(temp_path,ROI):
 		# cv2.imshow("Image",current_frame)
 		# cv2.waitKey(0)
 
-	p_robot=conversion(p[0],p[1],fabric_position[-1])
+	p_fabric=conversion(p[0],p[1],fabric_position[-1])
 
-	pick(p_robot,R_ee.R_ee(np.pi))	 
-	place(place_position,place_orientation)
+	#alwasy picking at fixed position
+	pick(pick_position,R_ee.R_ee(np.pi))	 
+	#fix difference in placing
+	# print(place_position+(pick_position-p_fabric))
+	place(place_position+(pick_position-p_fabric),R_ee.R_ee(np.pi-np.radians(angle)))
+
 
 
 ##home
 robot.jog_freespace(inv.inv(home,eef_orientation), 0.5*np.ones(n), True)
-# pp_fabric('client_yaml/template1.png',ROI2)
 
-pp_fabric('client_yaml/template2.png',ROI1)
+
+try:
+	pp_fabric('client_yaml/template1.png',pick_position2,ROI2)
+
+	# pp_fabric('client_yaml/template2.png',pick_position1,ROI1)
+except:
+	m1k_obj.EndSession()
 
 
 
