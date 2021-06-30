@@ -8,7 +8,7 @@ import numpy as np
   
 #Accept the names of the webcams and the nodename from command line
 parser = argparse.ArgumentParser(description="RR plug and play client")
-parser.add_argument("--tool-name",type=str)
+parser.add_argument("--tool-name",default='vacuum',type=str)
 args, _ = parser.parse_known_args()
 tool_name=args.tool_name
 
