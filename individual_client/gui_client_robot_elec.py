@@ -41,7 +41,9 @@ for serviceinfo2 in res:
 if url==None:
 	print('service not found')
 	sys.exit()
-
+#rpi relay
+tool_sub=RRN.SubscribeService('rr+tcp://192.168.50.115:22222?service=tool')
+tool=tool_sub.GetDefaultClientWait(1)
 
 #connect
 try:
@@ -103,7 +105,20 @@ def gripper_ctrl(m1k_obj):
 		gripper.configure(text='gripper on')
 	return
 
+def pin_ctrl(tool):
 
+	if pin.config('relief')[-1] == 'sunken':
+		tool.open()
+		pin.config(relief="raised")
+		pin.configure(bg='red')
+		pin.configure(text='pin up')
+
+	else:
+		tool.close()
+		pin.config(relief="sunken")
+		pin.configure(bg='green')
+		pin.configure(text='pin down')
+	return
 
 def move(n, robot_def,vel_ctrl,vd):
 	global jobid
@@ -174,6 +189,8 @@ backward=Button(top,text='backward')
 up=Button(top,text='up')
 down=Button(top,text='down')
 gripper=Button(top,text='gripper off',command=lambda: gripper_ctrl(m1k_obj),bg='red')
+pin=Button(top,text='pin up',command=lambda: pin_ctrl(tool),bg='red')
+
 
 left.bind('<ButtonPress-1>', lambda event: move(num_joints,robot_def,vel_ctrl,[0,.1,0]))
 right.bind('<ButtonPress-1>', lambda event: move(num_joints,robot_def,vel_ctrl,[0,-.1,0]))
@@ -198,6 +215,7 @@ backward.pack()
 up.pack()
 down.pack()
 gripper.pack()
+pin.pack()
 
 
 top.mainloop()

@@ -12,7 +12,9 @@ parser.add_argument("--tool-name",default='elec',type=str)
 args, _ = parser.parse_known_args()
 tool_name=args.tool_name
 
-
+#rpi relay
+tool_sub=RRN.SubscribeService('rr+tcp://192.168.50.115:22222?service=tool')
+tool=tool_sub.GetDefaultClientWait(1)
 
 url='rr+tcp://192.168.50.166:11111?service=m1k'
 m1k_obj = RRN.ConnectService(url)
@@ -24,21 +26,36 @@ m1k_obj.setawgconstant('A',0.)
 top=Tk()
 top.title(tool_name)
 jobid = None
-def gripper_ctrl1(m1k_obj):
 
-	if gripper1.config('relief')[-1] == 'sunken':
+def gripper_ctrl(m1k_obj):
+
+	if gripper.config('relief')[-1] == 'sunken':
 		m1k_obj.setawgconstant('A',0.)
-		gripper1.config(relief="raised")
-		gripper1.configure(bg='red')
-		gripper1.configure(text='gripper off')
+		gripper.config(relief="raised")
+		gripper.configure(bg='red')
+		gripper.configure(text='gripper off')
 
 	else:
 		m1k_obj.setawgconstant('A',5.)
-		gripper1.config(relief="sunken")
-		gripper1.configure(bg='green')
-		gripper1.configure(text='gripper on')
+		gripper.config(relief="sunken")
+		gripper.configure(bg='green')
+		gripper.configure(text='gripper on')
 	return
 
+def pin_ctrl(tool):
+
+	if pin.config('relief')[-1] == 'sunken':
+		tool.open()
+		pin.config(relief="raised")
+		pin.configure(bg='red')
+		pin.configure(text='pin up')
+
+	else:
+		tool.close()
+		pin.config(relief="sunken")
+		pin.configure(bg='green')
+		pin.configure(text='pin down')
+	return
 
 
 label = Label(top, fg = "black", justify=LEFT)
@@ -46,11 +63,12 @@ label.pack()
 
 
 
-gripper1=Button(top,text='gripper1 off',command=lambda: gripper_ctrl1(m1k_obj),bg='red')
+gripper=Button(top,text='gripper off',command=lambda: gripper_ctrl(m1k_obj),bg='red')
+pin=Button(top,text='pin up',command=lambda: pin_ctrl(tool),bg='red')
 
 
-gripper1.pack()
-
+gripper.pack()
+pin.pack()
 top.mainloop()
 
 m1k_obj.EndSession()

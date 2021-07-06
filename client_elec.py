@@ -127,9 +127,9 @@ robot_sub=RRN.SubscribeService(url)
 robot=robot_sub.GetDefaultClientWait(1)
 state_w = robot_sub.SubscribeWire("robot_state")
 
-# tool_sub=RRN.SubscribeService(url_gripper)
-# tool=tool_sub.GetDefaultClientWait(1)
-# tool_state_w = tool_sub.SubscribeWire("tool_state")
+tool_sub=RRN.SubscribeService(url_gripper)
+tool=tool_sub.GetDefaultClientWait(1)
+tool_state_w = tool_sub.SubscribeWire("tool_state")
 
 
 ##########Initialize robot constants
@@ -185,7 +185,7 @@ def pick(p,orientation):
 	robot.jog_freespace(q, 0.5*np.ones(n), True)
 
 	q=inv.inv(p,orientation)
-	robot.jog_freespace(q, 0.5*np.ones(n), True)
+	robot.jog_freespace(q, 0.2*np.ones(n), True)
 
 	# tool.close()
 	m1k_obj.setawgconstant('A',5.)
@@ -203,20 +203,20 @@ def place(p,orientation):
 	q=inv.inv(p+np.array([0,0,0.2]),orientation)
 	robot.jog_freespace(q, 0.5*np.ones(n), True)
 	q=inv.inv(p,orientation)
-	robot.jog_freespace(q, np.ones(n), True)
-
-	m1k_obj.setawgconstant('A',0)
-	# tool.open()
-	time.sleep(600)
-
-	
-
-	#move up
-	q=inv.inv(p+np.array([0,0,0.2]),orientation)
 	robot.jog_freespace(q, 0.2*np.ones(n), True)
 
-	time.sleep(5)
+	m1k_obj.setawgconstant('A',0)
+	tool.close()
 
+	#move up 1
+	q=inv.inv(p+np.array([0,0,0.03]),orientation)
+	robot.jog_freespace(q, 0.05*np.ones(n), True)
+	tool.open()
+	
+
+	#move up 2
+	q=inv.inv(p+np.array([0,0,0.2]),orientation)
+	robot.jog_freespace(q, 0.2*np.ones(n), True)
 
 	
 
@@ -268,6 +268,9 @@ def pp_fabric(temp_path,pick_position,ROI):
 
 
 ##home
+tool.open()
+
+
 robot.jog_freespace(inv.inv(home,eef_orientation), 0.5*np.ones(n), True)
 
 
