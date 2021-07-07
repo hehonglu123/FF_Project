@@ -41,20 +41,22 @@ for serviceinfo2 in res:
 if url==None:
 	print('service not found')
 	sys.exit()
-#rpi relay
-tool_sub=RRN.SubscribeService('rr+tcp://192.168.50.115:22222?service=tool')
-tool=tool_sub.GetDefaultClientWait(1)
 
-#connect
+#rpi relay
+try:
+	tool_sub=RRN.SubscribeService('rr+tcp://192.168.50.115:22222?service=tool')
+	tool=tool_sub.GetDefaultClientWait(1)
+except:
+	print('rpi relay not available')
+	pass
 try:
 	m1k_obj = RRN.ConnectService('rr+tcp://192.168.50.166:11111?service=m1k')
 	m1k_obj.StartSession()
 
 	m1k_obj.setmode('A', 'SVMI')
 	m1k_obj.setawgconstant('A',0.)
-
 except:
-	traceback.print_exc()
+	print('m1k not available')
 	pass
 
 

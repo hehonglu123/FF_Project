@@ -13,15 +13,21 @@ args, _ = parser.parse_known_args()
 tool_name=args.tool_name
 
 #rpi relay
-tool_sub=RRN.SubscribeService('rr+tcp://192.168.50.115:22222?service=tool')
-tool=tool_sub.GetDefaultClientWait(1)
+try:
+	tool_sub=RRN.SubscribeService('rr+tcp://192.168.50.115:22222?service=tool')
+	tool=tool_sub.GetDefaultClientWait(1)
+except:
+	print('rpi relay not available')
+	pass
+try:
+	m1k_obj = RRN.ConnectService('rr+tcp://192.168.50.166:11111?service=m1k')
+	m1k_obj.StartSession()
 
-url='rr+tcp://192.168.50.166:11111?service=m1k'
-m1k_obj = RRN.ConnectService(url)
-m1k_obj.StartSession()
-
-m1k_obj.setmode('A', 'SVMI')
-m1k_obj.setawgconstant('A',0.)
+	m1k_obj.setmode('A', 'SVMI')
+	m1k_obj.setawgconstant('A',0.)
+except:
+	print('m1k not available')
+	pass
 
 top=Tk()
 top.title(tool_name)
