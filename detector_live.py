@@ -61,7 +61,7 @@ R_realsense=np.array(realsense_param['R'])
 
 
 ###fabric template
-template=cv2.imread('client_yaml/template1_1.png',cv2.IMREAD_UNCHANGED)
+template=cv2.imread('client_yaml/template3.png',cv2.IMREAD_UNCHANGED)
 mask=np.where(template[:,:,-1]>0, 1, 0)
 #calc avg template color
 non_zeros=np.count_nonzero(template[:,:,-1])

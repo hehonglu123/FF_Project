@@ -49,6 +49,7 @@ try:
 except:
 	print('rpi relay not available')
 	pass
+
 try:
 	m1k_obj = RRN.ConnectService('rr+tcp://192.168.50.166:11111?service=m1k')
 	m1k_obj.StartSession()
@@ -92,16 +93,19 @@ n= len(robot.robot_info.joint_info)
 top=Tk()
 top.title(robot_name)
 jobid = None
-def gripper_ctrl(m1k_obj):
+
+def gripper_ctrl(tool):
 
 	if gripper.config('relief')[-1] == 'sunken':
 		m1k_obj.setawgconstant('A',0.)
+		# tool.setf_param('elec',RR.VarValue(False,'bool'))
 		gripper.config(relief="raised")
 		gripper.configure(bg='red')
 		gripper.configure(text='gripper off')
 
 	else:
 		m1k_obj.setawgconstant('A',5.)
+		# tool.setf_param('elec',RR.VarValue(True,'bool'))
 		gripper.config(relief="sunken")
 		gripper.configure(bg='green')
 		gripper.configure(text='gripper on')
@@ -122,6 +126,7 @@ def pin_ctrl(tool):
 		pin.configure(text='pin down')
 	return
 
+
 def move(n, robot_def,vel_ctrl,vd):
 	global jobid
 	try:
@@ -139,7 +144,7 @@ def move(n, robot_def,vel_ctrl,vd):
 
 		robot_pose=fwdkin(robot_def,q_cur.reshape((n,1)))
 		R_cur = robot_pose.R
-		ER=np.dot(R_cur,np.transpose(R_ee.R_ee(np.pi/2.)))
+		ER=np.dot(R_cur,np.transpose(R_ee.R_ee(0.)))
 		k,theta = R2rot(ER)
 		k=np.array(k,dtype=float)
 		s=np.sin(theta/2)*k         #eR2
