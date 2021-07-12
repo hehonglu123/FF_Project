@@ -121,19 +121,19 @@ robot_def=Robot(H,np.transpose(P),np.zeros(n))
 eef_angle=0.
 eef_orientation=R_ee.R_ee(0)
 place_orientation=R_ee.R_ee(0)
-pick_position=np.array([-0.49, 0.654, 0.135])
-discharge_position=np.array([0.62, 0.58, 0.14])
+pick_position=np.array([-0.5, 0.654, 0.135])
+discharge_position=np.array([0.58, 0.58, 0.143])
 
 place_position=np.array([0.0556,0.613,0.13])
 
 
 
-url='rr+tcp://192.168.50.166:11111?service=m1k'
-m1k_obj = RRN.ConnectService(url)
-m1k_obj.StartSession()
+# url='rr+tcp://192.168.50.166:11111?service=m1k'
+# m1k_obj = RRN.ConnectService(url)
+# m1k_obj.StartSession()
 
-m1k_obj.setmode('A', 'SVMI')
-m1k_obj.setawgconstant('A',0.)
+# m1k_obj.setmode('A', 'SVMI')
+# m1k_obj.setawgconstant('A',0.)
 
 
 def discharge(p,orientation):
@@ -146,7 +146,7 @@ def discharge(p,orientation):
 	q=inv.inv(p,orientation)
 	robot.jog_freespace(q, 0.1*np.ones(n), True)
 
-	time.sleep(10)
+	time.sleep(5)
 
 	#move up
 	q=inv.inv(p+np.array([0,0,0.2]),orientation.tolist())
@@ -155,17 +155,21 @@ def discharge(p,orientation):
 def pick(p,orientation):
 
 
+	
+
+
 	q=inv.inv(p+np.array([0,0,0.2]),orientation.tolist())
 	robot.jog_freespace(q, 0.3*np.ones(n), True)
 
+	tool.setf_param('elec',RR.VarValue(True,'bool'))
+	# m1k_obj.setawgconstant('A',5.)
 
 	#pick
 	q=inv.inv(p,orientation)
 	robot.jog_freespace(q, 0.1*np.ones(n), True)
 
-	# tool.setf_param('elec',RR.VarValue(True,'bool'))
-	m1k_obj.setawgconstant('A',5.)
-	time.sleep(3)
+	
+	time.sleep(5)
 	
 
 
@@ -185,8 +189,8 @@ def place(p,orientation):
 	robot.jog_freespace(q, 0.1*np.ones(n), True)
 
 	###turn off adhesion, pin down
-	m1k_obj.setawgconstant('A',0.)
-	# tool.setf_param('elec',RR.VarValue(False,'bool'))
+	# m1k_obj.setawgconstant('A',0.)
+	tool.setf_param('elec',RR.VarValue(False,'bool'))
 	tool.close()
 	time.sleep(2)
 	###pin up
@@ -200,8 +204,8 @@ def place(p,orientation):
 	
 
 ##pin up, adhesion off first
-# tool.setf_param('elec',RR.VarValue(False,'bool'))
-m1k_obj.setawgconstant('A',0.)
+tool.setf_param('elec',RR.VarValue(False,'bool'))
+# m1k_obj.setawgconstant('A',0.)
 tool.open()
 ##home
 robot.jog_freespace(inv.inv(home,eef_orientation), 0.3*np.ones(n), True)
@@ -213,9 +217,9 @@ try:
 
 			pick(place_position,R_ee.R_ee(eef_angle))
 			place(place_position,R_ee.R_ee(eef_angle))
-			m1k_obj.setawgconstant('A',0.)
+			# m1k_obj.setawgconstant('A',0.)
 
-			# tool.setf_param('elec',RR.VarValue(False,'bool'))
+			tool.setf_param('elec',RR.VarValue(False,'bool'))
 
 			discharge(discharge_position,R_ee.R_ee(eef_angle))
 
