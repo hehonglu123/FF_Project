@@ -124,7 +124,7 @@ place_orientation=R_ee.R_ee(0)
 pick_position=np.array([-0.5, 0.654, 0.135])
 discharge_position=np.array([0.58, 0.58, 0.143])
 
-place_position=np.array([0.0556,0.613,0.13])
+place_position=np.array([0.0556,0.613,0.148])
 
 
 
@@ -216,7 +216,9 @@ try:
 		try:
 
 			pick(place_position,R_ee.R_ee(eef_angle))
+			
 			place(place_position,R_ee.R_ee(eef_angle))
+			# time.sleep(5)
 			# m1k_obj.setawgconstant('A',0.)
 
 			tool.setf_param('elec',RR.VarValue(False,'bool'))

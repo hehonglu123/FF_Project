@@ -97,15 +97,15 @@ jobid = None
 def gripper_ctrl(tool):
 
 	if gripper.config('relief')[-1] == 'sunken':
-		m1k_obj.setawgconstant('A',0.)
-		# tool.setf_param('elec',RR.VarValue(False,'bool'))
+		# m1k_obj.setawgconstant('A',0.)
+		tool.setf_param('elec',RR.VarValue(False,'bool'))
 		gripper.config(relief="raised")
 		gripper.configure(bg='red')
 		gripper.configure(text='gripper off')
 
 	else:
-		m1k_obj.setawgconstant('A',5.)
-		# tool.setf_param('elec',RR.VarValue(True,'bool'))
+		# m1k_obj.setawgconstant('A',5.)
+		tool.setf_param('elec',RR.VarValue(True,'bool'))
 		gripper.config(relief="sunken")
 		gripper.configure(bg='green')
 		gripper.configure(text='gripper on')
@@ -195,7 +195,7 @@ forward=Button(top,text='forward')
 backward=Button(top,text='backward')
 up=Button(top,text='up')
 down=Button(top,text='down')
-gripper=Button(top,text='gripper off',command=lambda: gripper_ctrl(m1k_obj),bg='red')
+gripper=Button(top,text='gripper off',command=lambda: gripper_ctrl(tool),bg='red')
 pin=Button(top,text='pin up',command=lambda: pin_ctrl(tool),bg='red')
 
 
