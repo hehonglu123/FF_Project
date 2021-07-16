@@ -124,7 +124,7 @@ place_orientation=R_ee.R_ee(0)
 pick_position=np.array([-0.5, 0.654, 0.135])
 discharge_position=np.array([0.58, 0.58, 0.143])
 
-place_position=np.array([0.0556,0.613,0.148])
+place_position=np.array([0.0556,0.613,0.14])
 
 
 
@@ -169,7 +169,7 @@ def pick(p,orientation):
 	robot.jog_freespace(q, 0.1*np.ones(n), True)
 
 	
-	time.sleep(5)
+	time.sleep(2)
 	
 
 
@@ -223,7 +223,7 @@ try:
 
 			tool.setf_param('elec',RR.VarValue(False,'bool'))
 
-			discharge(discharge_position,R_ee.R_ee(eef_angle))
+			# discharge(discharge_position,R_ee.R_ee(eef_angle))
 
 		except:
 			m1k_obj.EndSession()
