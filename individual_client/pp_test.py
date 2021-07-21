@@ -124,7 +124,7 @@ place_orientation=R_ee.R_ee(0)
 pick_position=np.array([-0.5, 0.654, 0.135])
 discharge_position=np.array([0.58, 0.58, 0.143])
 
-place_position=np.array([0.0556,0.613,0.14])
+place_position=np.array([0.0556,0.613,0.145])
 
 
 

@@ -158,12 +158,12 @@ transformation=H42H3(H_ABB)
 
 
 
-url='rr+tcp://192.168.50.166:11111?service=m1k'
-m1k_obj = RRN.ConnectService(url)
-m1k_obj.StartSession()
+# url='rr+tcp://192.168.50.166:11111?service=m1k'
+# m1k_obj = RRN.ConnectService(url)
+# m1k_obj.StartSession()
 
-m1k_obj.setmode('A', 'SVMI')
-m1k_obj.setawgconstant('A',0.)
+# m1k_obj.setmode('A', 'SVMI')
+# m1k_obj.setawgconstant('A',0.)
 
 #convert cognex frame to robot frame
 def conversion(x,y,height):
@@ -184,7 +184,7 @@ def pick(p,orientation,v=2.5):
 	robot.jog_freespace(q, 0.3*np.ones(n), True)
 
 	##neutralize
-	m1k_obj.setawgconstant('A',0)
+	# m1k_obj.setawgconstant('A',0)
 	q=inv.inv(p,orientation)
 	robot.jog_freespace(q, 0.1*np.ones(n), True)
 
@@ -199,7 +199,7 @@ def pick(p,orientation,v=2.5):
 	robot.jog_freespace(q, 0.1*np.ones(n), True)
 
 	# tool.setf_param('elec',RR.VarValue(True,'bool'))
-	m1k_obj.setawgconstant('A',5.)
+	# m1k_obj.setawgconstant('A',5.)
 	time.sleep(3)
 
 	# tool.setf_param('elec',RR.VarValue(False,'bool'))
@@ -216,7 +216,7 @@ def place(p,orientation):
 	q=inv.inv(p+np.array([0,0,0.2]),orientation)
 	robot.jog_freespace(q, 0.2*np.ones(n), True)
 
-	m1k_obj.setawgconstant('A',0.)
+	# m1k_obj.setawgconstant('A',0.)
 	#move down 
 	q=inv.inv(p+np.array([0,0,0.016]),orientation)
 	robot.jog_freespace(q, 0.1*np.ones(n), True)
@@ -287,7 +287,7 @@ def pp_fabric(temp_path,pick_position,ROI,v=2.5):
 
 ##pin up, adhesion off first
 # tool.setf_param('elec',RR.VarValue(False,'bool'))
-m1k_obj.setawgconstant('A',0.)
+# m1k_obj.setawgconstant('A',0.)
 tool.open()
 ##home
 robot.jog_freespace(inv.inv(home,eef_orientation), 0.5*np.ones(n), True)
@@ -302,9 +302,9 @@ try:
 
 	
 except:
-	m1k_obj.EndSession()
+	# m1k_obj.EndSession()
 	traceback.print_exc(0)
 
 
 
-m1k_obj.EndSession()
+# m1k_obj.EndSession()
