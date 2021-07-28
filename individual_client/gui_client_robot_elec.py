@@ -104,7 +104,7 @@ def gripper_ctrl(m1k_obj):
 		gripper.configure(text='gripper off')
 
 	else:
-		m1k_obj.setawgconstant('A',4.9)
+		m1k_obj.setawgconstant('A',5.)
 		# tool.setf_param('elec',RR.VarValue(True,'bool'))
 		gripper.config(relief="sunken")
 		gripper.configure(bg='green')
