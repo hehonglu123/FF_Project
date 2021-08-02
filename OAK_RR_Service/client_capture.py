@@ -31,7 +31,7 @@ def main():
 
 
     current_frame=ImageToMat(cam.capture_frame())
-    cv2.imwrite('image_data/fabric.jpg',current_frame)
+    cv2.imwrite('image_data/wool.jpg',current_frame)
 
 if __name__ == '__main__':
     main()
