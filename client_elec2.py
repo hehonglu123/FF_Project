@@ -138,7 +138,7 @@ robot_def=Robot(H,np.transpose(P),np.zeros(n))
 eef_angle=0.
 eef_orientation=R_ee.R_ee(0)
 place_orientation=R_ee.R_ee(0)
-pick_position1=np.array([-0.53749414, 0.69276434, 0.13])
+pick_position1=np.array([-0.53749414, 0.69276434, 0.131])
 pick_position2=np.array([0.614, 0.54770172, 0.13778046])
 
 place_position=np.array([0.04843907,0.59446204,0.14366202])
@@ -172,28 +172,29 @@ def check_offset(template):
 	robot.jog_freespace(inv.inv(home+np.array([0,0,0.05]),eef_orientation), 0.1*np.ones(n), True)
 
 	q=[ 1.49419622,  0.78283241, -0.14415147, -0.1775408,  -0.64601098,  1.69674787]
-	robot.jog_freespace(q, 0.1*np.ones(n), True)
+	robot.jog_freespace(q, 0.2*np.ones(n), True)
 	### fabric detection
 	global current_frame
 	if (not current_frame is None):
 		roi_frame=current_frame[ROI[0][0]:ROI[0][1],ROI[1][0]:ROI[1][1]]
 
 	
-		angle,center_temp=match_w_ori(roi_frame,template,[0],'edge')
+		angle,center=match_w_ori(roi_frame,template,[0],'edge')
 
 		center=np.flip(center+np.flip(ROI[:,0]))
 
 		#draw dots	
 		cv2.circle(current_frame, tuple(np.flip(center).astype(int)), 10,(0,0,255), -1)		
-		current_frame = cv2.putText(current_frame, str(p[0])+','+str(p[1])+' ,'+str(angle), org = tuple(np.flip(center).astype(int)), 
-	           fontScale = 1, fontFace=cv2.FONT_HERSHEY_COMPLEX_SMALL,color = (255, 0, 0), thickness = 2, lineType=cv2.LINE_AA)
-
 
 		current_frame = cv2.rectangle(current_frame, (ROI[1][0],ROI[0][0]), (ROI[1][1],ROI[0][1]), color = (255, 0, 0), thickness=2)
 
 
 		cv2.imshow("Image",current_frame)
 		cv2.waitKey(0)
+
+	robot.jog_freespace(inv.inv(home+np.array([0,0,0.05]),eef_orientation), 0.2*np.ones(n), True)
+
+	return angle, center-ROI[:,0]
 
 
 def pick(p,orientation,v=5.):
@@ -218,8 +219,8 @@ def pick(p,orientation,v=5.):
 	robot.jog_freespace(q, 0.1*np.ones(n), True)
 
 	# tool.setf_param('elec',RR.VarValue(True,'bool'))
-	m1k_obj.setawgconstant('A',v)
-	time.sleep(3)
+	m1k_obj.setawgconstant('A',5.)
+	time.sleep(5)
 
 	# tool.setf_param('elec',RR.VarValue(False,'bool'))
 	
@@ -235,13 +236,14 @@ def place(p,orientation):
 	q=inv.inv(p+np.array([0,0,0.2]),orientation)
 	robot.jog_freespace(q, 0.2*np.ones(n), True)
 
-	# m1k_obj.setawgconstant('A',0.)
+	
 	#move down 
 	q=inv.inv(p+np.array([0,0,0.016]),orientation)
 	robot.jog_freespace(q, 0.1*np.ones(n), True)
 
 	###turn off adhesion, pin down
 	# tool.setf_param('elec',RR.VarValue(False,'bool'))
+	m1k_obj.setawgconstant('A',0.)
 	tool.close()
 	time.sleep(5)
 	###pin up
@@ -261,12 +263,15 @@ def pp_fabric(temp_path,pick_position,v=5.):
 	###alwasy picking at fixed position
 	pick(pick_position,R_ee.R_ee(eef_angle),v)
 
-	angle,offset=check_offset(read_template(temp_path))
+	avg_color,template=read_template(temp_path)
+	angle,offset=check_offset(template)
 
 	# ###fix difference in placing
 	# # print(place_position+(pick_position-p_fabric))
 	# place(place_position+offset,R_ee.R_ee(eef_angle-np.radians(angle)))
-	# discharge()
+
+	place(place_position,R_ee.R_ee(eef_angle-np.radians(angle)))
+	discharge()
 
 
 ##pin up, adhesion off first
@@ -276,11 +281,11 @@ m1k_obj.setawgconstant('A',0.)
 
 
 # ##home
-robot.jog_freespace(inv.inv(home,eef_orientation), 0.1*np.ones(n), True)
+robot.jog_freespace(inv.inv(home,eef_orientation), 0.2*np.ones(n), True)
 
 
 try:
-	pp_fabric('client_yaml/template0.png',pick_position1,v=5.)
+	pp_fabric('client_yaml/wool_temp.png',pick_position1,v=5.)
 
 	# pp_fabric('client_yaml/template1.png',pick_position1,ROI1,v=5.)
 

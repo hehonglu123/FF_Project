@@ -10,7 +10,7 @@ ROI=np.array([[29,690],[147,1252]])	#ROI [[r1,r2],[c1,c2]]
 #template size
 template_size=360*1.414
 #load template
-template=cv2.imread('image_data/wool.png',cv2.IMREAD_UNCHANGED)
+template=cv2.imread('image_data/wool_temp.png',cv2.IMREAD_UNCHANGED)
 mask=np.where(template[:,:,-1]>0, 1, 0)
 #calc avg template color
 non_zeros=np.count_nonzero(template[:,:,-1])
@@ -20,7 +20,7 @@ R=np.sum(template[:,:,2]*mask[:,:])/non_zeros
 avg_color=[B,G,R]
 
 #load test image
-test_image=cv2.imread('image_data/wool.jpg',cv2.IMREAD_UNCHANGED)
+test_image=cv2.imread('image_data/interlining.jpg',cv2.IMREAD_UNCHANGED)
 
 # try:
 # 	#test test image within ROI
