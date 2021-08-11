@@ -7,7 +7,7 @@ from plate_calib import *
 from fabric_detection import detection
 
 
-image=cv2.imread('image_data/military_pcb.jpg',0)
+image=cv2.imread('image_data/military_pcb2.jpg',0)
 ROI, ppu=preprocess(image)
 ROI[1][0]=400
 
@@ -20,10 +20,11 @@ with open('../client_yaml/fabric.yaml') as file:
 template_ppu=len(template)*len(template[0])/(dimension[0]*dimension[1])
 
 scale=ppu/template_ppu
+
 template=cv2.resize(template,tuple((np.sqrt(scale)*np.flip(np.array(template.shape[:2]))).astype(int)))
 
 #convert to binary
-template_binary= cv2.threshold(template, 50, 255, cv2.THRESH_BINARY)[1]
+template_binary= cv2.threshold(template, 40, 255, cv2.THRESH_BINARY)[1]
 
 test_region=image[ROI[0][0]:ROI[0][1],ROI[1][0]:ROI[1][1]]
 angle,center2=match_w_ori(test_region,template_binary,[0],'edge')
