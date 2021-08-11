@@ -177,9 +177,9 @@ def bw_temp_match2(image,template):		#binary based match with alpha channel
 
 
 def edge_temp_match(image,template):	#edge based match with alpha channel
-	# cv2.imshow("image", image)
-	# cv2.imshow("template", template)
-	# cv2.waitKey(0)
+	cv2.imshow("image", image)
+	cv2.imshow("template", template)
+	cv2.waitKey(0)
 
 	
 	#matching
@@ -260,7 +260,7 @@ def match_w_ori(image,template,orientation,alg='hsva'):
 
 	orientation=round(np.degrees(orientation)[0])
 
-	tEdged = cv2.Canny(template, 50, 200,apertureSize =3)
+	tEdged = template#cv2.Canny(template, 50, 200,apertureSize =3)
 	edged = bold_edge(cv2.Canny(image, 50, 200,apertureSize =3))
 	# image_contour=contour(image)
 	# template_contour=contour(template)
@@ -270,13 +270,14 @@ def match_w_ori(image,template,orientation,alg='hsva'):
 	# cv2.imshow("template", tEdged)
 	# cv2.waitKey(0)
 	for i in range(0,181,180):
-		for angle in range(orientation+i-5,orientation+i+5):
-			
+		for angle in range(orientation+i-10,orientation+i+10):
 			if alg=='contour':
 				template_rt=rotate_image(template_contour,angle,0)
 				min_val, min_loc=temp_alg['contour'](image_contour,template_rt)
 			elif alg=='edge':
 				template_rt=rotate_image(tEdged,angle,[0,0,0])
+				###make template binary
+				template_rt=cv2.threshold(template_rt, 50, 255, cv2.THRESH_BINARY)[1]
 				min_val, min_loc=temp_alg['edge'](edged,template_rt)
 			else:
 				template_rt=rotate_image(template,angle,[0,0,0,0])
@@ -290,10 +291,6 @@ def match_w_ori(image,template,orientation,alg='hsva'):
 				w=len(template_rt[0])
 				h=len(template_rt)
 				loc=(min_loc[0]+w/2,min_loc[1]+h/2)
-
-	template=cv2.cvtColor(template,cv2.COLOR_BGRA2BGR)
-	template[np.where((template==[0,0,0]).all(axis=2))] = BACKGROUND
-	template_rt=rotate_image(template,act_angle,BACKGROUND)
 
 
 
