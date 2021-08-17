@@ -15,7 +15,7 @@ sys.path.append('../toolbox')
 inv = import_module(robot_name+'_ik')
 R_ee = import_module('R_'+robot_name)
 
-url='rr+tcp://localhost:22222?service=robot'
+url='rr+tcp://[fe80::16ff:3758:dcde:4e15]:58651/?nodeid=16a22280-7458-4ce9-bd4d-29b55782a2e1&service=robot'
 robot_sub=RRN.SubscribeService(url)
 robot=robot_sub.GetDefaultClientWait(1)
 
@@ -46,10 +46,11 @@ print(robot_state_wire[1].joint_position)
 # R=R_ee.R_ee_tilt_y(np.pi/4)
 
 # q=inv.inv(np.array([-0.6,0.3,0.9])+np.array([0.2,0,0]),R)
-q=[ 1.55299516,  1.83282743, -3.02658648,  0.00757938, -0.32599355,  2.89831902]
+q=[0., -0.30016452,  1.00308302, 0., -0.64005821,  0.]
 
-print(q)
-robot.jog_freespace(q, np.ones(num_joints), True)
+
+# print(q)
+robot.jog_freespace(q, 0.05*np.ones(num_joints), True)
 
 
 

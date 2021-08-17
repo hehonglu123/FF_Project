@@ -9,6 +9,8 @@ from fabric_detection import detection
 
 image=cv2.imread('image_data/military_pcb2.jpg',0)
 ROI, ppu=preprocess(image)
+
+ppu=1.9
 ROI[1][0]=400
 
 #load template
@@ -27,7 +29,7 @@ template=cv2.resize(template,tuple((np.sqrt(scale)*np.flip(np.array(template.sha
 template_binary= cv2.threshold(template, 40, 255, cv2.THRESH_BINARY)[1]
 
 test_region=image[ROI[0][0]:ROI[0][1],ROI[1][0]:ROI[1][1]]
-angle,center2=match_w_ori(test_region,template_binary,[0],'edge')
+angle,center2=match_w_ori(test_region,template_binary,0.,'edge')
 center2=np.flip(center2+np.flip(ROI[:,0]))
 
 

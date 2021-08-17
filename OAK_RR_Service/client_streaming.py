@@ -66,7 +66,7 @@ def new_frame(pipe_ep):
         
         image=pipe_ep.ReceivePacket()
         #Convert the packet to an image and set the global variable
-        current_frame=ImageToMat(image)
+        current_frame=cv2.rotate(ImageToMat(image), cv2.ROTATE_180)
 
         return
 
