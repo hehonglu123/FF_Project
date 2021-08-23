@@ -1,5 +1,5 @@
 import numpy as np
-import cv2, time
+import cv2, time, traceback
 BACKGROUND=[170,166,161]
 
 
@@ -200,7 +200,7 @@ def contour_temp_match(image,template):
 	return min_val, min_loc
 
 
-def bold_edge(image):
+def bold_edge(image,num_pix=4):
 	image_bold= image.copy()
 	for r in range(len(image)):
 		for c in range(len(image[0])):
@@ -210,7 +210,7 @@ def bold_edge(image):
 			# 	continue
 			#bold remaining edges 
 			if image[r][c]!=0:
-				image_bold[r-4:r+4,c-4:c+4]=255*np.ones(image_bold[r-4:r+4,c-4:c+4].shape)
+				image_bold[r-num_pix:r+num_pix,c-num_pix:c+num_pix]=255*np.ones(image_bold[r-num_pix:r+num_pix,c-num_pix:c+num_pix].shape)
 	return image_bold
 
 
@@ -254,14 +254,25 @@ def match(image,template,alg='hsva'):
 		# print(angle,min_loc,min_val)
 	return act_angle,loc
 
-def match_w_ori(image,template,orientation,alg='hsva'):
+def match_w_ori(image,template,orientation,alg='hsva',edge_raw=None):
 	min_error=9999999999
 	act_angle=0
 
 	orientation=round(np.degrees(orientation))
 
-	tEdged = template#cv2.Canny(template, 50, 200,apertureSize =3)
-	edged = bold_edge(cv2.Canny(image, 50, 200,apertureSize =3))
+	if alg=='edge':
+
+		tEdged = template#cv2.Canny(template, 50, 200,apertureSize =3)
+		image_edge=cv2.Canny(image, 50, 200,apertureSize =3)
+		try:
+			image_edge_tmp=cv2.subtract(image_edge,edge_raw)
+			# cv2.imshow("image_sub", image_edge_tmp)
+			# cv2.imshow("image", image_edge)
+			# cv2.waitKey(0)
+		except:
+			traceback.print_exc()
+			pass
+		edged = bold_edge(image_edge)
 	# image_contour=contour(image)
 	# template_contour=contour(template)
 	# template_contour=template_contour[3:-3,3:-3]
@@ -270,7 +281,7 @@ def match_w_ori(image,template,orientation,alg='hsva'):
 	# cv2.imshow("template", tEdged)
 	# cv2.waitKey(0)
 	for i in range(0,181,180):
-		for angle in range(orientation+i-10,orientation+i+10):
+		for angle in range(orientation+i-5,orientation+i+5):
 			if alg=='contour':
 				template_rt=rotate_image(template_contour,angle,0)
 				min_val, min_loc=temp_alg['contour'](image_contour,template_rt)

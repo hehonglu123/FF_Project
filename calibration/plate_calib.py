@@ -6,13 +6,37 @@ import numpy as np
 from importlib import import_module
 robot_name='abb'
 sys.path.append('../toolbox/')
+from vel_emulate_sub import EmulatedVelocityControl
 from general_robotics_toolbox import *
 from cv2 import aruco
-
+from temp_match import bold_edge
 
 
 inv = import_module(robot_name+'_ik')
 R_ee = import_module('R_'+robot_name)
+
+
+def jog_joint(q,max_v):
+	global vel_ctrl
+	#enable velocity mode
+	vel_ctrl.enable_velocity_mode()
+
+	diff=q-vel_ctrl.joint_position()
+	time_temp=np.linalg.norm(diff)/max_v
+
+	qdot_temp=np.clip((1.15*diff)/time_temp,-max_v,max_v)
+
+	while np.linalg.norm(q-vel_ctrl.joint_position())>0.01:
+		
+		diff=q-vel_ctrl.joint_position()
+		qdot=np.where(np.abs(diff) > 0.05, qdot_temp, diff)
+
+		vel_ctrl.set_velocity_command(qdot)
+
+
+	vel_ctrl.set_velocity_command(np.zeros((6,)))
+	vel_ctrl.disable_velocity_mode() 
+
 
 def aruco_process(frame):
 	aruco_dict = aruco.Dictionary_get(aruco.DICT_ARUCO_ORIGINAL)
@@ -30,7 +54,7 @@ def PolyArea2D(pts):
 def preprocess(image):
 	tag_centroids, ids = aruco_process(image)
 	ROI=np.array([[np.min(tag_centroids[:,:,1]),np.max(tag_centroids[:,:,1])],[np.min(tag_centroids[:,:,0]),np.max(tag_centroids[:,:,0])]]).astype(int)		#[[r1,r2],[c1,c2]]
-	ppu=PolyArea2D(np.squeeze(tag_centroids,axis=1))/358800		#pixel area / plate area in mm
+	ppu=PolyArea2D(np.squeeze(tag_centroids,axis=1))/358800		#pixel area / plate area in mm^2
 	
 	return ROI,ppu
 
@@ -56,10 +80,12 @@ def new_frame(pipe_ep):
 
         return
         
+def edge_detection(image):
+	return cv2.Canny(image, 50, 200,apertureSize =3)
 def main():
-
+	global vel_ctrl
 	###read yamls
-	with open(r'testbed.yaml') as file:
+	with open(r'../client_yaml/testbed.yaml') as file:
 		testbed_yaml = yaml.load(file, Loader=yaml.FullLoader)
 
 	home=testbed_yaml['home']
@@ -88,7 +114,8 @@ def main():
 	robot_sub=RRN.SubscribeService('rr+tcp://[fe80::16ff:3758:dcde:4e15]:58651/?nodeid=16a22280-7458-4ce9-bd4d-29b55782a2e1&service=robot')
 	robot=robot_sub.GetDefaultClientWait(1)
 	state_w = robot_sub.SubscribeWire("robot_state")
-
+	cmd_w=robot_sub.SubscribeWire('position_command')
+	vel_ctrl = EmulatedVelocityControl(robot,state_w, cmd_w)
 
 	##########Initialize robot constants
 	robot_const = RRN.GetConstants("com.robotraconteur.robotics.robot", robot)
@@ -98,41 +125,54 @@ def main():
 
 	robot.command_mode = halt_mode
 	time.sleep(0.1)
-	robot.command_mode = jog_mode
+	robot.command_mode = position_mode
 
 	###temp, lift up
 	q=state_w.InValue.joint_position
 	pose=inv.fwd(q)
-	robot.jog_freespace(inv.inv([pose.p[0],pose.p[1],0.6],pose.R), 0.3*np.ones(6), True)
-
+	# robot.jog_freespace(inv.inv([pose.p[0],pose.p[1],0.6],pose.R), 0.3*np.ones(6), True)
+	jog_joint(inv.inv([pose.p[0],pose.p[1],0.6],pose.R), 0.3)
 
 
 	##home
-	robot.jog_freespace(inv.inv(home,R_ee.R_ee(0)), 0.3*np.ones(6), True)
-
+	# robot.jog_freespace(inv.inv(home,R_ee.R_ee(0)), 0.3*np.ones(6), True)
+	jog_joint(inv.inv(home,R_ee.R_ee(0)), 0.3)
 
 	global current_frame
 
 	q=inv.inv(vision_p+np.array([0.15,0,0.15]),R_ee.R_ee(0))
-	robot.jog_freespace(q, 0.3*np.ones(6), True)
+	# robot.jog_freespace(q, 0.3*np.ones(6), True)
+	jog_joint(q, 0.3)
 
-	robot.jog_freespace(vision_q, 0.2*np.ones(6), True)
-
-	cv2.imwrite('plate_calib.jpg', current_frame)
+	# robot.jog_freespace(vision_q, 0.2*np.ones(6), True)
+	jog_joint(vision_q, 0.2)
+	###capture image at calib configuration and process image
+	cv2.imwrite('../client_yaml/plate_calib.jpg', current_frame)
 	ROI, ppu=preprocess(current_frame)
 
-
+	###go back to normal config async
 	q=inv.inv(vision_p+np.array([0.15,0,0.15]),R_ee.R_ee(0))
-	robot.jog_freespace(q, 0.3*np.ones(6), False)
+	# robot.jog_freespace(q, 0.3*np.ones(6), False)
+	jog_joint(q,0.3)
+
+	###edge background	
+	roi_frame=cv2.cvtColor(image[ROI[0]:ROI[1],ROI[2]:ROI[3]], cv2.COLOR_BGR2GRAY)
+	edged=bold_edge(edge_detection(roi_frame),num_pix=2)
+	cv2.imwrite('../client_yaml/plate_edge.jpg', edged)
 
 	vision_yaml={'ROI':ROI.flatten().tolist(),'ppu':ppu.item()}
-	with open('vision.yaml', 'w') as file:
+	with open('../client_yaml/vision.yaml', 'w') as file:
 		yaml.dump(vision_yaml, file)
 	
 
 def main2():
-	image=cv2.imread('plate_calib.jpg')
-	preprocess(image)
+	image=cv2.imread('../client_yaml/plate_calib.jpg')
+	ROI,ppu=preprocess(image)
+	ROI=ROI.flatten().tolist()
+	print(ROI)
+	roi_frame=cv2.cvtColor(image[ROI[0]:ROI[1],ROI[2]:ROI[3]], cv2.COLOR_BGR2GRAY)
+	edged=bold_edge(edge_detection(roi_frame),num_pix=2)
+	cv2.imwrite('../client_yaml/plate_edge.jpg', edged)
 
 if __name__ == '__main__':
     main()

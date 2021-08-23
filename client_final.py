@@ -1,21 +1,18 @@
 #!/usr/bin/python3
 from RobotRaconteur.Client import *
 import sys, os, time, argparse, traceback, cv2, copy, yaml
-from qpsolvers import solve_qp
 import numpy as np
 from importlib import import_module
 robot_name='abb'
 sys.path.append('toolbox/')
 from vel_emulate_sub import EmulatedVelocityControl
 from general_robotics_toolbox import *    
-from pixel2coord import *
-from fabric_detection import detection
 from temp_match import *
 
 inv = import_module(robot_name+'_ik')
 R_ee = import_module('R_'+robot_name)
 
-def jog_joint(robot,q,max_v):
+def jog_joint(q,max_v):
 	global vel_ctrl
 	#enable velocity mode
 	vel_ctrl.enable_velocity_mode()
@@ -23,7 +20,7 @@ def jog_joint(robot,q,max_v):
 	diff=q-vel_ctrl.joint_position()
 	time_temp=np.linalg.norm(diff)/max_v
 
-	qdot_temp=np.clip((diff)/time_temp,-max_v,max_v)
+	qdot_temp=np.clip((1.15*diff)/time_temp,-max_v,max_v)
 
 	while np.linalg.norm(q-vel_ctrl.joint_position())>0.01:
 		
@@ -31,7 +28,6 @@ def jog_joint(robot,q,max_v):
 		qdot=np.where(np.abs(diff) > 0.05, qdot_temp, diff)
 
 		vel_ctrl.set_velocity_command(qdot)
-		# vel_ctrl.set_velocity_command(np.where(np.abs(qdot) > 0.01, qdot, 0.1*qdot))
 
 
 	vel_ctrl.set_velocity_command(np.zeros((6,)))
@@ -41,7 +37,7 @@ def jog_joint(robot,q,max_v):
 
 def read_template(im_path,dimension,ppu):
 	#load template
-	template=cv2.flip(cv2.imread(im_path, cv2.IMREAD_GRAYSCALE),0)
+	template=cv2.imread(im_path, cv2.IMREAD_GRAYSCALE)
 	
 	template_ppu=len(template)*len(template[0])/(dimension[0]*dimension[1])
 
@@ -63,8 +59,7 @@ current_frame=None
 
 def new_frame(pipe_ep):
     global current_frame, now
-    # print('fps= ', 1/(time.time()-now))
-    now=time.time()
+
     #Loop to get the newest frame
     while (pipe_ep.Available > 0):
         #Receive the packet
@@ -76,20 +71,20 @@ def new_frame(pipe_ep):
         return
 
 
-def pick(robot,pose,tool,m1k_obj,v):
+def pick(p,R,v):
+	global robot, tool, m1k_obj
 	print('go picking')
-	R=R_ee.R_ee(pose[-1])
-	q=inv.inv(pose[:-1]+np.array([0,0,0.5]),R)
+	q=inv.inv(p+np.array([0,0,0.5]),R)
 	jog_joint(robot,q, 0.3)
 
 	#move down 
-	q=inv.inv(pose[:-1]+np.array([0,0,0.2]),R)
+	q=inv.inv(p+np.array([0,0,0.2]),R)
 	jog_joint(robot,q, 0.1)
-	q=inv.inv(pose[:-1]+np.array([0,0,0.1]),R)
-	jog_joint(robot,q, 0.1)
+	# q=inv.inv(p+np.array([0,0,0.1]),R)
+	# jog_joint(robot,q, 0.1)
 
 	#pick
-	q=inv.inv(pose[:-1],R)
+	q=inv.inv(p,R)
 	jog_joint(robot,q,0.05)
 
 	m1k_obj.setawgconstant('A',v)
@@ -97,18 +92,19 @@ def pick(robot,pose,tool,m1k_obj,v):
 	
 
 	#move up
-	q=inv.inv(pose[:-1]+np.array([0,0,0.1]),R)
+	q=inv.inv(p+np.array([0,0,0.1]),R)
 	jog_joint(robot,q, 0.1)
-	q=inv.inv(pose[:-1]+np.array([0,0,0.2]),R)
-	jog_joint(robot,q, 0.1)
-	q=inv.inv(pose[:-1]+np.array([0,0,0.5]),R)
+	# q=inv.inv(p+np.array([0,0,0.2]),R)
+	# jog_joint(robot,q, 0.1)
+	q=inv.inv(p+np.array([0,0,0.5]),R)
 	jog_joint(robot,q, 0.1)
 
-def place(robot,place_position,angle,m1k_obj):
+def place(place_position,angle):
+	global robot, tool, m1k_obj
 	print('go placing')
 	R=R_ee.R_ee(angle)
 	#start joggging to initial pose
-	q=inv.inv(place_position+np.array([0,0,0.2]),R)
+	q=inv.inv(place_position+np.array([0,0,0.1]),R)
 	jog_joint(robot,q, 0.1)
 
 	#move down 
@@ -125,11 +121,11 @@ def place(robot,place_position,angle,m1k_obj):
 	
 
 	#move up
-	q=inv.inv(place_position+np.array([0,0,0.2]),R)
+	q=inv.inv(place_position+np.array([0,0,0.1]),R)
 	jog_joint(robot,q, 0.1)
 
-def	vision_check(robot,ROI,ppu,template,vision_p,vision_q):
-	global current_frame
+def	vision_check(ROI,ppu,template,vision_p,vision_q):
+	global current_frame, robot
 
 	q=inv.inv(vision_p+np.array([0.15,0,0.15]),R_ee.R_ee(0))
 	jog_joint(robot,q, 0.3)
@@ -137,7 +133,8 @@ def	vision_check(robot,ROI,ppu,template,vision_p,vision_q):
 	jog_joint(robot,vision_q,0.2)
 
 	cv2.imwrite("vision_check.jpg",current_frame)
-	roi_frame=current_frame[ROI[0]:ROI[1],ROI[2]:ROI[3]]
+	roi_frame=cv2.cvtColor(current_frame[ROI[0]:ROI[1],ROI[2]:ROI[3]], cv2.COLOR_BGR2GRAY)
+	image_copy=copy.deepcopy(current_frame)
 
 	q=inv.inv(vision_p+np.array([0.15,0,0.15]),R_ee.R_ee(0))
 	jog_joint(robot,q, 0.3)
@@ -145,15 +142,21 @@ def	vision_check(robot,ROI,ppu,template,vision_p,vision_q):
 
 	angle,center=match_w_ori(roi_frame,template,0.,'edge')
 
-	center=np.flip(center+np.array([ROI[1],ROI[0]]))
 
-	offset_p=(center-np.array([len(current_frame[0]),len(current_frame)]))/ppu
+	
+	offset_p=(center-np.array([len(roi_frame[0]),len(roi_frame)])/2.)/ppu
 
+	print(offset_p,angle)
+	# ###show final results
+	cv2.circle(roi_frame, (int(center[0]),int(center[1])),10,(0,0,255), -1)			
+	cv2.imshow("image", roi_frame)
+	cv2.waitKey(0)
+	cv2.destroyAllWindows()
 
+	return np.array([offset_p[1],-offset_p[0],0.])/1000.,np.radians(angle)
 
-	return offset_p,angle
-
-def slide(robot,place_position):
+def slide(place_position):
+	global robot, tool
 	q=inv.inv(place_position+np.array([0,0,0.2]),R_ee.R_ee(0))
 	jog_joint(robot,q, 0.1)
 	q=inv.inv(place_position,R_ee.R_ee(0))
@@ -166,6 +169,8 @@ def slide(robot,place_position):
 	jog_joint(robot,q, 0.1)
 
 def main():
+	global robot, tool, m1k_obj, vel_ctrl
+
 
 	###read yamls
 	with open(r'client_yaml/testbed.yaml') as file:
@@ -176,8 +181,10 @@ def main():
 		fabric_dimension = yaml.load(file, Loader=yaml.FullLoader)
 
 	home=testbed_yaml['home']
-	bin1_pose=testbed_yaml['bin1']
-	bin2_pose=testbed_yaml['bin2']
+	bin1_p=testbed_yaml['bin1_p']
+	bin1_R=np.array(testbed_yaml['bin1_R']).reshape((3,3))
+	bin2_p=testbed_yaml['bin2_p']
+	bin2_R=np.array(testbed_yaml['bin2_R']).reshape((3,3))
 	vision_q=testbed_yaml['vision_q']
 	vision_p=testbed_yaml['vision_p']
 	place_position=testbed_yaml['place_position']
@@ -229,7 +236,6 @@ def main():
 	robot=robot_sub.GetDefaultClientWait(1)
 	state_w = robot_sub.SubscribeWire("robot_state")
 	cmd_w=robot_sub.SubscribeWire('position_command')
-	global vel_ctrl
 	vel_ctrl = EmulatedVelocityControl(robot,state_w, cmd_w)
 
 	##########Initialize robot constants
@@ -245,30 +251,26 @@ def main():
 	###temp, lift up
 	q=state_w.InValue.joint_position
 	pose=inv.fwd(q)
-	jog_joint(robot,inv.inv([pose.p[0],pose.p[1],0.6],pose.R), 0.3)
+	jog_joint(inv.inv([pose.p[0],pose.p[1],0.6],pose.R), 0.3)
 
 
 
 	##home
-	jog_joint(robot,inv.inv(home,R_ee.R_ee(0)), 0.3)
+	jog_joint(inv.inv(home,R_ee.R_ee(0)), 0.3)
 
 
 	try:
 		template=read_template('client_yaml/FR-LF-UP.jpg',fabric_dimension['FR-LF-UP'],ppu)
-		pick(robot,bin1_pose+np.array([0,0,0.002,0]),tool,m1k_obj,v=2.5)
-		offset_p,offset_angle=vision_check(robot,ROI,ppu,template,vision_p,vision_q)
-		offset_p=[0,0]
-		offset_angle=0.
-		place(robot,place_position+np.array([offset_p[0],offset_p[1],0]),offset_angle,m1k_obj)
+		pick(bin1_p,bin1_R,v=2.5)
+		# offset_p,offset_angle=vision_check(ROI,ppu,template,vision_p,vision_q)
+		# place(place_position+offset_p,offset_angle,m1k_obj)
 
 		# template=read_template('client_yaml/FR-LF-UP.jpg',fabric_dimension['FR-LF-UP'],ppu)
-		# pick(robot,bin2_pose,tool,m1k_obj,v=2.)
-		# offset_p,offset_angle=vision_check(robot,ROI,ppu,template,vision_p,vision_q)
-		# offset_p=[0,0]
-		# offset_angle=0.
-		# place(robot,place_position+np.array([offset_p[0],offset_p[1],0]),offset_angle,m1k_obj)
+		# pick(bin2_p,bin2_R,v=2.5)
+		# offset_p,offset_angle=vision_check(ROI,ppu,template,vision_p,vision_q)
+		# place(place_position+offset_p,offset_angle,m1k_obj)
 
-		slide(robot,place_position)
+		# slide(place_position)
 		
 	except:
 		m1k_obj.EndSession()
