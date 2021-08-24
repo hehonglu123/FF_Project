@@ -20,7 +20,7 @@ current_frame=None
 
 def main():
 
-    url='rr+tcp://localhost:59823?service=camera'
+    url='rr+tcp://pi_fuse:59823?service=camera'
     if (len(sys.argv)>=2):
         url=sys.argv[1]
 
