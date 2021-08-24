@@ -213,7 +213,7 @@ def main():
 
 	#rpi relay
 	try:
-		tool_sub=RRN.SubscribeService('rr+tcp://192.168.50.115:22222?service=tool')
+		tool_sub=RRN.SubscribeService('rr+tcp://localhost:22222?service=tool')
 		tool=tool_sub.GetDefaultClientWait(1)
 		tool.open()
 	except:
@@ -222,7 +222,7 @@ def main():
 
 	#m1k
 	try:	
-		url='rr+tcp://192.168.50.166:11111?service=m1k'
+		url='rr+tcp://localhost:11111?service=m1k'
 		m1k_obj = RRN.ConnectService(url)
 		m1k_obj.StartSession()
 		m1k_obj.setmode('A', 'SVMI')
