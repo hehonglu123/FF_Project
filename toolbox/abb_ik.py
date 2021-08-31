@@ -37,6 +37,7 @@ def inv(p,R=np.array([[0,0,1],[0,1,0],[-1,0,0]]),up=False):
 			if q[1]>0 and q[2]>-np.pi/2 and np.abs(q[3])<np.pi/3.:
 				return q
 	return q
-
+def jacobian(q):
+	return robotjacobian(ABB_def,q)
 # pose=fwd([1.9482572,  1.07084695, 0.09290268, 0.00667227, 0.41965127, 0.38426432])
 # print(pose.p,pose.R)

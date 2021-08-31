@@ -81,7 +81,7 @@ class EA_Gripper(object):
 
 
 
-with RR.ServerNodeSetup("vacuum_gripper",22222) as node_setup:
+with RR.ServerNodeSetup("electroadhesion_gripper",22222) as node_setup:
 	RRC.RegisterStdRobDefServiceTypes(RRN)
 
 	gripper_inst=EA_Gripper()
