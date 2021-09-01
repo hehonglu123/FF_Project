@@ -64,21 +64,7 @@ def ImageToMat(image):
     frame2=image.data.reshape([image.image_info.height, image.image_info.width, int(len(image.data)/(image.image_info.height*image.image_info.width))], order='C')
 
     return frame2
-current_frame=None
 
-def new_frame(pipe_ep):
-    global current_frame, now
-    # print('fps= ', 1/(time.time()-now))
-    now=time.time()
-    #Loop to get the newest frame
-    while (pipe_ep.Available > 0):
-        #Receive the packet
-        
-        image=pipe_ep.ReceivePacket()
-        #Convert the packet to an image and set the global variable
-        current_frame=cv2.rotate(ImageToMat(image), cv2.ROTATE_180)
-
-        return
         
 def edge_detection(image):
 	return cv2.Canny(image, 50, 200,apertureSize =3)
@@ -96,22 +82,10 @@ def main():
 	###realsense connect
 	url='rr+tcp://localhost:59823?service=camera'
 	#Startup, connect, and pull out the camera from the objref    
-	c=RRN.ConnectService(url)
-
-	#Connect the pipe FrameStream to get the PipeEndpoint p
-	p=c.frame_stream.Connect(-1)
-
-	#Set the callback for when a new pipe packet is received to the
-	#new_frame function
-	p.PacketReceivedEvent+=new_frame
-	try:
-	    c.start_streaming()
-	except: 
-	    traceback.print_exc()
-	    pass
+	cam=RRN.ConnectService(url)
 
 
-	robot_sub=RRN.SubscribeService('rr+tcp://[fe80::16ff:3758:dcde:4e15]:58651/?nodeid=16a22280-7458-4ce9-bd4d-29b55782a2e1&service=robot')
+	robot_sub=RRN.SubscribeService('rr+tcp://pi_fuse:58651/?service=robot')
 	robot=robot_sub.GetDefaultClientWait(1)
 	state_w = robot_sub.SubscribeWire("robot_state")
 	cmd_w=robot_sub.SubscribeWire('position_command')
@@ -138,7 +112,6 @@ def main():
 	# robot.jog_freespace(inv.inv(home,R_ee.R_ee(0)), 0.3*np.ones(6), True)
 	jog_joint(inv.inv(home,R_ee.R_ee(0)), 0.3)
 
-	global current_frame
 
 	q=inv.inv(vision_p+np.array([0.15,0,0.15]),R_ee.R_ee(0))
 	# robot.jog_freespace(q, 0.3*np.ones(6), True)
@@ -147,16 +120,17 @@ def main():
 	# robot.jog_freespace(vision_q, 0.2*np.ones(6), True)
 	jog_joint(vision_q, 0.2)
 	###capture image at calib configuration and process image
+	current_frame=cv2.rotate(ImageToMat(cam.capture_frame()), cv2.ROTATE_180)
 	cv2.imwrite('../client_yaml/plate_calib.jpg', current_frame)
 	ROI, ppu=preprocess(current_frame)
-
+	print(ROI)
 	###go back to normal config async
 	q=inv.inv(vision_p+np.array([0.15,0,0.15]),R_ee.R_ee(0))
 	# robot.jog_freespace(q, 0.3*np.ones(6), False)
 	jog_joint(q,0.3)
 
 	###edge background	
-	roi_frame=cv2.cvtColor(image[ROI[0]:ROI[1],ROI[2]:ROI[3]], cv2.COLOR_BGR2GRAY)
+	roi_frame=cv2.cvtColor(current_frame[ROI[0]:ROI[1],ROI[2]:ROI[3]], cv2.COLOR_BGR2GRAY)
 	edged=bold_edge(edge_detection(roi_frame),num_pix=2)
 	cv2.imwrite('../client_yaml/plate_edge.jpg', edged)
 

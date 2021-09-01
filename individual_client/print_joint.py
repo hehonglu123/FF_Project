@@ -13,6 +13,7 @@ robot_name=args.robot_name
 
 sys.path.append('../toolbox')
 from general_robotics_toolbox import Robot, q2R
+from abb_ik import *
 #auto discovery
 time.sleep(2)
 res=RRN.FindServiceByType("com.robotraconteur.robotics.robot.Robot",
@@ -41,7 +42,7 @@ time.sleep(0.5)
 robot_state_wire=state_w.TryGetInValue()
 print("wire value set: ",robot_state_wire[0])
 robot_state = robot_state_wire[1]
-print("kin_chain_tcp: ", robot_state.kin_chain_tcp)
+print("kin_chain_tcp: ", fwd(robot_state.joint_position).p)
 print("robot_joints: ", robot_state.joint_position)
 position=robot_state.kin_chain_tcp[0]['position'] 
 orientation=robot_state.kin_chain_tcp[0]['orientation'] 

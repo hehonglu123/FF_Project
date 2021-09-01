@@ -14,9 +14,9 @@ class EA_Gripper(object):
 		self.tool_state_type=RRN.NewStructure("com.robotraconteur.robotics.tool.ToolState")
 		self._date_time_util = DateTimeUtil(RRN)
 
-		i2c = busio.I2C(board.SCL, board.SDA)
-		self.sensor_28 = adafruit_vl53l0x.VL53L0X(i2c,address=0x28)
-		self.sensor_29 = adafruit_vl53l0x.VL53L0X(i2c,address=0x29)
+		# i2c = busio.I2C(board.SCL, board.SDA)
+		# self.sensor_28 = adafruit_vl53l0x.VL53L0X(i2c,address=0x28)
+		# self.sensor_29 = adafruit_vl53l0x.VL53L0X(i2c,address=0x29)
 
 		self._streaming=False
 		self._lock = threading.Lock()
@@ -58,8 +58,9 @@ class EA_Gripper(object):
 			with self._lock:
 				try:
 					ToolState=self.tool_state_type
-					self.sensor_list=[self.sensor_28.range,self.sensor_29.range]
-					print(self.sensor_list)
+					self.sensor_list=[]
+					# self.sensor_list=[self.sensor_28.range,self.sensor_29.range]
+					# print(self.sensor_list)
 					ToolState.sensor=self.sensor_list
 					ToolState.ts=self._date_time_util.TimeSpec3Now()
 					self.tool_state.OutValue=ToolState

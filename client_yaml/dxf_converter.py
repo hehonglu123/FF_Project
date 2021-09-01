@@ -1,12 +1,13 @@
 import dxfgrabber
 import math
 import matplotlib
+
 from dxfwrite import DXFEngine as dxf
 
 import matplotlib.pyplot as plt
 import numpy as np
 import csv
-
+import io
 
 import copy
 
@@ -14,7 +15,7 @@ import time
 import csv
 import sys
 import os
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageEnhance
 #from robodk import *
 #sys.path.append(os.path.abspath("/home/ubuntu/robodk_postprocessors")) # temporarily add the path to POSTS folder
 
@@ -195,36 +196,48 @@ class dxf_robot_motion:
                 #plt.plot(entity.points[i][0]+bestfitlineslope/(-math.sqrt(bestfitlineslope**2+1)),entity.points[i][1]+1/(math.sqrt(bestfitlineslope**2+1)),'bo')
                 #vector1=np.array([bestfitlineslope/(-math.sqrt(bestfitlineslope**2+1)),1/(math.sqrt(bestfitlineslope**2+1))])
             
-            
+        plt.savefig('hello.png')    
         plt.show()
+        #plt.title("test")
+        #buf = io.BytesIO()
+        #plt.savefig(buf, format='png')
+        #buf.seek(0)
+        
+        #im = Image.open(buf)
+        #im.show()
+        #buf.close()
         print("Max x=%f"%maxx)
         print("Min x=%f"%minx)
         print("Max y=%f"%maxy)
         print("Min y=%f"%minx)
         
-        return(all_polylines)
+        return(all_polylines,maxx,maxy)
 
 def main():
     #rospy.init_node('dxf_parser')
     dxf_planner=dxf_robot_motion()
     filename="fabric_dxf/PD19_016C-FR-LFT-UP HICKEY V2 36.dxf"
     #filename="38rear-R12.dxf"
-    points=dxf_planner.dxf_grabber_readfile(filename)
+    points,maxx,maxy=dxf_planner.dxf_grabber_readfile(filename)
+    
     draw = dxf.drawing(name='test.dxf')
     tupled=[]
     draw.add_layer('LINES')
     for entity in points:
         for point in entity.points:
+            print(point)
             x=tuple([point[0]*50,point[1]*50])
             tupled.append(x)
         draw.add(dxf.polyline(entity.points, color=7, layer='LINES'))
     draw.save()
-    
-    img = Image.new('RGB', (1100,600), color='white')
+    intmaxx=math.ceil(maxx)*50
+    intmaxy=math.ceil(maxy)*50
+    img = Image.new('RGB', (intmaxx,intmaxy), color='white')
     draw = ImageDraw.Draw(img)
     draw.polygon(tupled,outline='black')
-
-    img.save('output.jpg')
+    enhancer = ImageEnhance.Sharpness(img)
+    output=enhancer.enhance(1)
+    output.save('output.jpg')
 
 if __name__ == "__main__":
 	main()
