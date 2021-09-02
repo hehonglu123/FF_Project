@@ -49,7 +49,8 @@ class EA_Gripper(object):
 
 	def setf_param(self,param_name, value):
 		if param_name=='voltage':
-			self.CHA.constant(value.data)
+			print('setting voltage to: ', value.data[0])
+			self.CHA.constant(value.data[0])
 
 	#sensor reading
 	def threadfunc(self):

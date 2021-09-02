@@ -66,7 +66,7 @@ def ImageToMat(image):
 
 
 def pick(p,R,v):
-	global robot, tool
+	global robot, tool, m1k_obj
 	print('go picking')
 	q=inv.inv(p+np.array([0,0,0.5]),R)
 	jog_joint(q, 0.3)
@@ -81,7 +81,8 @@ def pick(p,R,v):
 	q=inv.inv(p,R)
 	jog_joint(q,0.05)
 
-	tool.setf_param('voltage',RR.VarValue(v,'single'))
+	# tool.setf_param('voltage',RR.VarValue(v,'single'))
+	m1k_obj.setawgconstant('A',v)
 	time.sleep(3)
 	
 
@@ -94,7 +95,7 @@ def pick(p,R,v):
 	jog_joint(q, 0.1)
 
 def place(place_position,angle):
-	global robot, tool
+	global robot, tool, m1k_obj
 	print('go placing')
 	R=R_ee.R_ee(angle)
 	#start joggging to initial pose
@@ -107,11 +108,12 @@ def place(place_position,angle):
 	
 
 	###turn off adhesion, pin down
-	tool.setf_param('voltage',RR.VarValue(0.,'single'))
+	# tool.setf_param('voltage',RR.VarValue(0.,'single'))
+	m1k_obj.setawgconstant('A',0.)
 
-	tool.close()
-	time.sleep(2)
-	tool.open()
+	# tool.close()
+	time.sleep(5)
+	# tool.open()
 	
 
 	#move up
@@ -157,6 +159,31 @@ def	vision_check(ROI,ppu,template,vision_p,vision_q):
 
 	return np.array([offset_p[1],-offset_p[0],0.])/1000.,np.radians(angle)
 
+def place_slide(place_position,angle):
+	global robot, tool, m1k_obj
+	print('go placing')
+	R=R_ee.R_ee(angle)
+	#start joggging to initial pose
+	q=inv.inv(place_position+np.array([0,0,0.1]),R)
+	jog_joint(q, 0.1)
+
+	#move down 
+	q=inv.inv(place_position,R)
+	jog_joint(q, 0.1)
+	
+
+	###turn off adhesion, pin down
+	# tool.setf_param('voltage',RR.VarValue(0.,'single'))
+	m1k_obj.setawgconstant('A',0.)
+	# tool.close()
+	###sliding
+	q=inv.inv(place_position+np.array([0.1,0,0.]),R)
+	jog_joint(q, 0.1)
+	# tool.open()
+	###move up
+	q=inv.inv(place_position+np.array([0.1,0,0.1]),R)
+	jog_joint(q, 0.1)
+
 def slide(place_position):
 	global robot, tool
 	q=inv.inv(place_position+np.array([0,0,0.2]),R_ee.R_ee(0))
@@ -173,7 +200,7 @@ def slide(place_position):
 	jog_joint(q, 0.1)
 
 def main():
-	global robot, tool, cam, vel_ctrl, halt_mode, jog_mode, position_mode
+	global robot, tool, cam, vel_ctrl, halt_mode, jog_mode, position_mode, m1k_obj
 
 
 	###read yamls
@@ -194,9 +221,17 @@ def main():
 	place_position=testbed_yaml['place_position']
 	ROI=vision_yaml['ROI']
 	ppu=vision_yaml['ppu']
+	pins_height=np.array([0,0,0.01])
 
-
-
+	try:	
+		url='rr+tcp://192.168.50.166:11111?service=m1k'
+		m1k_obj = RRN.ConnectService(url)
+		m1k_obj.StartSession()
+		m1k_obj.setmode('A', 'SVMI')
+		m1k_obj.setawgconstant('A',0.)
+	except:
+		print('m1k not available')
+		pass
 
 	###camera connect
 	url='rr+tcp://localhost:59823?service=camera'
@@ -210,6 +245,7 @@ def main():
 		tool.open()
 		tool.setf_param('voltage',RR.VarValue(0.,'single'))
 	except:
+		traceback.print_exc()
 		print('rpi relay not available')
 		pass
 
@@ -240,16 +276,16 @@ def main():
 	jog_joint(inv.inv(home,R_ee.R_ee(0)), 0.3)
 
 
-	template=read_template('client_yaml/FR-LF-UP.jpg',fabric_dimension['FR-LF-UP'],ppu)
-	stack_height=np.array([0,0,0.005])
-	pick(bin1_p+stack_height,bin1_R,v=2.3)
-	offset_p,offset_angle=vision_check(ROI,ppu,template,vision_p,vision_q)
-	place(place_position+offset_p,offset_angle)
-
 	# template=read_template('client_yaml/FR-LF-UP.jpg',fabric_dimension['FR-LF-UP'],ppu)
-	# pick(bin2_p,bin2_R,v=2.5)
+	# stack_height=np.array([0,0,0.005])
+	# pick(bin1_p+stack_height,bin1_R,v=2.3)
 	# offset_p,offset_angle=vision_check(ROI,ppu,template,vision_p,vision_q)
-	# place(place_position+offset_p,offset_angle)
+	# place(place_position+offset_p+pins_height,offset_angle)
+
+	template=read_template('client_yaml/FR-LF-UP.jpg',fabric_dimension['FR-LF-UP'],ppu)
+	pick(bin2_p,bin2_R,v=2.2)
+	offset_p,offset_angle=vision_check(ROI,ppu,template,vision_p,vision_q)
+	place_slide(place_position+offset_p+pins_height,offset_angle)
 
 	# slide(place_position)
 		

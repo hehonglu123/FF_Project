@@ -1,24 +1,17 @@
 import dxfgrabber
-import math
+import math, yaml
 import matplotlib
 
 from dxfwrite import DXFEngine as dxf
 
 import matplotlib.pyplot as plt
 import numpy as np
-import csv
-import io
-
 import copy
 
 import time
-import csv
 import sys
 import os
-from PIL import Image, ImageDraw, ImageEnhance
-#from robodk import *
-#sys.path.append(os.path.abspath("/home/ubuntu/robodk_postprocessors")) # temporarily add the path to POSTS folder
-
+from PIL import Image, ImageDraw, ImageEnhance, ImageOps
 
 
 
@@ -53,10 +46,7 @@ class dxf_robot_motion:
             all_polylines= [entity for entity in test_block if entity.dxftype == 'POLYLINE']
         else:
             all_polylines=[entity for entity in dxf.entities if entity.dxftype == 'POLYLINE']
-        
-        #for q in range(len(all_blocks)):
-        #test_block=dxf.blocks[all_blocks[q].name]
-        #all_polylines= [entity for entity in test_block if entity.dxftype == 'POLYLINE']
+
         q=1
         
         all_polylines= [entity for entity in dxf.entities if entity.dxftype == 'POLYLINE']
@@ -67,14 +57,11 @@ class dxf_robot_motion:
         flag=False
         vertices=[]
         sine_vals=[]
-        #with open('eggs.csv', 'w') as csvfile:
-        #    spamwriter = csv.writer(csvfile, delimiter=' ',
-        #                        quotechar='|', quoting=csv.QUOTE_MINIMAL)
+
         for i in range(len(all_polylines)):
             start=all_polylines[i].points[0]
             end=all_polylines[i].points[-1]
-            #matchedone=False
-            #matched2=False
+
             print(start)
             print(end)
             
@@ -82,26 +69,9 @@ class dxf_robot_motion:
                 if(i==e):
                     continue
                 else:
-                    '''
-                    if(all_polylines[e].points[0]==start or all_polylines[e].points[0]==end):
-                        matchedone=True
-                        if(matchedone):
-                            matched2=True
-                    if(all_polylines[e].points[-1]==end or all_polylines[e].points[-1]==end):
-                        matchedone=True
-                        if(matchedone):
-                            matched2=True
-                    '''   
+
                     if(all_polylines[e].points[0]==start and all_polylines[e].points[-1]==end):
-                        #print("identical start found")
-                        #print(start)
-                        #print(i)
-                        #print(e)
-                    #if(all_polylines[e].points[-1]==end):
-                        #print("identical end found")
-                        #print(end)
-                        #print(i)
-                        #print(e)
+
                         if(len(all_polylines[i].points)==len(all_polylines[e].points) and not flag):
                             flag=True
                             removed.append(all_polylines[e])
@@ -179,33 +149,10 @@ class dxf_robot_motion:
                     maxy=entity.points[i][1]
                 if(entity.points[i][1]<miny):
                     miny=entity.points[i][1]
-                
-                
-                #bestfitlineslope, offset=np.polyfit(x_vals,y_vals,1)
-                
-                #m=(entity.points[i+1][1]-entity.points[i][1])/(entity.points[i+1][0]-entity.points[i][0])
-                #print(entity.points[i+1][0]-entity.points[i][0])
-                
-                #print(magnitude/bestfitlineslope)
-                
-                #bestfitlineslope, offset=np.polyfit(x_vals,y_vals,1)
-                #print("best fit line:")
-                #print(bestfitlineslope)
-                #print(shape.contains_point([entity.points[i][0]+bestfitlineslope/(-math.sqrt(bestfitlineslope**2+1)),entity.points[i][1]+1/(math.sqrt(bestfitlineslope**2+1))]))
-                #plt.arrow(entity.points[i][0],entity.points[i][1],bestfitlineslope/(-math.sqrt(bestfitlineslope**2+1)),1/(math.sqrt(bestfitlineslope**2+1)))
-                #plt.plot(entity.points[i][0]+bestfitlineslope/(-math.sqrt(bestfitlineslope**2+1)),entity.points[i][1]+1/(math.sqrt(bestfitlineslope**2+1)),'bo')
-                #vector1=np.array([bestfitlineslope/(-math.sqrt(bestfitlineslope**2+1)),1/(math.sqrt(bestfitlineslope**2+1))])
             
         plt.savefig('hello.png')    
         plt.show()
-        #plt.title("test")
-        #buf = io.BytesIO()
-        #plt.savefig(buf, format='png')
-        #buf.seek(0)
-        
-        #im = Image.open(buf)
-        #im.show()
-        #buf.close()
+
         print("Max x=%f"%maxx)
         print("Min x=%f"%minx)
         print("Max y=%f"%maxy)
@@ -214,30 +161,33 @@ class dxf_robot_motion:
         return(all_polylines,maxx,maxy)
 
 def main():
-    #rospy.init_node('dxf_parser')
     dxf_planner=dxf_robot_motion()
-    filename="fabric_dxf/PD19_016C-FR-LFT-UP HICKEY V2 36.dxf"
-    #filename="38rear-R12.dxf"
+    fabric_name="PD19_016C-FR-LFT-UP HICKEY V2 36"
+    filename="fabric_dxf/"+fabric_name+".dxf"
     points,maxx,maxy=dxf_planner.dxf_grabber_readfile(filename)
     
     draw = dxf.drawing(name='test.dxf')
     tupled=[]
+    scale=50
     draw.add_layer('LINES')
     for entity in points:
         for point in entity.points:
-            print(point)
-            x=tuple([point[0]*50,point[1]*50])
+            # print(point)
+            x=tuple([point[0]*scale,point[1]*scale])
             tupled.append(x)
         draw.add(dxf.polyline(entity.points, color=7, layer='LINES'))
     draw.save()
-    intmaxx=math.ceil(maxx)*50
-    intmaxy=math.ceil(maxy)*50
-    img = Image.new('RGB', (intmaxx,intmaxy), color='white')
+    intmaxx=math.ceil(maxx*scale)
+    intmaxy=math.ceil(maxy*scale)
+    img = Image.new('RGB', (intmaxx,intmaxy), color='black')
     draw = ImageDraw.Draw(img)
-    draw.polygon(tupled,outline='black')
+    draw.polygon(tupled,outline='white')
     enhancer = ImageEnhance.Sharpness(img)
     output=enhancer.enhance(1)
-    output.save('output.jpg')
+    output.save(fabric_name+'.jpg')
+
+    with open('fabric.yaml') as file:
+        fabric_yaml = yaml.load(file, Loader=yaml.FullLoader)
 
 if __name__ == "__main__":
 	main()

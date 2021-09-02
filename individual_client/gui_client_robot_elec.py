@@ -93,7 +93,7 @@ def gripper_ctrl(tool):
 		gripper.configure(text='gripper off')
 
 	else:
-		tool.setf_param('voltage',RR.VarValue(2.5,'double'))
+		tool.setf_param('voltage',RR.VarValue(2.,'double'))
 		gripper.config(relief="sunken")
 		gripper.configure(bg='green')
 		gripper.configure(text='gripper on')

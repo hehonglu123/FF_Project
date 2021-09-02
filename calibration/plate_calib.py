@@ -123,6 +123,7 @@ def main():
 	current_frame=cv2.rotate(ImageToMat(cam.capture_frame()), cv2.ROTATE_180)
 	cv2.imwrite('../client_yaml/plate_calib.jpg', current_frame)
 	ROI, ppu=preprocess(current_frame)
+	ROI=ROI.flatten().tolist()
 	print(ROI)
 	###go back to normal config async
 	q=inv.inv(vision_p+np.array([0.15,0,0.15]),R_ee.R_ee(0))
@@ -143,10 +144,10 @@ def main2():
 	image=cv2.imread('../client_yaml/plate_calib.jpg')
 	ROI,ppu=preprocess(image)
 	ROI=ROI.flatten().tolist()
-	print(ROI)
+	print(ROI,ppu)
 	roi_frame=cv2.cvtColor(image[ROI[0]:ROI[1],ROI[2]:ROI[3]], cv2.COLOR_BGR2GRAY)
 	edged=bold_edge(edge_detection(roi_frame),num_pix=2)
 	cv2.imwrite('../client_yaml/plate_edge.jpg', edged)
 
 if __name__ == '__main__':
-    main()
+    main2()
