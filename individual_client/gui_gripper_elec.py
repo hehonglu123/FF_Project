@@ -19,28 +19,39 @@ try:
 except:
 	print('rpi relay not available')
 	pass
-
+try:	
+	url='rr+tcp://192.168.50.166:11111?service=m1k'
+	m1k_obj = RRN.ConnectService(url)
+	m1k_obj.StartSession()
+	m1k_obj.setmode('A', 'SVMI')
+	m1k_obj.setawgconstant('A',0.)
+except:
+	print('m1k not available')
+	pass
 
 top=Tk()
 top.title(tool_name)
 jobid = None
 
-def gripper_ctrl(tool):
+def gripper_ctrl():
+
 
 	if gripper.config('relief')[-1] == 'sunken':
-		tool.setf_param('voltage',RR.VarValue(0.,'single'))
+		# tool.setf_param('voltage',RR.VarValue(0.,'single'))
+		m1k_obj.setawgconstant('A',0.)
 		gripper.config(relief="raised")
 		gripper.configure(bg='red')
 		gripper.configure(text='gripper off')
 
 	else:
-		tool.setf_param('voltage',RR.VarValue(3.5,'single'))
+		# tool.setf_param('voltage',RR.VarValue(3.5,'single'))
+		m1k_obj.setawgconstant('A',2.)
 		gripper.config(relief="sunken")
 		gripper.configure(bg='green')
 		gripper.configure(text='gripper on')
 	return
 
-def pin_ctrl(tool):
+def pin_ctrl():
 
 	if pin.config('relief')[-1] == 'sunken':
 		tool.open()
@@ -60,12 +71,15 @@ label = Label(top, fg = "black", justify=LEFT)
 label.pack()
 
 
+try:
+	gripper=Button(top,text='gripper off',command=lambda: gripper_ctrl(),bg='red')
+	pin=Button(top,text='pin up',command=lambda: pin_ctrl(),bg='red')
 
-gripper=Button(top,text='gripper off',command=lambda: gripper_ctrl(tool),bg='red')
-pin=Button(top,text='pin up',command=lambda: pin_ctrl(tool),bg='red')
 
-
-gripper.pack()
-pin.pack()
-top.mainloop()
+	gripper.pack()
+	pin.pack()
+	top.mainloop()
+except:
+	m1k_obj.EndSession()
+m1k_obj.EndSession()
 

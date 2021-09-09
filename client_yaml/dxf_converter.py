@@ -12,7 +12,7 @@ import time
 import sys
 import os
 from PIL import Image, ImageDraw, ImageEnhance, ImageOps
-
+import cv2
 
 
 class dxf_robot_motion:
@@ -150,8 +150,7 @@ class dxf_robot_motion:
                 if(entity.points[i][1]<miny):
                     miny=entity.points[i][1]
             
-        plt.savefig('hello.png')    
-        plt.show()
+        # plt.show()
 
         print("Max x=%f"%maxx)
         print("Min x=%f"%minx)
@@ -162,7 +161,7 @@ class dxf_robot_motion:
 
 def main():
     dxf_planner=dxf_robot_motion()
-    fabric_name="PD19_016C-FR-LFT-UP HICKEY V2 36"
+    fabric_name="PD19_016C-TOP-CLLR 56"
     filename="fabric_dxf/"+fabric_name+".dxf"
     points,maxx,maxy=dxf_planner.dxf_grabber_readfile(filename)
     
@@ -179,15 +178,35 @@ def main():
     draw.save()
     intmaxx=math.ceil(maxx*scale)
     intmaxy=math.ceil(maxy*scale)
+    
+
     img = Image.new('RGB', (intmaxx,intmaxy), color='black')
     draw = ImageDraw.Draw(img)
     draw.polygon(tupled,outline='white')
+
+
+
     enhancer = ImageEnhance.Sharpness(img)
-    output=enhancer.enhance(1)
-    output.save(fabric_name+'.jpg')
+    output=ImageOps.flip(enhancer.enhance(1))
+
+    output = np.array(output) 
+    output = output[:, :, ::-1].copy() 
+
+    if maxy>maxx:
+
+        output=cv2.rotate(output,cv2.cv2.ROTATE_90_CLOCKWISE)
+        temp=maxx
+        maxx=maxy
+        maxy=temp
+
+    cv2.imwrite('templates/'+fabric_name+'.jpg',output)
 
     with open('fabric.yaml') as file:
         fabric_yaml = yaml.load(file, Loader=yaml.FullLoader)
+
+    with open('fabric.yaml','w') as file:
+        fabric_yaml[fabric_name]=[25.4*maxx,25.4*maxy]
+        yaml.dump(fabric_yaml,file)
 
 if __name__ == "__main__":
 	main()

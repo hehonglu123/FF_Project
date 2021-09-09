@@ -111,9 +111,9 @@ def place(place_position,angle):
 	# tool.setf_param('voltage',RR.VarValue(0.,'single'))
 	m1k_obj.setawgconstant('A',0.)
 
-	# tool.close()
-	time.sleep(5)
-	# tool.open()
+	tool.close()
+	time.sleep(2)
+	tool.open()
 	
 
 	#move up
@@ -175,11 +175,12 @@ def place_slide(place_position,angle):
 	###turn off adhesion, pin down
 	# tool.setf_param('voltage',RR.VarValue(0.,'single'))
 	m1k_obj.setawgconstant('A',0.)
-	# tool.close()
+	tool.close()
+	time.sleep(0.5)
 	###sliding
 	q=inv.inv(place_position+np.array([0.1,0,0.]),R)
 	jog_joint(q, 0.1)
-	# tool.open()
+	tool.open()
 	###move up
 	q=inv.inv(place_position+np.array([0.1,0,0.1]),R)
 	jog_joint(q, 0.1)
@@ -221,7 +222,7 @@ def main():
 	place_position=testbed_yaml['place_position']
 	ROI=vision_yaml['ROI']
 	ppu=vision_yaml['ppu']
-	pins_height=np.array([0,0,0.01])
+	pins_height=np.array([0,0,0.015])
 
 	try:	
 		url='rr+tcp://192.168.50.166:11111?service=m1k'
@@ -249,48 +250,49 @@ def main():
 		print('rpi relay not available')
 		pass
 
-	robot_sub=RRN.SubscribeService('rr+tcp://pi_fuse:58651?service=robot')
-	robot=robot_sub.GetDefaultClientWait(1)
-	state_w = robot_sub.SubscribeWire("robot_state")
-	cmd_w=robot_sub.SubscribeWire('position_command')
-	vel_ctrl = EmulatedVelocityControl(robot,state_w, cmd_w)
+	try:
+		robot_sub=RRN.SubscribeService('rr+tcp://pi_fuse:58651?service=robot')
+		robot=robot_sub.GetDefaultClientWait(1)
+		state_w = robot_sub.SubscribeWire("robot_state")
+		cmd_w=robot_sub.SubscribeWire('position_command')
+		vel_ctrl = EmulatedVelocityControl(robot,state_w, cmd_w)
 
-	##########Initialize robot constants
-	robot_const = RRN.GetConstants("com.robotraconteur.robotics.robot", robot)
-	halt_mode = robot_const["RobotCommandMode"]["halt"]
-	position_mode = robot_const["RobotCommandMode"]["position_command"]
-	jog_mode = robot_const["RobotCommandMode"]["jog"]
+		##########Initialize robot constants
+		robot_const = RRN.GetConstants("com.robotraconteur.robotics.robot", robot)
+		halt_mode = robot_const["RobotCommandMode"]["halt"]
+		position_mode = robot_const["RobotCommandMode"]["position_command"]
+		jog_mode = robot_const["RobotCommandMode"]["jog"]
 
-	robot.command_mode = halt_mode
-	time.sleep(0.1)
-	robot.command_mode = position_mode
+		robot.command_mode = halt_mode
+		time.sleep(0.1)
+		robot.command_mode = position_mode
 
-	###temp, lift up
-	q=state_w.InValue.joint_position
-	pose=inv.fwd(q)
-	jog_joint(inv.inv([pose.p[0],pose.p[1],0.6],pose.R), 0.3)
-
-
-
-	##home
-	jog_joint(inv.inv(home,R_ee.R_ee(0)), 0.3)
+		###temp, lift up
+		q=state_w.InValue.joint_position
+		pose=inv.fwd(q)
+		jog_joint(inv.inv([pose.p[0],pose.p[1],0.6],pose.R), 0.3)
 
 
-	# template=read_template('client_yaml/FR-LF-UP.jpg',fabric_dimension['FR-LF-UP'],ppu)
-	# stack_height=np.array([0,0,0.005])
-	# pick(bin1_p+stack_height,bin1_R,v=2.3)
-	# offset_p,offset_angle=vision_check(ROI,ppu,template,vision_p,vision_q)
-	# place(place_position+offset_p+pins_height,offset_angle)
 
-	template=read_template('client_yaml/FR-LF-UP.jpg',fabric_dimension['FR-LF-UP'],ppu)
-	pick(bin2_p,bin2_R,v=2.2)
-	offset_p,offset_angle=vision_check(ROI,ppu,template,vision_p,vision_q)
-	place_slide(place_position+offset_p+pins_height,offset_angle)
+		##home
+		jog_joint(inv.inv(home,R_ee.R_ee(0)), 0.3)
 
-	# slide(place_position)
-		
+		fabric_name='PD19_016C-TOP-CLLR 56'
+		template=read_template('client_yaml/templates/'+fabric_name+'.jpg',fabric_dimension[fabric_name],ppu)
+		stack_height1=np.array([0,0,0.005])
+		pick(bin1_p+stack_height1,bin1_R,v=2.)
+		offset_p,offset_angle=vision_check(ROI,ppu,template,vision_p,vision_q)
+		place(place_position+offset_p+pins_height,offset_angle)
 
+		stack_height2=np.array([0,0,0.01])
+		pick(bin2_p+stack_height2,bin2_R,v=2.)
+		offset_p,offset_angle=vision_check(ROI,ppu,template,vision_p,vision_q)
+		place_slide(place_position+offset_p+pins_height,offset_angle)
 
+	except:
+
+		m1k_obj.EndSession()
+	m1k_obj.EndSession()
 
 if __name__ == '__main__':
     main()

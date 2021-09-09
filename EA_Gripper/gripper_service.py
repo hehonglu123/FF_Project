@@ -4,7 +4,7 @@ RRN=RR.RobotRaconteurNode.s
 import RobotRaconteurCompanion as RRC
 from RobotRaconteurCompanion.Util.DateTimeUtil import DateTimeUtil
 import numpy as np 
-import time, traceback, threading, signal, board, busio, adafruit_vl53l0x
+import time, traceback, threading, signal#, board, busio, adafruit_vl53l0x, adafruit_sht31d
 from gpiozero import Button
 from pysmu import Session, Mode
 
@@ -14,9 +14,13 @@ class EA_Gripper(object):
 		self.tool_state_type=RRN.NewStructure("com.robotraconteur.robotics.tool.ToolState")
 		self._date_time_util = DateTimeUtil(RRN)
 
+		###distance sensor
 		# i2c = busio.I2C(board.SCL, board.SDA)
 		# self.sensor_28 = adafruit_vl53l0x.VL53L0X(i2c,address=0x28)
 		# self.sensor_29 = adafruit_vl53l0x.VL53L0X(i2c,address=0x29)
+		###ht sensor
+		# i2c2 = board.I2C()
+		# self.ht_sensor = adafruit_sht31d.SHT31D(i2c2)
 
 		self._streaming=False
 		self._lock = threading.Lock()
@@ -60,7 +64,7 @@ class EA_Gripper(object):
 				try:
 					ToolState=self.tool_state_type
 					self.sensor_list=[]
-					# self.sensor_list=[self.sensor_28.range,self.sensor_29.range]
+					# self.sensor_list=[self.sensor_28.range,self.sensor_29.range,self.ht_sensor.temperature,self.ht_sensor.relative_humidity]
 					# print(self.sensor_list)
 					ToolState.sensor=self.sensor_list
 					ToolState.ts=self._date_time_util.TimeSpec3Now()
