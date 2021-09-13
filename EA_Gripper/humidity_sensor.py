@@ -1,11 +1,22 @@
-import Adafruit_DHT as dht
-from time import sleep
-#Set DATA pin
-DHT = 4
+import time
+import board
+import adafruit_sht31d
+
+# Create sensor object, communicating over the board's default I2C bus
+i2c = board.I2C()
+sensor = adafruit_sht31d.SHT31D(i2c)
+
+loopcount = 0
 while True:
-	sleep(5) #Wait 5 seconds and read again
-	#Read Temp and Hum from DHT22
-	h,t = dht.read_retry(dht.DHT22, DHT)
-	#Print Temperature and Humidity on Shell window
-	print('Temp={0:0.1f}*C  Humidity={1:0.1f}%'.format(t,h))
-	
+    print("\nTemperature: %0.1f C" % sensor.temperature)
+    print("Humidity: %0.1f %%" % sensor.relative_humidity)
+    loopcount += 1
+    time.sleep(2)
+    # every 10 passes turn on the heater for 1 second
+    if loopcount == 10:
+        loopcount = 0
+        sensor.heater = True
+        print("Sensor Heater status =", sensor.heater)
+        time.sleep(1)
+        sensor.heater = False
+        print("Sensor Heater status =", sensor.heater)
