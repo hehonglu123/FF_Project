@@ -1,4 +1,3 @@
-from relay_lib_seeed import *
 import RobotRaconteur as RR
 RRN=RR.RobotRaconteurNode.s
 import RobotRaconteurCompanion as RRC
@@ -7,6 +6,7 @@ import numpy as np
 import time, traceback, threading, signal#, board, busio, adafruit_vl53l0x, adafruit_sht31d
 from gpiozero import Button
 from pysmu import Session, Mode
+from io_test import RAPID
 
 class EA_Gripper(object):
 	def __init__(self):
@@ -27,6 +27,9 @@ class EA_Gripper(object):
 		self.tool_state_type=RRN.NewStructure("com.robotraconteur.robotics.tool.ToolState")
 		self._date_time_util = DateTimeUtil(RRN)
 
+		###DIO
+		self.rapid = RAPID(base_url='http://192.168.55.1:80')
+
 		###M1k setting
 		self.session = Session(ignore_dataflow=True, queue_size=100000)
 		# queue size can be changed, set to 1 Sec of data at 100KSPS
@@ -44,12 +47,12 @@ class EA_Gripper(object):
 			self.CHA.constant(0)
 
 	def open(self):
-		relay_on(1)
-		relay_off(2)
+		self.rapid.set_digital_io('valve1', 1) 
+		self.rapid.set_digital_io('valve2', 0)
 
 	def close(self):
-		relay_off(1)
-		relay_on(2)
+		self.rapid.set_digital_io('valve1', 0) 
+		self.rapid.set_digital_io('valve2', 1) 
 
 	def setf_param(self,param_name, value):
 		if param_name=='voltage':
