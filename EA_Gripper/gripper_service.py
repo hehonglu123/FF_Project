@@ -58,6 +58,9 @@ class EA_Gripper(object):
 		if param_name=='voltage':
 			print('setting voltage to: ', value.data[0])
 			self.CHA.constant(value.data[0])
+		if param_name=='relay':
+			print('change relay to: ', value.data[0])
+			self.rapid.set_digital_io('relay', value.data[0]) 
 
 	#sensor reading
 	def threadfunc(self):
