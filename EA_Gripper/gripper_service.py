@@ -35,7 +35,7 @@ class EA_Gripper(object):
 		# queue size can be changed, set to 1 Sec of data at 100KSPS
 		self.num_dev = self.session.scan() # get number of connected boards
 		if self.num_dev == 0:
-			print("No M1ks Found")
+			print("No M1ks Connected to pi")
 
 		else:
 			# get first (only?) device

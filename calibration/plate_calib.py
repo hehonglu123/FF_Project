@@ -46,6 +46,23 @@ def aruco_process(frame):
 	tag_centroids=np.average(corners,axis=2)
 	return tag_centroids, ids
 
+
+def angle(p1, p2):
+	###comparator for vertices order
+    k = (p2[1] - p1[1]) / np.linalg.norm(p1- p2)
+
+    if k >= 0:
+        if p2[0] >= p1[0]: # First Quadrant
+            return (2.0 * math.pi - math.asin(k))
+        else: # Second Quadrant
+            return (math.pi + math.asin(k))
+    else:
+        if p2[0] >= p1[0]: # Fourth Quadrant
+            return math.asin(-k)
+        else: # Third Quadrant
+            return (math.pi - math.asin(-k))
+
+
 def PolyArea2D(pts):
     lines = np.hstack([pts,np.roll(pts,-1,axis=0)])
     area = 0.5*abs(sum(x1*y2-x2*y1 for x1,y1,x2,y2 in lines))
@@ -54,7 +71,10 @@ def PolyArea2D(pts):
 def preprocess(image):
 	tag_centroids, ids = aruco_process(image)
 	ROI=np.array([[np.min(tag_centroids[:,:,1]),np.max(tag_centroids[:,:,1])],[np.min(tag_centroids[:,:,0]),np.max(tag_centroids[:,:,0])]]).astype(int)		#[[r1,r2],[c1,c2]]
-	ppu=PolyArea2D(np.squeeze(tag_centroids,axis=1))/358800		#pixel area / plate area in mm^2
+	
+	vertices=np.squeeze(tag_centroids,axis=1)
+	sorted_vertices=sorted(vertices, key = lambda point: -angle(point, np.average(vertices,axis=0)))
+	ppu=PolyArea2D(sorted_vertices)/358800		#pixel area / plate area in mm^2
 	
 	return ROI,ppu
 
