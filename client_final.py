@@ -120,11 +120,9 @@ def place(place_position,angle):
 	q=inv.inv(place_position+np.array([0,0,0.1]),R)
 	jog_joint(q, 0.1)
 
-def	vision_check(ROI,ppu,template,vision_p,vision_q):
-	global cam, robot, halt_mode, jog_mode, position_mode
-
-	q=inv.inv(vision_p+np.array([0.15,0,0.15]),R_ee.R_ee(0))
-	jog_joint(q, 0.3)
+def	vision_check(ROI,ppu,template,vision_q):
+	global cam, robot, halt_mode, jog_mode, position_mode, place_position_global
+	print("vision check")
 
 	jog_joint(vision_q,0.2)
 
@@ -133,12 +131,11 @@ def	vision_check(ROI,ppu,template,vision_p,vision_q):
 	roi_frame=cv2.cvtColor(current_frame[ROI[0]:ROI[1],ROI[2]:ROI[3]], cv2.COLOR_BGR2GRAY)
 
 
-	q=inv.inv(vision_p+np.array([0.15,0,0.15]),R_ee.R_ee(0))
-	# jog_joint(q, 0.3)
+	q=inv.inv(place_position_global+np.array([0,0,0.1]),R_ee.R_ee(0))
 	robot.command_mode = halt_mode
 	time.sleep(0.1)
 	robot.command_mode = jog_mode
-	robot.jog_freespace(q,0.3*np.ones(6), False)
+	robot.jog_freespace(q,0.1*np.ones(6), False)
 
 	angle,center=match_w_ori(roi_frame,template,0,'edge')
 
@@ -201,7 +198,7 @@ def slide(place_position):
 	jog_joint(q, 0.1)
 
 def main():
-	global robot, tool, cam, vel_ctrl, halt_mode, jog_mode, position_mode, m1k_obj
+	global robot, tool, cam, vel_ctrl, halt_mode, jog_mode, position_mode, m1k_obj, place_position_global
 
 
 	###read yamls
@@ -219,7 +216,7 @@ def main():
 	bin2_R=np.array(testbed_yaml['bin2_R']).reshape((3,3))
 	vision_q=testbed_yaml['vision_q']
 	vision_p=testbed_yaml['vision_p']
-	place_position=testbed_yaml['place_position']
+	place_position_global=testbed_yaml['place_position']
 	ROI=vision_yaml['ROI']
 	ppu=vision_yaml['ppu']
 	pins_height=np.array([0,0,0.015])
@@ -235,7 +232,7 @@ def main():
 		pass
 
 	###camera connect
-	url='rr+tcp://localhost:59823?service=camera'
+	url='rr+tcp://192.168.50.166:59823?service=camera'
 	#Startup, connect, and pull out the camera from the objref    
 	cam=RRN.ConnectService(url)
 
@@ -277,21 +274,23 @@ def main():
 		##home
 		jog_joint(inv.inv(home,R_ee.R_ee(0)), 0.3)
 
-		fabric_name='PD19_016C-TOP-CLLR 56'
+		fabric_name='PD19_016C-FR-LFT-LWR HICKEY V2 56'
 		template=read_template('client_yaml/templates/'+fabric_name+'.jpg',fabric_dimension[fabric_name],ppu)
 		stack_height1=np.array([0,0,0.005])
-		pick(bin1_p+stack_height1,bin1_R,v=2.)
-		offset_p,offset_angle=vision_check(ROI,ppu,template,vision_p,vision_q)
-		place(place_position+offset_p+pins_height,offset_angle)
+		pick(bin1_p+stack_height1,bin1_R,v=4.4)
+
+		offset_p,offset_angle=vision_check(ROI,ppu,template,vision_q)
+		place(place_position_global+offset_p+pins_height,offset_angle)
 
 		stack_height2=np.array([0,0,0.01])
-		pick(bin2_p+stack_height2,bin2_R,v=2.)
-		offset_p,offset_angle=vision_check(ROI,ppu,template,vision_p,vision_q)
-		place_slide(place_position+offset_p+pins_height,offset_angle)
+		pick(bin2_p+stack_height2,bin2_R,v=3.)
+		offset_p,offset_angle=vision_check(ROI,ppu,template,vision_q)
+		place_slide(place_position_global+offset_p+pins_height,offset_angle)
 
 	except:
 
 		m1k_obj.EndSession()
+		traceback.print_exc()
 	m1k_obj.EndSession()
 
 if __name__ == '__main__':
