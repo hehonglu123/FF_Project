@@ -20,7 +20,7 @@ current_frame=None
 
 def main():
 
-    url='rr+tcp://pi_fuse:59823?service=camera'
+    url='rr+tcp://192.168.50.114:59823?service=camera'
     if (len(sys.argv)>=2):
         url=sys.argv[1]
 
@@ -66,7 +66,7 @@ def new_frame(pipe_ep):
         
         image=pipe_ep.ReceivePacket()
         #Convert the packet to an image and set the global variable
-        current_frame=cv2.rotate(ImageToMat(image), cv2.ROTATE_180)
+        current_frame=ImageToMat(image)
 
         return
 

@@ -107,18 +107,27 @@ def place(place_position,angle):
 	jog_joint(q, 0.1)
 	
 
-	###turn off adhesion, pin down
+	###turn off adhesion, turn on HV relay, pin down
 	# tool.setf_param('voltage',RR.VarValue(0.,'single'))
 	m1k_obj.setawgconstant('A',0.)
+	time.sleep(0.1)
+	tool.setf_param('relay',RR.VarValue(1,'int8'))
 
 	tool.close()
-	time.sleep(2)
+
+	time.sleep(2.5)
+	
 	tool.open()
+
+	time.sleep(0.5)
 	
 
 	#move up
 	q=inv.inv(place_position+np.array([0,0,0.1]),R)
-	jog_joint(q, 0.1)
+	jog_joint(q, 0.05)
+
+	#turn off HV relay
+	tool.setf_param('relay',RR.VarValue(0,'int8'))
 
 def	vision_check(ROI,ppu,template,vision_q):
 	global cam, robot, halt_mode, jog_mode, position_mode, place_position_global
@@ -126,7 +135,7 @@ def	vision_check(ROI,ppu,template,vision_q):
 
 	jog_joint(vision_q,0.2)
 
-	current_frame=cv2.rotate(ImageToMat(cam.capture_frame()), cv2.ROTATE_180)
+	current_frame=ImageToMat(cam.capture_frame())
 	cv2.imwrite("vision_check.jpg",current_frame)
 	roi_frame=cv2.cvtColor(current_frame[ROI[0]:ROI[1],ROI[2]:ROI[3]], cv2.COLOR_BGR2GRAY)
 
@@ -141,7 +150,10 @@ def	vision_check(ROI,ppu,template,vision_q):
 
 
 	
-	offset_p=(center-np.array([len(roi_frame[0]),len(roi_frame)])/2.)/ppu
+	# offset_p=(center-np.array([len(roi_frame[0]),len(roi_frame)])/2.)/np.sqrt(ppu)
+	offset_p=(center-np.array([len(roi_frame[0]),len(roi_frame)])/2.)
+	offset_p[0]=offset_p[0]/1.391666
+	offset_p[1]=offset_p[1]/1.3825
 
 	print(offset_p,angle)
 	# ###show final results
@@ -173,14 +185,18 @@ def place_slide(place_position,angle):
 	# tool.setf_param('voltage',RR.VarValue(0.,'single'))
 	m1k_obj.setawgconstant('A',0.)
 	tool.close()
-	time.sleep(0.5)
+	time.sleep(1.)
+	tool.setf_param('relay',RR.VarValue(1,'int8'))
 	###sliding
-	q=inv.inv(place_position+np.array([0.1,0,0.]),R)
+	q=inv.inv(place_position+np.array([0.18,0,0.]),R)
 	jog_joint(q, 0.1)
+
 	tool.open()
+	time.sleep(0.5)
 	###move up
-	q=inv.inv(place_position+np.array([0.1,0,0.1]),R)
+	q=inv.inv(place_position+np.array([0.18,0,0.1]),R)
 	jog_joint(q, 0.1)
+	tool.setf_param('relay',RR.VarValue(0,'int8'))
 
 def slide(place_position):
 	global robot, tool
@@ -196,6 +212,10 @@ def slide(place_position):
 	###move up
 	q=inv.inv(place_position+np.array([0.1,0,0.1]),R_ee.R_ee(0))
 	jog_joint(q, 0.1)
+
+def connect_failed(s, client_id, url, err):
+    print ("Client connect failed: " + str(client_id.NodeID) + " url: " + str(url) + " error: " + str(err))
+
 
 def main():
 	global robot, tool, cam, vel_ctrl, halt_mode, jog_mode, position_mode, m1k_obj, place_position_global
@@ -223,16 +243,20 @@ def main():
 
 	try:	
 		url='rr+tcp://192.168.50.166:11111?service=m1k'
-		m1k_obj = RRN.ConnectService(url)
+		m1k_sub=RRN.SubscribeService(url)
+		####get client object
+		m1k_obj = m1k_sub.GetDefaultClientWait(1)
 		m1k_obj.StartSession()
 		m1k_obj.setmode('A', 'SVMI')
 		m1k_obj.setawgconstant('A',0.)
 	except:
 		print('m1k not available')
 		pass
+	# m1k_sub.ClientConnectFailed += connect_failed
+
 
 	###camera connect
-	url='rr+tcp://192.168.50.166:59823?service=camera'
+	url='rr+tcp://192.168.50.114:59823?service=camera'
 	#Startup, connect, and pull out the camera from the objref    
 	cam=RRN.ConnectService(url)
 
@@ -241,10 +265,11 @@ def main():
 		tool_sub=RRN.SubscribeService('rr+tcp://pi_fuse:22222?service=tool')
 		tool=tool_sub.GetDefaultClientWait(1)
 		tool.open()
-		tool.setf_param('voltage',RR.VarValue(0.,'single'))
+		tool.setf_param('relay',RR.VarValue(0,'int8'))
+		# tool.setf_param('voltage',RR.VarValue(0.,'single'))
 	except:
 		traceback.print_exc()
-		print('rpi relay not available')
+		print('rpi not available')
 		pass
 
 	try:
@@ -274,18 +299,25 @@ def main():
 		##home
 		jog_joint(inv.inv(home,R_ee.R_ee(0)), 0.3)
 
-		fabric_name='PD19_016C-FR-LFT-LWR HICKEY V2 56'
+		fabric_name='PD19_016C-FR-LFT-UP HICKEY V2 36'
 		template=read_template('client_yaml/templates/'+fabric_name+'.jpg',fabric_dimension[fabric_name],ppu)
-		stack_height1=np.array([0,0,0.005])
-		pick(bin1_p+stack_height1,bin1_R,v=4.4)
+		stack_height1=np.array([0,0,0.003])
+		pick(bin1_p+stack_height1,bin1_R,v=1.9)
 
 		offset_p,offset_angle=vision_check(ROI,ppu,template,vision_q)
-		place(place_position_global+offset_p+pins_height,offset_angle)
+		place(place_position_global-offset_p+pins_height,offset_angle)
 
-		stack_height2=np.array([0,0,0.01])
-		pick(bin2_p+stack_height2,bin2_R,v=3.)
+		stack_height2=np.array([0,0,0.005])
+		pick(bin2_p+stack_height2,bin2_R,v=1.6)
 		offset_p,offset_angle=vision_check(ROI,ppu,template,vision_q)
-		place_slide(place_position_global+offset_p+pins_height,offset_angle)
+		# offset_p+=np.array([0.03,0,0])
+		place_slide(place_position_global-offset_p+pins_height,offset_angle)
+		##home
+		jog_joint(inv.inv(home,R_ee.R_ee(0)), 0.3)
+		##reset chargepad
+		tool.setf_param('relay',RR.VarValue(1,'int8'))
+		time.sleep(1.)
+		tool.setf_param('relay',RR.VarValue(0,'int8'))
 
 	except:
 

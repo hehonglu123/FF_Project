@@ -70,12 +70,12 @@ def PolyArea2D(pts):
 ###determine pixels/unit distance, ROI
 def preprocess(image):
 	# tag_centroids, ids = aruco_process(image)
-	tag_centroids=np.array([[[ 98,   40]], [[103,679]],[[1158,43]],[[1159,679]]])
+	tag_centroids=np.array([[[ 89,51]], [[89,715]],[[1195,47]],[[1195,714]]])
 	ROI=np.array([[np.min(tag_centroids[:,:,1]),np.max(tag_centroids[:,:,1])],[np.min(tag_centroids[:,:,0]),np.max(tag_centroids[:,:,0])]]).astype(int)		#[[r1,r2],[c1,c2]]
 	
 	vertices=np.squeeze(tag_centroids,axis=1)
 	sorted_vertices=sorted(vertices, key = lambda point: -angle(point, np.average(vertices,axis=0)))
-	ppu=PolyArea2D(sorted_vertices)/358800		#pixel area / plate area in mm^2
+	ppu=PolyArea2D(sorted_vertices)/384000		#pixel area / plate area in mm^2
 	
 	return ROI,ppu
 

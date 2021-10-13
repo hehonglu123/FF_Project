@@ -43,7 +43,9 @@ robot_state_wire=state_w.TryGetInValue()
 print("wire value set: ",robot_state_wire[0])
 robot_state = robot_state_wire[1]
 print("kin_chain_tcp: ", fwd(robot_state.joint_position).p)
+print("kin_chain_tcp_R: ",fwd(robot_state.joint_position).R)
 print("robot_joints: ", robot_state.joint_position)
+print("joint torque: ", robot_state.joint_effort)
 position=robot_state.kin_chain_tcp[0]['position'] 
 orientation=robot_state.kin_chain_tcp[0]['orientation'] 
 print(position)

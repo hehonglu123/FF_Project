@@ -258,7 +258,7 @@ def match_w_ori(image,template,orientation,alg='hsva',edge_raw=None):
 	min_error=9999999999
 	act_angle=0
 
-	orientation=round(np.degrees(orientation))
+	orientation=int(round(np.degrees(orientation)))
 
 	if alg=='edge':
 
