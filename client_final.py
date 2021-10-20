@@ -135,6 +135,10 @@ def	vision_check(ROI,ppu,template,vision_q):
 
 	jog_joint(vision_q,0.2)
 
+	###clear buffer
+	cam.capture_frame()
+
+
 	current_frame=ImageToMat(cam.capture_frame())
 	cv2.imwrite("vision_check.jpg",current_frame)
 	roi_frame=cv2.cvtColor(current_frame[ROI[0]:ROI[1],ROI[2]:ROI[3]], cv2.COLOR_BGR2GRAY)
@@ -242,7 +246,7 @@ def main():
 	pins_height=np.array([0,0,0.015])
 
 	try:	
-		url='rr+tcp://192.168.50.166:11111?service=m1k'
+		url='rr+tcp://pi_fuse:11111?service=m1k'
 		m1k_sub=RRN.SubscribeService(url)
 		####get client object
 		m1k_obj = m1k_sub.GetDefaultClientWait(1)
@@ -256,7 +260,7 @@ def main():
 
 
 	###camera connect
-	url='rr+tcp://192.168.50.114:59823?service=camera'
+	url='rr+tcp://pi_fuse:59823?service=camera'
 	#Startup, connect, and pull out the camera from the objref    
 	cam=RRN.ConnectService(url)
 
