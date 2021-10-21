@@ -20,7 +20,7 @@ current_frame=None
 
 def main():
 
-    url='rr+tcp://192.168.50.114:59823?service=camera'
+    url='rr+tcp://192.168.50.176:59823?service=camera'
     if (len(sys.argv)>=2):
         url=sys.argv[1]
 
