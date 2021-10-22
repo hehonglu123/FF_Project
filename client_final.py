@@ -8,8 +8,9 @@ sys.path.append('toolbox/')
 from vel_emulate_sub import EmulatedVelocityControl
 from general_robotics_toolbox import *    
 from temp_match import *
+from abb_def import *
+from qpsolvers import solve_qp
 
-inv = import_module(robot_name+'_ik')
 R_ee = import_module('R_'+robot_name)
 
 def jog_joint(q,max_v,vd=[]):
@@ -68,17 +69,17 @@ def ImageToMat(image):
 def pick(p,R,v):
 	global robot, tool, m1k_obj
 	print('go picking')
-	q=inv.inv(p+np.array([0,0,0.5]),R)
-	jog_joint(q, 0.3)
+	q=inv(p+np.array([0,0,0.5]),R)
+	jog_joint(q, 0.5)
 
 	#move down 
-	q=inv.inv(p+np.array([0,0,0.2]),R)
-	jog_joint(q, 0.1,[0,0,-0.01])
-	# q=inv.inv(p+np.array([0,0,0.1]),R)
+	q=inv(p+np.array([0,0,0.2]),R)
+	jog_joint(q, 0.2,[0,0,-0.01])
+	# q=inv(p+np.array([0,0,0.1]),R)
 	# jog_joint(q, 0.1)
 
 	#pick
-	q=inv.inv(p,R)
+	q=inv(p,R)
 	jog_joint(q,0.05)
 
 	# tool.setf_param('voltage',RR.VarValue(v,'single'))
@@ -87,11 +88,11 @@ def pick(p,R,v):
 	
 
 	#move up
-	q=inv.inv(p+np.array([0,0,0.1]),R)
+	q=inv(p+np.array([0,0,0.1]),R)
 	jog_joint(q, 0.1, [0,0,0.01])
-	# q=inv.inv(p+np.array([0,0,0.2]),R)
+	# q=inv(p+np.array([0,0,0.2]),R)
 	# jog_joint(q, 0.1)
-	q=inv.inv(p+np.array([0,0,0.5]),R)
+	q=inv(p+np.array([0,0,0.5]),R)
 	jog_joint(q, 0.1)
 
 def place(place_position,angle):
@@ -99,11 +100,11 @@ def place(place_position,angle):
 	print('go placing')
 	R=R_ee.R_ee(angle)
 	#start joggging to initial pose
-	q=inv.inv(place_position+np.array([0,0,0.1]),R)
+	q=inv(place_position+np.array([0,0,0.1]),R)
 	jog_joint(q, 0.1)
 
 	#move down 
-	q=inv.inv(place_position,R)
+	q=inv(place_position,R)
 	jog_joint(q, 0.1)
 	
 
@@ -123,7 +124,7 @@ def place(place_position,angle):
 	
 
 	#move up
-	q=inv.inv(place_position+np.array([0,0,0.1]),R)
+	q=inv(place_position+np.array([0,0,0.1]),R)
 	jog_joint(q, 0.05)
 
 	#turn off HV relay
@@ -144,7 +145,7 @@ def	vision_check(ROI,ppu,template,vision_q):
 	roi_frame=cv2.cvtColor(current_frame[ROI[0]:ROI[1],ROI[2]:ROI[3]], cv2.COLOR_BGR2GRAY)
 
 
-	q=inv.inv(place_position_global+np.array([0,0,0.1]),R_ee.R_ee(0))
+	q=inv(place_position_global+np.array([0,0,0.1]),R_ee.R_ee(0))
 	robot.command_mode = halt_mode
 	time.sleep(0.1)
 	robot.command_mode = jog_mode
@@ -172,16 +173,87 @@ def	vision_check(ROI,ppu,template,vision_q):
 
 	return np.array([offset_p[1],-offset_p[0],0.])/1000.,np.radians(angle)
 
+def move(vd, ER):
+	global vel_ctrl, robot_def
+	try:
+		w=1.
+		Kq=.01*np.eye(6)    #small value to make sure positive definite
+		KR=np.eye(3)        #gains for position and orientation error
+
+		q_cur=vel_ctrl.joint_position()
+		J=jacobian(q_cur)       #calculate current Jacobian
+		Jp=J[3:,:]
+		JR=J[:3,:] 
+		H=np.dot(np.transpose(Jp),Jp)+Kq+w*np.dot(np.transpose(JR),JR)
+
+		H=(H+np.transpose(H))/2
+
+
+		k,theta = R2rot(ER)
+		k=np.array(k)
+		s=np.sin(theta/2)*k         #eR2
+		wd=-np.dot(KR,s)  
+		f=-np.dot(np.transpose(Jp),vd)-w*np.dot(np.transpose(JR),wd)
+		###Don't put bound here, will affect cartesian motion outcome
+		qdot=solve_qp(H, f)
+		###For safty, make sure robot not moving too fast
+		if np.max(np.abs(qdot))>0.6:
+			qdot=np.zeros(6)
+			print('too fast')
+		vel_ctrl.set_velocity_command(qdot)
+
+	except:
+		traceback.print_exc()
+	return
+
+def	vision_check_fb(ROI,ppu,template,vision_q):
+	global cam, robot, halt_mode, jog_mode, position_mode, place_position_global, state_w
+	print("vision check")
+
+	jog_joint(vision_q,0.5)
+
+	###clear buffer
+	cam.capture_frame()
+
+
+	current_frame=ImageToMat(cam.capture_frame())
+	cv2.imwrite("vision_check.jpg",current_frame)
+	roi_frame=cv2.cvtColor(current_frame[ROI[0]:ROI[1],ROI[2]:ROI[3]], cv2.COLOR_BGR2GRAY)
+
+	angle,center=match_w_ori(roi_frame,template,0,'edge')
+	offset_p=(center-np.array([len(roi_frame[0]),len(roi_frame)])/2.)
+
+	vel_ctrl.enable_velocity_mode()
+	while np.linalg.norm(offset_p)>1:
+		move(np.array([offset_p[1],-offset_p[0],0.])/1000.,np.eye(3))
+
+		cam.capture_frame()
+		current_frame=ImageToMat(cam.capture_frame())
+
+		roi_frame=cv2.cvtColor(current_frame[ROI[0]:ROI[1],ROI[2]:ROI[3]], cv2.COLOR_BGR2GRAY)
+
+		angle,center=match_w_ori_single(roi_frame,template,np.radians(angle),'edge')
+		offset_p=(center-np.array([len(roi_frame[0]),len(roi_frame)])/2.)
+		print(offset_p)
+
+	vel_ctrl.disable_velocity_mode() 
+
+	p_cur=fwd(state_w.InValue.joint_position).p
+	p_vision=fwd(vision_q).p
+	return p_vision-p_cur,np.radians(angle)
+
+
+
 def place_slide(place_position,angle):
 	global robot, tool, m1k_obj
 	print('go placing')
 	R=R_ee.R_ee(angle)
 	#start joggging to initial pose
-	q=inv.inv(place_position+np.array([0,0,0.1]),R)
+	q=inv(place_position+np.array([0,0,0.1]),R)
 	jog_joint(q, 0.1)
 
 	#move down 
-	q=inv.inv(place_position,R)
+	q=inv(place_position,R)
 	jog_joint(q, 0.1)
 	
 
@@ -192,29 +264,29 @@ def place_slide(place_position,angle):
 	time.sleep(1.)
 	tool.setf_param('relay',RR.VarValue(1,'int8'))
 	###sliding
-	q=inv.inv(place_position+np.array([0.18,0,0.]),R)
+	q=inv(place_position+np.array([0.18,0,0.]),R)
 	jog_joint(q, 0.1)
 
 	tool.open()
 	time.sleep(0.5)
 	###move up
-	q=inv.inv(place_position+np.array([0.18,0,0.1]),R)
+	q=inv(place_position+np.array([0.18,0,0.1]),R)
 	jog_joint(q, 0.1)
 	tool.setf_param('relay',RR.VarValue(0,'int8'))
 
 def slide(place_position):
 	global robot, tool
-	q=inv.inv(place_position+np.array([0,0,0.2]),R_ee.R_ee(0))
+	q=inv(place_position+np.array([0,0,0.2]),R_ee.R_ee(0))
 	jog_joint(q, 0.1)
-	q=inv.inv(place_position,R_ee.R_ee(0))
+	q=inv(place_position,R_ee.R_ee(0))
 	jog_joint(q, 0.1)
 	tool.close()
 	###sliding
-	q=inv.inv(place_position+np.array([0.1,0,0.]),R_ee.R_ee(0))
+	q=inv(place_position+np.array([0.1,0,0.]),R_ee.R_ee(0))
 	jog_joint(q, 0.1)
 	tool.open()
 	###move up
-	q=inv.inv(place_position+np.array([0.1,0,0.1]),R_ee.R_ee(0))
+	q=inv(place_position+np.array([0.1,0,0.1]),R_ee.R_ee(0))
 	jog_joint(q, 0.1)
 
 def connect_failed(s, client_id, url, err):
@@ -222,7 +294,7 @@ def connect_failed(s, client_id, url, err):
 
 
 def main():
-	global robot, tool, cam, vel_ctrl, halt_mode, jog_mode, position_mode, m1k_obj, place_position_global
+	global robot, tool, cam, vel_ctrl, halt_mode, jog_mode, position_mode, m1k_obj, place_position_global,state_w
 
 
 	###read yamls
@@ -239,7 +311,6 @@ def main():
 	bin2_p=testbed_yaml['bin2_p']
 	bin2_R=np.array(testbed_yaml['bin2_R']).reshape((3,3))
 	vision_q=testbed_yaml['vision_q']
-	vision_p=testbed_yaml['vision_p']
 	place_position_global=testbed_yaml['place_position']
 	ROI=vision_yaml['ROI']
 	ppu=vision_yaml['ppu']
@@ -260,7 +331,7 @@ def main():
 
 
 	###camera connect
-	url='rr+tcp://pi_fuse:59823?service=camera'
+	url='rr+tcp://robosewclient:59823?service=camera'
 	#Startup, connect, and pull out the camera from the objref    
 	cam=RRN.ConnectService(url)
 
@@ -295,29 +366,30 @@ def main():
 
 		###temp, lift up
 		q=state_w.InValue.joint_position
-		pose=inv.fwd(q)
-		jog_joint(inv.inv([pose.p[0],pose.p[1],0.6],pose.R), 0.3)
+		pose=fwd(q)
+		jog_joint(inv([pose.p[0],pose.p[1],0.6],pose.R), 0.3)
 
 
 
 		##home
-		jog_joint(inv.inv(home,R_ee.R_ee(0)), 0.3)
+		jog_joint(inv(home,R_ee.R_ee(0)), 0.3)
 
 		fabric_name='PD19_016C-FR-LFT-UP HICKEY V2 36'
 		template=read_template('client_yaml/templates/'+fabric_name+'.jpg',fabric_dimension[fabric_name],ppu)
 		stack_height1=np.array([0,0,0.003])
 		pick(bin1_p+stack_height1,bin1_R,v=1.9)
 
-		offset_p,offset_angle=vision_check(ROI,ppu,template,vision_q)
+		# offset_p,offset_angle=vision_check(ROI,ppu,template,vision_q)
+		offset_p,offset_angle=vision_check_fb(ROI,ppu,template,vision_q)
 		place(place_position_global-offset_p+pins_height,offset_angle)
 
 		stack_height2=np.array([0,0,0.005])
 		pick(bin2_p+stack_height2,bin2_R,v=1.6)
-		offset_p,offset_angle=vision_check(ROI,ppu,template,vision_q)
-		# offset_p+=np.array([0.03,0,0])
-		place_slide(place_position_global-offset_p+pins_height,offset_angle)
+		# offset_p,offset_angle=vision_check(ROI,ppu,template,vision_q)
+		offset_p,offset_angle=vision_check_fb(ROI,ppu,template,vision_q)
+		place(place_position_global-offset_p+pins_height,offset_angle)
 		##home
-		jog_joint(inv.inv(home,R_ee.R_ee(0)), 0.3)
+		jog_joint(inv(home,R_ee.R_ee(0)), 0.3)
 		##reset chargepad
 		tool.setf_param('relay',RR.VarValue(1,'int8'))
 		time.sleep(1.)

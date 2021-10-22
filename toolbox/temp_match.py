@@ -270,7 +270,7 @@ def match_w_ori(image,template,orientation,alg='hsva',edge_raw=None):
 			# cv2.imshow("image", image_edge)
 			# cv2.waitKey(0)
 		except:
-			traceback.print_exc()
+			# traceback.print_exc()
 			pass
 		edged = bold_edge(image_edge)
 	# image_contour=contour(image)
@@ -280,29 +280,69 @@ def match_w_ori(image,template,orientation,alg='hsva',edge_raw=None):
 	# cv2.imshow("image", edged)
 	# cv2.imshow("template", tEdged)
 	# cv2.waitKey(0)
-	for i in range(0,181,180):
-		for angle in range(orientation+i-5,orientation+i+5):
-			if alg=='contour':
-				template_rt=rotate_image(template_contour,angle,0)
-				min_val, min_loc=temp_alg['contour'](image_contour,template_rt)
-			elif alg=='edge':
-				template_rt=rotate_image(tEdged,angle,[0,0,0])
-				###make template binary
-				template_rt=cv2.threshold(template_rt, 50, 255, cv2.THRESH_BINARY)[1]
-				min_val, min_loc=temp_alg['edge'](edged,template_rt)
-			else:
-				template_rt=rotate_image(template,angle,[0,0,0,0])
-				min_val, min_loc=temp_alg[alg](image,template_rt)
-			
 
-			if min_val<min_error:
-				min_error=min_val
-				act_angle=angle
-				loc=min_loc
-				w=len(template_rt[0])
-				h=len(template_rt)
-				loc=(min_loc[0]+w/2,min_loc[1]+h/2)
+	# for i in range(0,181,180):
+	for angle in range(orientation-5,orientation+5):
+		if alg=='contour':
+			template_rt=rotate_image(template_contour,angle,0)
+			min_val, min_loc=temp_alg['contour'](image_contour,template_rt)
+		elif alg=='edge':
+			template_rt=rotate_image(tEdged,angle,[0,0,0])
+			###make template binary
+			template_rt=cv2.threshold(template_rt, 50, 255, cv2.THRESH_BINARY)[1]
+			min_val, min_loc=temp_alg['edge'](edged,template_rt)
+		else:
+			template_rt=rotate_image(template,angle,[0,0,0,0])
+			min_val, min_loc=temp_alg[alg](image,template_rt)
+		
+
+		if min_val<min_error:
+			min_error=min_val
+			act_angle=angle
+			loc=min_loc
+			w=len(template_rt[0])
+			h=len(template_rt)
+			loc=(min_loc[0]+w/2,min_loc[1]+h/2)
 
 
 
 	return act_angle,loc
+
+
+def match_w_ori_single(image,template,orientation,alg='hsva',edge_raw=None):
+	min_error=9999999999
+	act_angle=0
+
+	orientation=int(round(np.degrees(orientation)))
+
+	if alg=='edge':
+
+		tEdged = template#cv2.Canny(template, 50, 200,apertureSize =3)
+		image_edge=cv2.Canny(image, 50, 200,apertureSize =3)
+		try:
+			image_edge_tmp=cv2.subtract(image_edge,edge_raw)
+
+		except:
+			# traceback.print_exc()
+			pass
+		edged = bold_edge(image_edge)
+	
+	# for i in range(0,181,180):
+	angle=orientation
+	if alg=='contour':
+		template_rt=rotate_image(template_contour,angle,0)
+		min_val, min_loc=temp_alg['contour'](image_contour,template_rt)
+	elif alg=='edge':
+		template_rt=rotate_image(tEdged,angle,[0,0,0])
+		###make template binary
+		template_rt=cv2.threshold(template_rt, 50, 255, cv2.THRESH_BINARY)[1]
+		min_val, min_loc=temp_alg['edge'](edged,template_rt)
+	else:
+		template_rt=rotate_image(template,angle,[0,0,0,0])
+		min_val, min_loc=temp_alg[alg](image,template_rt)
+	
+
+
+	w=len(template_rt[0])
+	h=len(template_rt)
+	return angle,(min_loc[0]+w/2,min_loc[1]+h/2)

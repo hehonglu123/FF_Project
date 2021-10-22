@@ -6,7 +6,7 @@ from tkinter import messagebox
 from qpsolvers import solve_qp
 import numpy as np
 from importlib import import_module
-sys.path.append('toolbox')
+sys.path.append('../toolbox')
 from vel_emulate_sub import EmulatedVelocityControl
 from general_robotics_toolbox import *    
 

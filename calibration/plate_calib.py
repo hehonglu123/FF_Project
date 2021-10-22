@@ -70,7 +70,7 @@ def PolyArea2D(pts):
 ###determine pixels/unit distance, ROI
 def preprocess(image):
 	# tag_centroids, ids = aruco_process(image)
-	tag_centroids=np.array([[[ 89,51]], [[89,715]],[[1195,47]],[[1195,714]]])
+	tag_centroids=np.array([[[ 89,20]], [[80,706]],[[1212,18]],[[1224,696]]])
 	ROI=np.array([[np.min(tag_centroids[:,:,1]),np.max(tag_centroids[:,:,1])],[np.min(tag_centroids[:,:,0]),np.max(tag_centroids[:,:,0])]]).astype(int)		#[[r1,r2],[c1,c2]]
 	
 	vertices=np.squeeze(tag_centroids,axis=1)
