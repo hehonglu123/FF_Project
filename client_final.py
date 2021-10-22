@@ -58,12 +58,25 @@ def read_template(im_path,dimension,ppu):
 	template_binary= cv2.threshold(template, 40, 255, cv2.THRESH_BINARY)[1]
 
 	return template_binary
- 
+
+def new_frame(pipe_ep):
+	global current_frame, now
+
+	#Loop to get the newest frame
+	while (pipe_ep.Available > 0):
+		#Receive the packet
+		
+		image=pipe_ep.ReceivePacket()
+		#Convert the packet to an image and set the global variable
+		current_frame=ImageToMat(image)
+
+		return
+
 def ImageToMat(image):
 
-    frame2=image.data.reshape([image.image_info.height, image.image_info.width, int(len(image.data)/(image.image_info.height*image.image_info.width))], order='C')
+	frame2=image.data.reshape([image.image_info.height, image.image_info.width, int(len(image.data)/(image.image_info.height*image.image_info.width))], order='C')
 
-    return frame2
+	return frame2
 
 
 def pick(p,R,v):
@@ -140,9 +153,9 @@ def	vision_check(ROI,ppu,template,vision_q):
 	cam.capture_frame()
 
 
-	current_frame=ImageToMat(cam.capture_frame())
-	cv2.imwrite("vision_check.jpg",current_frame)
-	roi_frame=cv2.cvtColor(current_frame[ROI[0]:ROI[1],ROI[2]:ROI[3]], cv2.COLOR_BGR2GRAY)
+	current_frame_local=ImageToMat(cam.capture_frame())
+	cv2.imwrite("vision_check.jpg",current_frame_local)
+	roi_frame=cv2.cvtColor(current_frame_local[ROI[0]:ROI[1],ROI[2]:ROI[3]], cv2.COLOR_BGR2GRAY)
 
 
 	q=inv(place_position_global+np.array([0,0,0.1]),R_ee.R_ee(0))
@@ -207,16 +220,12 @@ def move(vd, ER):
 	return
 
 def	vision_check_fb(ROI,ppu,template,vision_q):
-	global cam, robot, halt_mode, jog_mode, position_mode, place_position_global, state_w
+	global cam, state_w, current_frame
 	print("vision check")
-
+	cam.start_streaming()
 	jog_joint(vision_q,0.5)
 
-	###clear buffer
-	cam.capture_frame()
-
-
-	current_frame=ImageToMat(cam.capture_frame())
+	###write for reference
 	cv2.imwrite("vision_check.jpg",current_frame)
 	roi_frame=cv2.cvtColor(current_frame[ROI[0]:ROI[1],ROI[2]:ROI[3]], cv2.COLOR_BGR2GRAY)
 
@@ -226,9 +235,6 @@ def	vision_check_fb(ROI,ppu,template,vision_q):
 	vel_ctrl.enable_velocity_mode()
 	while np.linalg.norm(offset_p)>1:
 		move(np.array([offset_p[1],-offset_p[0],0.])/1000.,np.eye(3))
-
-		cam.capture_frame()
-		current_frame=ImageToMat(cam.capture_frame())
 
 		roi_frame=cv2.cvtColor(current_frame[ROI[0]:ROI[1],ROI[2]:ROI[3]], cv2.COLOR_BGR2GRAY)
 
@@ -240,6 +246,8 @@ def	vision_check_fb(ROI,ppu,template,vision_q):
 
 	p_cur=fwd(state_w.InValue.joint_position).p
 	p_vision=fwd(vision_q).p
+
+	cam.stop_streaming()
 	return p_vision-p_cur,np.radians(angle)
 
 
@@ -290,12 +298,13 @@ def slide(place_position):
 	jog_joint(q, 0.1)
 
 def connect_failed(s, client_id, url, err):
-    print ("Client connect failed: " + str(client_id.NodeID) + " url: " + str(url) + " error: " + str(err))
+	print ("Client connect failed: " + str(client_id.NodeID) + " url: " + str(url) + " error: " + str(err))
 
 
 def main():
-	global robot, tool, cam, vel_ctrl, halt_mode, jog_mode, position_mode, m1k_obj, place_position_global,state_w
+	global robot, tool, cam, vel_ctrl, halt_mode, jog_mode, position_mode, m1k_obj, place_position_global,state_w, current_frame
 
+	current_frame=None
 
 	###read yamls
 	with open(r'client_yaml/testbed.yaml') as file:
@@ -334,6 +343,8 @@ def main():
 	url='rr+tcp://robosewclient:59823?service=camera'
 	#Startup, connect, and pull out the camera from the objref    
 	cam=RRN.ConnectService(url)
+	cam_pipe=cam.frame_stream.Connect(-1)
+	cam_pipe.PacketReceivedEvent+=new_frame
 
 	#rpi relay
 	try:
@@ -402,4 +413,4 @@ def main():
 	m1k_obj.EndSession()
 
 if __name__ == '__main__':
-    main()
+	main()
