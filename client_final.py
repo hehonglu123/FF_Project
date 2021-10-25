@@ -10,10 +10,9 @@ from general_robotics_toolbox import *
 from vision import *
 from abb_def import *
 from qpsolvers import solve_qp
+from R_abb import *
 
-R_ee = import_module('R_'+robot_name)
-
-def jog_joint(q,max_v,threshold=0.01):
+def jog_joint(q,max_v,threshold=0.01,dcc_range=0.1):
 	global vel_ctrl
 	#enable velocity mode
 	vel_ctrl.enable_velocity_mode()
@@ -25,13 +24,13 @@ def jog_joint(q,max_v,threshold=0.01):
 	while np.linalg.norm(diff)>threshold:
 		
 		diff=q-vel_ctrl.joint_position()
-		qdot=np.where(np.abs(diff) > 10*threshold, qdot_temp, diff)
+		qdot=np.where(np.abs(diff) > dcc_range, qdot_temp, diff)
 
 		vel_ctrl.set_velocity_command(qdot)
 	vel_ctrl.set_velocity_command(np.zeros((6,)))
 	vel_ctrl.disable_velocity_mode() 
 
-def jog_joint_movel(p,max_v,threshold=0.001):
+def jog_joint_movel(p,max_v,threshold=0.001,acc_range=0.01,dcc_range=0.02,Rd=[]):
 	global vel_ctrl
 	#enable velocity mode
 	vel_ctrl.enable_velocity_mode()
@@ -43,19 +42,21 @@ def jog_joint_movel(p,max_v,threshold=0.001):
 
 	v_temp=np.clip((1.15*diff)/time_temp,-max_v,max_v)
 
-	while np.linalg.norm(diff)>0.001:
-		
-		diff=p-fwd(vel_ctrl.joint_position()).p
-		diff2=np.linalg.norm(fwd(vel_ctrl.joint_position()).p-p_init)
+	while np.linalg.norm(diff)>threshold:
+		pose_cur=fwd(vel_ctrl.joint_position())
+		diff=p-pose_cur.p
+		diff2=np.linalg.norm(pose_cur.p-p_init)
 
-		if np.linalg.norm(diff)<10*threshold:
+		if np.linalg.norm(diff)<dcc_range:
 			v=diff
-		elif np.linalg.norm(diff2)<10*threshold:
-			v=np.linalg.norm(diff2)*v_temp/(10*threshold)
+		elif np.linalg.norm(diff2)<acc_range:
+			v=np.linalg.norm(diff2)*v_temp/acc_range
 		else:
 			v=v_temp
-
-		move(v,np.eye(3))
+		if len(Rd)==0:
+			move(v,np.eye(3))
+		else:
+			move(v,np.dot(pose_cur.R,Rd.T))
 
 	vel_ctrl.set_velocity_command(np.zeros((6,)))
 	vel_ctrl.disable_velocity_mode() 
@@ -99,39 +100,38 @@ def pick(p,R,v):
 	global robot, tool, m1k_obj
 	print('go picking')
 	q=inv(p+np.array([0,0,0.5]),R)
-	jog_joint(q, 0.35)
+	jog_joint(q, 0.35,threshold=0.1,dcc_range=0.12)
 
 	#move down 
 	# q=inv(p+np.array([0,0,0.2]),R)
 	# jog_joint(q, 0.2,[0,0,-0.01])
 	
-	jog_joint_movel(p,0.06)
+	jog_joint_movel(p,0.08,Rd=R)
 
 	#pick
 	# q=inv(p,R)
 	# jog_joint(q,0.05)
 
-	# tool.setf_param('voltage',RR.VarValue(v,'single'))
 	m1k_obj.setawgconstant('A',v)
-	time.sleep(3)
+	time.sleep(0.5)
 	
 
 	#move up
-	jog_joint_movel(p+np.array([0,0,0.3]),0.06)
+	jog_joint_movel(p+np.array([0,0,0.3]),0.08,threshold=0.05)
 
 
 
 def place(place_position,angle):
-	global robot, tool, m1k_obj
+	global robot, tool, m1k_obj, place_orientation_global
 	print('go placing')
-	R=R_ee.R_ee(angle)
+	R=np.dot(place_orientation_global,Rx(-angle))
 	#start joggging to initial pose
-	q=inv(place_position+np.array([0,0,0.1]),R)
-	jog_joint(q, 0.3)
+	# q=inv(place_position+np.array([0,0,0.1]),R)
+	# jog_joint(q, 0.3)
 
 	#move down 
 	q=inv(place_position,R)
-	jog_joint(q, 0.1)
+	jog_joint(q, 0.3)
 	
 
 	###turn off adhesion, turn on HV relay, pin down
@@ -142,7 +142,7 @@ def place(place_position,angle):
 
 	tool.close()
 
-	time.sleep(2.5)
+	time.sleep(5)
 	
 	tool.open()
 
@@ -156,48 +156,48 @@ def place(place_position,angle):
 	#turn off HV relay
 	tool.setf_param('relay',RR.VarValue(0,'int8'))
 
-def	vision_check(ROI,ppu,template,vision_q):
-	global cam, robot, halt_mode, jog_mode, position_mode, place_position_global
-	print("vision check")
+# def	vision_check(ROI,ppu,template,vision_q):
+# 	global cam, robot, halt_mode, jog_mode, position_mode, place_position_global
+# 	print("vision check")
 
-	jog_joint(vision_q,0.2)
+# 	jog_joint(vision_q,0.2)
 
-	###clear buffer
-	cam.capture_frame()
-
-
-	current_frame_local=ImageToMat(cam.capture_frame())
-	cv2.imwrite("vision_check.jpg",current_frame_local)
-	roi_frame=cv2.cvtColor(current_frame_local[ROI[0]:ROI[1],ROI[2]:ROI[3]], cv2.COLOR_BGR2GRAY)
+# 	###clear buffer
+# 	cam.capture_frame()
 
 
-	q=inv(place_position_global+np.array([0,0,0.1]),R_ee.R_ee(0))
-	robot.command_mode = halt_mode
-	time.sleep(0.1)
-	robot.command_mode = jog_mode
-	robot.jog_freespace(q,0.1*np.ones(6), False)
+# 	current_frame_local=ImageToMat(cam.capture_frame())
+# 	cv2.imwrite("vision_check.jpg",current_frame_local)
+# 	roi_frame=cv2.cvtColor(current_frame_local[ROI[0]:ROI[1],ROI[2]:ROI[3]], cv2.COLOR_BGR2GRAY)
 
-	angle,center=match_w_ori(roi_frame,template,0,'edge')
+
+# 	q=inv(place_position_global+np.array([0,0,0.1]),R_ee(0))
+# 	robot.command_mode = halt_mode
+# 	time.sleep(0.1)
+# 	robot.command_mode = jog_mode
+# 	robot.jog_freespace(q,0.1*np.ones(6), False)
+
+# 	angle,center=match_w_ori(roi_frame,template,0,'edge')
 
 
 	
-	# offset_p=(center-np.array([len(roi_frame[0]),len(roi_frame)])/2.)/np.sqrt(ppu)
-	offset_p=(center-np.array([len(roi_frame[0]),len(roi_frame)])/2.)
-	offset_p[0]=offset_p[0]/1.391666
-	offset_p[1]=offset_p[1]/1.3825
+# 	# offset_p=(center-np.array([len(roi_frame[0]),len(roi_frame)])/2.)/np.sqrt(ppu)
+# 	offset_p=(center-np.array([len(roi_frame[0]),len(roi_frame)])/2.)
+# 	offset_p[0]=offset_p[0]/1.391666
+# 	offset_p[1]=offset_p[1]/1.3825
 
-	print(offset_p,angle)
-	# ###show final results
-	cv2.circle(roi_frame, (int(center[0]),int(center[1])),10,(0,0,255), -1)			
-	cv2.imshow("image", roi_frame)
-	cv2.waitKey(0)
-	cv2.destroyAllWindows()
+# 	print(offset_p,angle)
+# 	# ###show final results
+# 	cv2.circle(roi_frame, (int(center[0]),int(center[1])),10,(0,0,255), -1)			
+# 	cv2.imshow("image", roi_frame)
+# 	cv2.waitKey(0)
+# 	cv2.destroyAllWindows()
 
-	robot.command_mode = halt_mode
-	time.sleep(0.1)
-	robot.command_mode = position_mode
+# 	robot.command_mode = halt_mode
+# 	time.sleep(0.1)
+# 	robot.command_mode = position_mode
 
-	return np.array([offset_p[1],-offset_p[0],0.])/1000.,np.radians(angle)
+# 	return np.array([offset_p[1],-offset_p[0],0.])/1000.,np.radians(angle)
 
 def move(vd, ER):
 	global vel_ctrl, robot_def
@@ -250,8 +250,8 @@ def	vision_check_fb(ROI,ppu,template,vision_q):
 	offset_p=(center-np.array([len(roi_frame[0]),len(roi_frame)])/2.)
 
 	vel_ctrl.enable_velocity_mode()
-	while np.linalg.norm(offset_p)>1:
-		move(np.array([offset_p[1],-offset_p[0],0.])/2000.,np.eye(3))
+	while np.linalg.norm(offset_p)>2:
+		move(np.array([offset_p[1],-offset_p[0],0.])/3000.,np.eye(3))
 
 		roi_frame=cv2.cvtColor(current_frame[ROI[0]:ROI[1],ROI[2]:ROI[3]], cv2.COLOR_BGR2GRAY)
 
@@ -269,16 +269,16 @@ def	vision_check_fb(ROI,ppu,template,vision_q):
 
 
 def place_slide(place_position,angle):
-	global robot, tool, m1k_obj
+	global robot, tool, m1k_obj, place_orientation_global
 	print('go placing')
-	R=R_ee.R_ee(angle)
+	R=np.dot(place_orientation_global,Rx(-angle))
 	#start joggging to initial pose
-	q=inv(place_position+np.array([0,0,0.1]),R)
-	jog_joint(q, 0.3)
+	# q=inv(place_position+np.array([0,0,0.1]),R)
+	# jog_joint(q, 0.3)
 
 	#move down 
 	q=inv(place_position,R)
-	jog_joint(q, 0.1)
+	jog_joint(q, 0.3)
 	
 
 	###turn off adhesion, pin down
@@ -291,8 +291,8 @@ def place_slide(place_position,angle):
 	vel_ctrl.enable_velocity_mode()
 
 	now=time.time()
-	while time.time()-now<5:
-		move(np.array([0.06,0,0]),np.eye(3))
+	while time.time()-now<6:
+		move(np.array([0.08,0,0]),np.eye(3))
 	vel_ctrl.disable_velocity_mode() 
 
 	# q=inv(place_position+np.array([0.22,0,0.]),R)
@@ -301,31 +301,17 @@ def place_slide(place_position,angle):
 	tool.open()
 	time.sleep(0.5)
 	###move up
-	q=inv(place_position+np.array([0.22,0,0.1]),R)
-	jog_joint(q, 0.1)
+	q=inv(place_position+np.array([0.3,0,0.1]),R)
+	jog_joint(q, 0.3)
 	tool.setf_param('relay',RR.VarValue(0,'int8'))
 
-def slide(place_position):
-	global robot, tool
-	q=inv(place_position+np.array([0,0,0.2]),R_ee.R_ee(0))
-	jog_joint(q, 0.1)
-	q=inv(place_position,R_ee.R_ee(0))
-	jog_joint(q, 0.1)
-	tool.close()
-	###sliding
-	q=inv(place_position+np.array([0.1,0,0.]),R_ee.R_ee(0))
-	jog_joint(q, 0.1)
-	tool.open()
-	###move up
-	q=inv(place_position+np.array([0.1,0,0.1]),R_ee.R_ee(0))
-	jog_joint(q, 0.1)
 
 def connect_failed(s, client_id, url, err):
 	print ("Client connect failed: " + str(client_id.NodeID) + " url: " + str(url) + " error: " + str(err))
 
 
 def main():
-	global robot, tool, cam, vel_ctrl, halt_mode, jog_mode, position_mode, m1k_obj, place_position_global,state_w, current_frame
+	global robot, tool, cam, vel_ctrl, halt_mode, jog_mode, position_mode, m1k_obj, place_position_global,state_w, current_frame, place_orientation_global
 
 	current_frame=None
 
@@ -337,13 +323,14 @@ def main():
 	with open('client_yaml/fabric.yaml') as file:
 		fabric_dimension = yaml.load(file, Loader=yaml.FullLoader)
 
-	home=testbed_yaml['home']
+	home=testbed_yaml['home_p']
 	bin1_p=testbed_yaml['bin1_p']
 	bin1_R=np.array(testbed_yaml['bin1_R']).reshape((3,3))
 	bin2_p=testbed_yaml['bin2_p']
 	bin2_R=np.array(testbed_yaml['bin2_R']).reshape((3,3))
 	vision_q=testbed_yaml['vision_q']
-	place_position_global=testbed_yaml['place_position']
+	place_position_global=testbed_yaml['place_p']
+	place_orientation_global=np.array(testbed_yaml['place_R']).reshape((3,3))
 	ROI=vision_yaml['ROI']
 	ppu=vision_yaml['ppu']
 	pins_height=np.array([0,0,0.015])
@@ -400,30 +387,32 @@ def main():
 
 		###temp, lift up
 		q=state_w.InValue.joint_position
-		pose=fwd(q)
-		jog_joint(inv([pose.p[0],pose.p[1],0.6],pose.R), 0.3)
+		p_cur=fwd(q).p
+		jog_joint_movel([p_cur[0],p_cur[1],0.6], 0.08,threshold=0.05, acc_range=0.)
 
 
 
 		##home
-		jog_joint(inv(home,R_ee.R_ee(0)), 0.3)
+		jog_joint(inv(home,R_ee(0)), 0.35,threshold=0.05,dcc_range=0.5)
 
 		fabric_name='PD19_016C-FR-LFT-UP HICKEY V2 36'
 		template=read_template('client_yaml/templates/'+fabric_name+'.jpg',fabric_dimension[fabric_name],ppu)
+		
 		stack_height1=np.array([0,0,0.003])
-		pick(bin1_p+stack_height1,bin1_R,v=1.9)
+		pick(bin1_p+stack_height1,bin1_R,v=2.0)
 
 		# offset_p,offset_angle=vision_check(ROI,ppu,template,vision_q)
 		offset_p,offset_angle=vision_check_fb(ROI,ppu,template,vision_q)
 		place(place_position_global-offset_p+pins_height,offset_angle)
 
 		stack_height2=np.array([0,0,0.005])
-		pick(bin2_p+stack_height2,bin2_R,v=1.6)
+		pick(bin2_p+stack_height2,bin2_R,v=1.8)
 		# offset_p,offset_angle=vision_check(ROI,ppu,template,vision_q)
 		offset_p,offset_angle=vision_check_fb(ROI,ppu,template,vision_q)
+		# place(place_position_global-offset_p+pins_height,offset_angle)
 		place_slide(place_position_global-offset_p+pins_height,offset_angle)
 		##home
-		jog_joint(inv(home,R_ee.R_ee(0)), 0.3)
+		jog_joint(inv(home,R_ee(0)), 0.3)
 		##reset chargepad
 		tool.setf_param('relay',RR.VarValue(1,'int8'))
 		time.sleep(1.)

@@ -66,7 +66,7 @@ def match_w_ori(image,template,orientation,alg='hsva',edge_raw=None):
 	min_error=9999999999
 	act_angle=0
 
-	orientation=int(round(np.degrees(orientation)))
+	orientation=np.degrees(orientation)
 
 
 	tEdged = template#cv2.Canny(template, 50, 200,apertureSize =3)
@@ -86,7 +86,7 @@ def match_w_ori(image,template,orientation,alg='hsva',edge_raw=None):
 	# cv2.waitKey(0)
 
 	# for i in range(0,181,180):
-	for angle in range(orientation-5,orientation+5):
+	for angle in np.arange(orientation-5,orientation+5,1.):
 	
 		template_rt=rotate_image(tEdged,angle,[0,0,0])
 		###make template binary
@@ -112,7 +112,7 @@ def match_w_ori_single(image,template,orientation,alg='hsva',edge_raw=None):
 	min_error=9999999999
 	act_angle=0
 
-	orientation=int(round(np.degrees(orientation)))
+	orientation=np.degrees(orientation)
 
 
 	tEdged = template#cv2.Canny(template, 50, 200,apertureSize =3)
