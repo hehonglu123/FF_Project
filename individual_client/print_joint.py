@@ -4,7 +4,7 @@ import numpy as np
 import time,traceback, sys, yaml, argparse
 from importlib import import_module
 sys.path.append('../toolbox')
-from abb_ik import *
+from abb_def import *
 
 # #Accept the names of the webcams and the nodename from command line
 # parser = argparse.ArgumentParser(description="RR plug and play client")
@@ -44,8 +44,8 @@ robot_state_wire=state_w.TryGetInValue()
 print("wire value set: ",robot_state_wire[0])
 robot_state = robot_state_wire[1]
 print("robot_joints: ", robot_state.joint_position)
-print("kin_chain_tcp: ", fwd(robot_state.joint_position).p)
-print("kin_chain_tcp_R: ",fwd(robot_state.joint_position).R)
+print("kin_chain_tcp(fwd): ", fwd(robot_state.joint_position).p)
+print("kin_chain_tcp_R(fwd): ",fwd(robot_state.joint_position).R)
 print("joint torque: ", robot_state.joint_effort)
 position=robot_state.kin_chain_tcp[0]['position'] 
 orientation=robot_state.kin_chain_tcp[0]['orientation'] 

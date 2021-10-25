@@ -7,13 +7,13 @@ robot_name='abb'
 sys.path.append('toolbox/')
 from vel_emulate_sub import EmulatedVelocityControl
 from general_robotics_toolbox import *    
-from temp_match import *
+from vision import *
 from abb_def import *
 from qpsolvers import solve_qp
 
 R_ee = import_module('R_'+robot_name)
 
-def jog_joint(q,max_v,vd=[]):
+def jog_joint(q,max_v,threshold=0.01):
 	global vel_ctrl
 	#enable velocity mode
 	vel_ctrl.enable_velocity_mode()
@@ -21,28 +21,44 @@ def jog_joint(q,max_v,vd=[]):
 	diff=q-vel_ctrl.joint_position()
 	time_temp=np.linalg.norm(diff)/max_v
 
-	# if vd:
-	# 	J=inv.jacobian(q)
-
-	# 	while np.linalg.norm(q-vel_ctrl.joint_position())>0.01:
-	# 		qdot_temp=np.dot(np.linalg.inv(J),np.vstack((np.zeros((3,1)),np.array(vd).reshape((3,1))))).flatten()
-
-	# 		diff=q-vel_ctrl.joint_position()
-	# 		qdot=np.where(np.abs(diff) > 0.05, qdot_temp, diff)
-	# 		print(qdot)
-	# 		vel_ctrl.set_velocity_command(qdot)
-
-	# else:	
 	qdot_temp=np.clip((1.15*diff)/time_temp,-max_v,max_v)
-	while np.linalg.norm(q-vel_ctrl.joint_position())>0.01:
+	while np.linalg.norm(diff)>threshold:
 		
 		diff=q-vel_ctrl.joint_position()
-		qdot=np.where(np.abs(diff) > 0.05, qdot_temp, diff)
+		qdot=np.where(np.abs(diff) > 10*threshold, qdot_temp, diff)
 
 		vel_ctrl.set_velocity_command(qdot)
 	vel_ctrl.set_velocity_command(np.zeros((6,)))
 	vel_ctrl.disable_velocity_mode() 
 
+def jog_joint_movel(p,max_v,threshold=0.001):
+	global vel_ctrl
+	#enable velocity mode
+	vel_ctrl.enable_velocity_mode()
+
+	p_init=fwd(vel_ctrl.joint_position()).p
+
+	diff=p-p_init
+	time_temp=np.linalg.norm(diff)/max_v
+
+	v_temp=np.clip((1.15*diff)/time_temp,-max_v,max_v)
+
+	while np.linalg.norm(diff)>0.001:
+		
+		diff=p-fwd(vel_ctrl.joint_position()).p
+		diff2=np.linalg.norm(fwd(vel_ctrl.joint_position()).p-p_init)
+
+		if np.linalg.norm(diff)<10*threshold:
+			v=diff
+		elif np.linalg.norm(diff2)<10*threshold:
+			v=np.linalg.norm(diff2)*v_temp/(10*threshold)
+		else:
+			v=v_temp
+
+		move(v,np.eye(3))
+
+	vel_ctrl.set_velocity_command(np.zeros((6,)))
+	vel_ctrl.disable_velocity_mode() 
 
 def read_template(im_path,dimension,ppu):
 	#load template
@@ -83,17 +99,17 @@ def pick(p,R,v):
 	global robot, tool, m1k_obj
 	print('go picking')
 	q=inv(p+np.array([0,0,0.5]),R)
-	jog_joint(q, 0.5)
+	jog_joint(q, 0.35)
 
 	#move down 
-	q=inv(p+np.array([0,0,0.2]),R)
-	jog_joint(q, 0.2,[0,0,-0.01])
-	# q=inv(p+np.array([0,0,0.1]),R)
-	# jog_joint(q, 0.1)
+	# q=inv(p+np.array([0,0,0.2]),R)
+	# jog_joint(q, 0.2,[0,0,-0.01])
+	
+	jog_joint_movel(p,0.06)
 
 	#pick
-	q=inv(p,R)
-	jog_joint(q,0.05)
+	# q=inv(p,R)
+	# jog_joint(q,0.05)
 
 	# tool.setf_param('voltage',RR.VarValue(v,'single'))
 	m1k_obj.setawgconstant('A',v)
@@ -101,12 +117,9 @@ def pick(p,R,v):
 	
 
 	#move up
-	q=inv(p+np.array([0,0,0.1]),R)
-	jog_joint(q, 0.1, [0,0,0.01])
-	# q=inv(p+np.array([0,0,0.2]),R)
-	# jog_joint(q, 0.1)
-	q=inv(p+np.array([0,0,0.5]),R)
-	jog_joint(q, 0.1)
+	jog_joint_movel(p+np.array([0,0,0.3]),0.06)
+
+
 
 def place(place_position,angle):
 	global robot, tool, m1k_obj
@@ -114,7 +127,7 @@ def place(place_position,angle):
 	R=R_ee.R_ee(angle)
 	#start joggging to initial pose
 	q=inv(place_position+np.array([0,0,0.1]),R)
-	jog_joint(q, 0.1)
+	jog_joint(q, 0.3)
 
 	#move down 
 	q=inv(place_position,R)
@@ -138,7 +151,7 @@ def place(place_position,angle):
 
 	#move up
 	q=inv(place_position+np.array([0,0,0.1]),R)
-	jog_joint(q, 0.05)
+	jog_joint(q, 0.3)
 
 	#turn off HV relay
 	tool.setf_param('relay',RR.VarValue(0,'int8'))
@@ -222,8 +235,12 @@ def move(vd, ER):
 def	vision_check_fb(ROI,ppu,template,vision_q):
 	global cam, state_w, current_frame
 	print("vision check")
-	cam.start_streaming()
-	jog_joint(vision_q,0.5)
+	try:
+		cam.start_streaming()
+	except:
+		traceback.print_exc()
+		pass
+	jog_joint(vision_q,0.35)
 
 	###write for reference
 	cv2.imwrite("vision_check.jpg",current_frame)
@@ -234,13 +251,12 @@ def	vision_check_fb(ROI,ppu,template,vision_q):
 
 	vel_ctrl.enable_velocity_mode()
 	while np.linalg.norm(offset_p)>1:
-		move(np.array([offset_p[1],-offset_p[0],0.])/1000.,np.eye(3))
+		move(np.array([offset_p[1],-offset_p[0],0.])/2000.,np.eye(3))
 
 		roi_frame=cv2.cvtColor(current_frame[ROI[0]:ROI[1],ROI[2]:ROI[3]], cv2.COLOR_BGR2GRAY)
 
 		angle,center=match_w_ori_single(roi_frame,template,np.radians(angle),'edge')
 		offset_p=(center-np.array([len(roi_frame[0]),len(roi_frame)])/2.)
-		print(offset_p)
 
 	vel_ctrl.disable_velocity_mode() 
 
@@ -258,7 +274,7 @@ def place_slide(place_position,angle):
 	R=R_ee.R_ee(angle)
 	#start joggging to initial pose
 	q=inv(place_position+np.array([0,0,0.1]),R)
-	jog_joint(q, 0.1)
+	jog_joint(q, 0.3)
 
 	#move down 
 	q=inv(place_position,R)
@@ -272,13 +288,20 @@ def place_slide(place_position,angle):
 	time.sleep(1.)
 	tool.setf_param('relay',RR.VarValue(1,'int8'))
 	###sliding
-	q=inv(place_position+np.array([0.18,0,0.]),R)
-	jog_joint(q, 0.1)
+	vel_ctrl.enable_velocity_mode()
+
+	now=time.time()
+	while time.time()-now<5:
+		move(np.array([0.06,0,0]),np.eye(3))
+	vel_ctrl.disable_velocity_mode() 
+
+	# q=inv(place_position+np.array([0.22,0,0.]),R)
+	# jog_joint(q, 0.1)
 
 	tool.open()
 	time.sleep(0.5)
 	###move up
-	q=inv(place_position+np.array([0.18,0,0.1]),R)
+	q=inv(place_position+np.array([0.22,0,0.1]),R)
 	jog_joint(q, 0.1)
 	tool.setf_param('relay',RR.VarValue(0,'int8'))
 
@@ -398,7 +421,7 @@ def main():
 		pick(bin2_p+stack_height2,bin2_R,v=1.6)
 		# offset_p,offset_angle=vision_check(ROI,ppu,template,vision_q)
 		offset_p,offset_angle=vision_check_fb(ROI,ppu,template,vision_q)
-		place(place_position_global-offset_p+pins_height,offset_angle)
+		place_slide(place_position_global-offset_p+pins_height,offset_angle)
 		##home
 		jog_joint(inv(home,R_ee.R_ee(0)), 0.3)
 		##reset chargepad
