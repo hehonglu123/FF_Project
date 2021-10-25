@@ -336,7 +336,7 @@ def main():
 	pins_height=np.array([0,0,0.015])
 
 	try:	
-		url='rr+tcp://pi_fuse:11111?service=m1k'
+		url='rr+tcp://192.168.50.253:11111?service=m1k'
 		m1k_sub=RRN.SubscribeService(url)
 		####get client object
 		m1k_obj = m1k_sub.GetDefaultClientWait(1)
@@ -358,7 +358,7 @@ def main():
 
 	#rpi relay
 	try:
-		tool_sub=RRN.SubscribeService('rr+tcp://pi_fuse:22222?service=tool')
+		tool_sub=RRN.SubscribeService('rr+tcp://192.168.50.253:22222?service=tool')
 		tool=tool_sub.GetDefaultClientWait(1)
 		tool.open()
 		tool.setf_param('relay',RR.VarValue(0,'int8'))
@@ -369,7 +369,7 @@ def main():
 		pass
 
 	try:
-		robot_sub=RRN.SubscribeService('rr+tcp://pi_fuse:58651?service=robot')
+		robot_sub=RRN.SubscribeService('rr+tcp://192.168.50.253:58651?service=robot')
 		robot=robot_sub.GetDefaultClientWait(1)
 		state_w = robot_sub.SubscribeWire("robot_state")
 		cmd_w=robot_sub.SubscribeWire('position_command')
