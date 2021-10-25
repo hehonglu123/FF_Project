@@ -284,9 +284,11 @@ def place_slide(place_position,angle):
 	###turn off adhesion, pin down
 	# tool.setf_param('voltage',RR.VarValue(0.,'single'))
 	m1k_obj.setawgconstant('A',0.)
-	tool.close()
-	time.sleep(1.)
+	time.sleep(0.5)
 	tool.setf_param('relay',RR.VarValue(1,'int8'))
+	tool.close()
+	time.sleep(2.)
+	
 	###sliding
 	vel_ctrl.enable_velocity_mode()
 
