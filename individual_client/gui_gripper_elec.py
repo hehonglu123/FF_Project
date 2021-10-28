@@ -20,7 +20,7 @@ except:
 	print('rpi gripper service not available')
 	pass
 try:	
-	url='rr+tcp://pi_fuse:11111?service=m1k'
+	url='rr+tcp://192.168.50.166:11111?service=m1k'
 	m1k_obj = RRN.ConnectService(url)
 	m1k_obj.StartSession()
 	m1k_obj.setmode('A', 'SVMI')
@@ -45,7 +45,7 @@ def gripper_ctrl():
 
 	else:
 		# tool.setf_param('voltage',RR.VarValue(3.5,'single'))
-		m1k_obj.setawgconstant('A',2.)
+		m1k_obj.setawgconstant('A',5.)
 		gripper.config(relief="sunken")
 		gripper.configure(bg='green')
 		gripper.configure(text='gripper on')

@@ -74,7 +74,7 @@ vel_ctrl.enable_velocity_mode()
 
 
 top=Tk()
-top.title(robot_name)
+top.title("ABB1200 elec QP jogger")
 jobid = None
 def gripper_ctrl():
 
