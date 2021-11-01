@@ -88,7 +88,7 @@ def gripper_ctrl():
 
 	else:
 		# tool.setf_param('voltage',RR.VarValue(3.5,'single'))
-		m1k_obj.setawgconstant('A',2.)
+		m1k_obj.setawgconstant('A',4.)
 		gripper.config(relief="sunken")
 		gripper.configure(bg='green')
 		gripper.configure(text='gripper on')
@@ -332,5 +332,12 @@ j5_p.pack(in_=top, side=LEFT)
 j6_n.pack(in_=top, side=LEFT)
 j6_p.pack(in_=top, side=LEFT)
 
-top.mainloop()
+try:
+	top.mainloop()
+except:
+	vel_ctrl.disable_velocity_mode()
+	m1k_obj.EndSession()
+
+
 vel_ctrl.disable_velocity_mode()
+m1k_obj.EndSession()

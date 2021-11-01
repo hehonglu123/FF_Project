@@ -28,7 +28,7 @@ class EA_Gripper(object):
 		self._date_time_util = DateTimeUtil(RRN)
 
 		###DIO
-		self.rapid = RAPID(base_url='http://192.168.55.1:80')
+		self.rapid = RAPID(base_url='http://192.168.51.26:80')
 
 		###M1k setting
 		self.session = Session(ignore_dataflow=True, queue_size=100000)
