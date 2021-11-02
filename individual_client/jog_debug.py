@@ -12,8 +12,6 @@ robot_name='abb'
 
 
 sys.path.append('../toolbox')
-inv = import_module(robot_name+'_ik')
-R_ee = import_module('R_'+robot_name)
 
 url='rr+tcp://pi_fuse:58651/?service=robot'
 robot_sub=RRN.SubscribeService(url)
@@ -44,7 +42,7 @@ print(robot_state_wire[1].joint_position)
 
 
 # R=R_ee.R_ee_tilt_y(np.pi/4)
-q0=[-0.03757475,-0.02503307,0.23709877,0.00419083,1.54763242,-0.06684875]
+q0=[-0.02474012, -0.28560685, 0.31168665, 0.01406645, 1.5511932, -0.05878576]
 
 
 # print(q)

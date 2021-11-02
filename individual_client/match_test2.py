@@ -7,6 +7,7 @@ import time
 
 fabric_name='PD19_016C-FR-LFT-UP HICKEY V2 36'
 image=cv2.imread('../vision_check.jpg',0)
+edge_raw=cv2.imread('../edge_raw.jpg',0)
 
 
 with open('../client_yaml/vision.yaml') as file:
@@ -35,7 +36,7 @@ roi_frame_small = cv2.resize(roi_frame, (int(roi_frame.shape[1] * scale_percent)
 template_binary_small = cv2.resize(template_binary, (int(template_binary.shape[1] * scale_percent),int(template_binary.shape[0] * scale_percent)))
 
 now=time.time()
-angle,center=match_w_ori(roi_frame_small,template_binary_small,0.,'edge',template)
+angle,center=match_w_ori(roi_frame_small,template_binary_small,0.,'edge',edge_raw=None)
 print('time: ',time.time()-now)
 
 

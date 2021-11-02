@@ -235,11 +235,12 @@ def	vision_check_fb(ROI,ppu,template,vision_q):
 	except:
 		traceback.print_exc()
 		pass
-	jog_joint(vision_q, 1.5,threshold=0.01,dcc_range=0.3)
+	jog_joint(vision_q, 1.5,threshold=0.001,dcc_range=0.3)
 
 	###brief stop for vision
 	vel_ctrl.set_velocity_command(np.zeros((6,)))
 	vel_ctrl.disable_velocity_mode()
+	time.sleep(0.5)
 
 	###write for reference
 	cv2.imwrite("vision_check.jpg",current_frame)
@@ -247,19 +248,36 @@ def	vision_check_fb(ROI,ppu,template,vision_q):
 
 	angle,center=match_w_ori(roi_frame,template,0,'edge')
 	offset_p=(center-np.array([len(roi_frame[0]),len(roi_frame)])/2.)
-
 	vel_ctrl.enable_velocity_mode()
-	while np.linalg.norm(offset_p)>5:
-		print(offset_p)
-		if np.linalg.norm(offset_p)<10:
-			move(np.array([offset_p[1],-offset_p[0],0.])/5000.,np.eye(3))
-		else:
-			move(np.array([offset_p[1],-offset_p[0],0.])/2000.,np.eye(3))
+
+	###jog with large offset first
+	# vision_pose=fwd(vision_q)
+	# q_temp=inv(np.array([vision_pose.p[0]+offset_p[1]/1366.54,vision_pose.p[1]-offset_p[0]/1366.54,vision_pose.p[-1]]),vision_pose.R)
+	# jog_joint(q_temp,0.2,threshold=0.01,dcc_range=0.1)
+
+	while np.linalg.norm(offset_p)>2:	
 
 		roi_frame=cv2.cvtColor(current_frame[ROI[0]:ROI[1],ROI[2]:ROI[3]], cv2.COLOR_BGR2GRAY)
-
 		angle,center=match_w_ori_single(roi_frame,template,np.radians(angle),'edge')
 		offset_p=(center-np.array([len(roi_frame[0]),len(roi_frame)])/2.)
+
+		print(offset_p,np.linalg.norm(offset_p))
+		if np.linalg.norm(offset_p)>10:
+			move(np.array([offset_p[1],-offset_p[0],0.])/2000.,np.eye(3))
+		else:
+			move(np.array([offset_p[1],-offset_p[0],0.])/5000.,np.eye(3))
+
+	# while np.linalg.norm(offset_p)>2:
+	# 	print(offset_p,np.linalg.norm(offset_p))
+	# 	if np.linalg.norm(offset_p)<10:
+	# 		move(np.array([offset_p[1],-offset_p[0],0.])/5000.,np.eye(3))
+	# 	else:
+	# 		move(np.array([offset_p[1],-offset_p[0],0.])/2000.,np.eye(3))
+
+	# 	roi_frame=cv2.cvtColor(current_frame[ROI[0]:ROI[1],ROI[2]:ROI[3]], cv2.COLOR_BGR2GRAY)
+
+	# 	angle,center=match_w_ori_single(roi_frame,template,np.radians(angle),'edge')
+	# 	offset_p=(center-np.array([len(roi_frame[0]),len(roi_frame)])/2.)
 
 	vel_ctrl.set_velocity_command(np.zeros((6,)))
 
@@ -292,7 +310,7 @@ def place_slide(place_position,angle):
 
 	now=time.time()
 	while time.time()-now<6:
-		move(np.array([0.1,0,0]),np.eye(3))
+		move(np.array([0.09,0,0]),np.eye(3))
 
 	tool.open()
 	time.sleep(0.5)
@@ -398,14 +416,14 @@ def main():
 		template=read_template('client_yaml/templates/'+fabric_name+'.jpg',fabric_dimension[fabric_name],ppu)
 		
 		stack_height1=np.array([0,0,0.003])
-		pick(bin1_p+stack_height1,bin1_R,v=4.5)
+		pick(bin1_p+stack_height1,bin1_R,v=5.)
 
 		# offset_p,offset_angle=vision_check(ROI,ppu,template,vision_q)
 		offset_p,offset_angle=vision_check_fb(ROI,ppu,template,vision_q)
 		place(place_position_global-offset_p+pins_height,offset_angle)
 
 		stack_height2=np.array([0,0,0.005])
-		pick(bin2_p+stack_height2,bin2_R,v=3.0)
+		pick(bin2_p+stack_height2,bin2_R,v=5.)
 		# offset_p,offset_angle=vision_check(ROI,ppu,template,vision_q)
 		offset_p,offset_angle=vision_check_fb(ROI,ppu,template,vision_q)
 		# place(place_position_global-offset_p+pins_height,offset_angle)

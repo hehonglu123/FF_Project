@@ -17,10 +17,10 @@ class CameraImpl(object):
     
     def __init__(self, device_id, width, height, fps, camera_info):
         
-        #if platform.system() == "Windows":
-        #    self._capture = cv2.VideoCapture(device_id + cv2.CAP_DSHOW)
-        #else:
-        self._capture = cv2.VideoCapture(device_id, cv2.CAP_V4L2)
+        if platform.system() == "Windows":
+           self._capture = cv2.VideoCapture(device_id)
+        else:
+            self._capture = cv2.VideoCapture(device_id, cv2.CAP_V4L2)
         assert self._capture.isOpened(), f"Could not open device: {device_id}"
 
         self._seqno = 0
@@ -179,8 +179,8 @@ class CameraImpl(object):
 
 def main():
     parser = argparse.ArgumentParser(description="OpenCV based camera driver service for Robot Raconteur")
-    parser.add_argument("--camera-info-file", type=argparse.FileType('r'),default=None,required=True,help="Camera info file (required)")
-    parser.add_argument("--device-id", type=int, default=0, help="the device to open (default 0)")
+    parser.add_argument("--camera-info-file", type=argparse.FileType('r'),default='oak1.yml',required=False,help="Camera info file (required)")
+    parser.add_argument("--device-id", type=int, default=1, help="the device to open (default 0)")
     parser.add_argument("--width", type=int, default=1280, help="try to set width of image (default 1280)")
     parser.add_argument("--height", type=int, default=720, help="try to set height of image (default 720)")
     parser.add_argument("--fps", type=int, default=15, help="try to set rate of video capture (default 15 fps)")

@@ -49,9 +49,8 @@ def edge_temp_match(image,template):	#edge based match with alpha channel
 	# cv2.imshow("template", template)
 	# cv2.waitKey(0)
 
-	
 	#matching
-	res = cv2.matchTemplate(image, template , cv2.TM_SQDIFF, mask=template)
+	res = cv2.matchTemplate(image, template , cv2.TM_SQDIFF, mask=create_mask(template))
 	min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
 
 	return min_val, min_loc
@@ -61,6 +60,16 @@ def bold_edge(image,num_pix=4):
 	bolded = cv2.threshold(bolded, 5, 255, cv2.THRESH_BINARY)[1]
 	return bolded
 
+def create_mask(template):
+	# get the (largest) contour
+	contours = cv2.findContours(template, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+	contours = contours[0] if len(contours) == 2 else contours[1]
+	big_contour = max(contours, key=cv2.contourArea)
+
+	# draw white filled contour on black background
+	result = np.zeros_like(template)
+	cv2.drawContours(result, [big_contour], 0, (255,255,255), cv2.FILLED)
+	return result
 
 def match_w_ori(image,template,orientation,alg='hsva',edge_raw=None):
 	min_error=9999999999
@@ -71,16 +80,17 @@ def match_w_ori(image,template,orientation,alg='hsva',edge_raw=None):
 
 	tEdged = template#cv2.Canny(template, 50, 200,apertureSize =3)
 	image_edge=cv2.Canny(image, 50, 200,apertureSize =3)
+	
+	edged = bold_edge(image_edge)
 	try:
-		image_edge_tmp=cv2.subtract(image_edge,edge_raw)
-		# cv2.imshow("image_sub", image_edge_tmp)
-		# cv2.imshow("image", image_edge)
+		edged=cv2.subtract(edged,edge_raw)
+		# cv2.imshow("image", edged)
 		# cv2.waitKey(0)
 	except:
 		# traceback.print_exc()
 		pass
-	edged = bold_edge(image_edge)
 
+	# cv2.imwrite('edge_raw.jpg',edged)
 	# cv2.imshow("image", edged)
 	# cv2.imshow("template", tEdged)
 	# cv2.waitKey(0)

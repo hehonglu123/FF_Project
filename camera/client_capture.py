@@ -21,7 +21,7 @@ def main():
     #Accept the names of the webcams and the nodename from command line
     parser = argparse.ArgumentParser(description="RR plug and play client")
 
-    url='rr+tcp://192.168.50.166:59823?service=camera'
+    url='rr+tcp://robosewclient:59823?service=camera'
 
     #Startup, connect, and pull out the camera from the objref    
     cam=RRN.ConnectService(url)
@@ -31,7 +31,7 @@ def main():
 
 
     current_frame=ImageToMat(cam.capture_frame())
-    cv2.imwrite('image_data/test.jpg',current_frame)
+    cv2.imwrite('image_data/vision_calib.jpg',current_frame)
 
 if __name__ == '__main__':
     main()

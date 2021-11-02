@@ -10,11 +10,7 @@ from vel_emulate_sub import EmulatedVelocityControl
 from general_robotics_toolbox import *
 from cv2 import aruco
 from temp_match import bold_edge
-
-
-inv = import_module(robot_name+'_ik')
-R_ee = import_module('R_'+robot_name)
-
+from abb_def import *
 
 def jog_joint(q,max_v):
 	global vel_ctrl
@@ -70,7 +66,7 @@ def PolyArea2D(pts):
 ###determine pixels/unit distance, ROI
 def preprocess(image):
 	# tag_centroids, ids = aruco_process(image)
-	tag_centroids=np.array([[[ 89,20]], [[80,706]],[[1212,18]],[[1224,696]]])
+	tag_centroids=np.array([[[ 97,25]], [[105,670]],[[1201,16]],[[1204,673]]])
 	ROI=np.array([[np.min(tag_centroids[:,:,1]),np.max(tag_centroids[:,:,1])],[np.min(tag_centroids[:,:,0]),np.max(tag_centroids[:,:,0])]]).astype(int)		#[[r1,r2],[c1,c2]]
 	
 	vertices=np.squeeze(tag_centroids,axis=1)
@@ -125,16 +121,16 @@ def main():
 	###temp, lift up
 	q=state_w.InValue.joint_position
 	pose=inv.fwd(q)
-	# robot.jog_freespace(inv.inv([pose.p[0],pose.p[1],0.6],pose.R), 0.3*np.ones(6), True)
-	jog_joint(inv.inv([pose.p[0],pose.p[1],0.6],pose.R), 0.3)
+	# robot.jog_freespace(inv([pose.p[0],pose.p[1],0.6],pose.R), 0.3*np.ones(6), True)
+	jog_joint(inv([pose.p[0],pose.p[1],0.6],pose.R), 0.3)
 
 
 	##home
-	# robot.jog_freespace(inv.inv(home,R_ee.R_ee(0)), 0.3*np.ones(6), True)
-	jog_joint(inv.inv(home,R_ee.R_ee(0)), 0.3)
+	# robot.jog_freespace(inv(home,R_ee(0)), 0.3*np.ones(6), True)
+	jog_joint(inv(home,R_ee(0)), 0.3)
 
 
-	q=inv.inv(vision_p+np.array([0.15,0,0.15]),R_ee.R_ee(0))
+	q=inv(vision_p+np.array([0.15,0,0.15]),R_ee(0))
 	# robot.jog_freespace(q, 0.3*np.ones(6), True)
 	jog_joint(q, 0.3)
 
@@ -147,7 +143,7 @@ def main():
 	ROI=ROI.flatten().tolist()
 	print(ROI)
 	###go back to normal config async
-	q=inv.inv(vision_p+np.array([0.15,0,0.15]),R_ee.R_ee(0))
+	q=inv(vision_p+np.array([0.15,0,0.15]),R_ee(0))
 	# robot.jog_freespace(q, 0.3*np.ones(6), False)
 	jog_joint(q,0.3)
 
