@@ -35,9 +35,7 @@ scale_percent = 1.
 roi_frame_small = cv2.resize(roi_frame, (int(roi_frame.shape[1] * scale_percent),int(roi_frame.shape[0] * scale_percent)))#, interpolation = cv2.INTER_AREA)
 template_binary_small = cv2.resize(template_binary, (int(template_binary.shape[1] * scale_percent),int(template_binary.shape[0] * scale_percent)))
 
-now=time.time()
 angle,center=match_w_ori(roi_frame_small,template_binary_small,0.,'edge',edge_raw=None)
-print('time: ',time.time()-now)
 
 
 center_original=[center[0]/scale_percent,center[1]/scale_percent]
