@@ -115,29 +115,32 @@ def pick(p,R,v):
 	
 
 	#move up
-	jog_joint_movel(p+np.array([0,0,0.3]),0.5,acc_range=0.2,threshold=0.05)
+	jog_joint_movel(p+np.array([0,0,0.3]),0.45,acc_range=0.2,threshold=0.05)
 
 
 
 def place(place_position,angle):
-	global robot, tool, m1k_obj, place_orientation_global
+	global robot, tool, m1k_obj, place_orientation_global, pins_height
 	print('go placing')
 	R=np.dot(place_orientation_global,Rx(-angle))
 
 	#start joggging to place position
-	q=inv(place_position,R)
+	q=inv(place_position+pins_height,R)
 	jog_joint(q, 0.5,threshold=0.001,dcc_range=0.1)
 	vel_ctrl.set_velocity_command(np.zeros((6,)))
 
-	###turn off adhesion, turn on HV relay, pin down
+	###turn off adhesion first, 
 	# tool.setf_param('voltage',RR.VarValue(0.,'single'))
 	m1k_obj.setawgconstant('A',0.)
-	time.sleep(0.1)
+	###keep moving until perfectly in contact with metal plate
+	#turn on HV relay, pin down
+	q=inv(place_position,R)
+	jog_joint(q, 0.1,threshold=0.0001,dcc_range=0.1)
 	tool.setf_param('relay',RR.VarValue(1,'int8'))
 
 	tool.close()
-
-	time.sleep(2)
+	jog_joint_movel(place_position+pins_height, 0.01,threshold=0.001,dcc_range=0.1)
+	# time.sleep(2)
 	
 	tool.open()
 
@@ -297,21 +300,26 @@ def	vision_check_fb(ROI,ppu,template,vision_q):
 
 
 def place_slide(place_position,angle):
-	global robot, tool, m1k_obj, place_orientation_global
+	global robot, tool, m1k_obj, place_orientation_global, pins_height
 	print('go placing')
 	R=np.dot(place_orientation_global,Rx(-angle))
 	#start joggging to place position
-	q=inv(place_position,R)
+	q=inv(place_position+pins_height,R)
 	jog_joint(q, 0.5,threshold=0.001,dcc_range=0.1)
 	vel_ctrl.set_velocity_command(np.zeros((6,)))
 
-	###turn off adhesion, pin down
+	###turn off adhesion first
 	# tool.setf_param('voltage',RR.VarValue(0.,'single'))
 	m1k_obj.setawgconstant('A',0.)
-	time.sleep(0.5)
+
+	###keep jogging down until perfect contact with metal plate
+	q=inv(place_position,R)
+	jog_joint(q, 0.1,threshold=0.0001,dcc_range=0.1)
+
 	tool.setf_param('relay',RR.VarValue(1,'int8'))
 	tool.close()
-	time.sleep(2.)
+
+	jog_joint_movel(place_position+pins_height, 0.01,threshold=0.001,dcc_range=0.1)
 	
 	###sliding
 
@@ -332,7 +340,7 @@ def connect_failed(s, client_id, url, err):
 
 
 def main():
-	global robot, tool, cam, vel_ctrl, halt_mode, jog_mode, position_mode, m1k_obj, place_position_global,state_w, current_frame, place_orientation_global
+	global robot, tool, cam, vel_ctrl, halt_mode, jog_mode, position_mode, m1k_obj, place_position_global,state_w, current_frame, place_orientation_global, pins_height
 
 	current_frame=None
 
@@ -428,14 +436,14 @@ def main():
 		# offset_p,offset_angle=vision_check(ROI,ppu,template,vision_q)
 		offset_p,offset_angle=vision_check_fb(ROI,ppu,template,vision_q)
 		
-		place(place_position_global-offset_p+pins_height,offset_angle)
+		place(place_position_global-offset_p,offset_angle)
 
 		stack_height2=np.array([0,0,0.005])
 		pick(bin2_p+stack_height2,bin2_R,v=4.5)
 		# offset_p,offset_angle=vision_check(ROI,ppu,template,vision_q)
 		offset_p,offset_angle=vision_check_fb(ROI,ppu,template,vision_q)
 		# place(place_position_global-offset_p+pins_height,offset_angle)
-		place_slide(place_position_global-offset_p+pins_height,offset_angle)
+		place_slide(place_position_global-offset_p,offset_angle)
 		##home
 		jog_joint(inv(home,R_ee(0)), 0.3)
 		##reset chargepad
