@@ -69,7 +69,7 @@ class fusing_pi(object):
 			self.tool=self.tool_sub.GetDefaultClientWait(1)
 			self.tool.open()
 			self.tool.setf_param('relay',RR.VarValue(0,'int8'))
-			# tool.setf_param('voltage',RR.VarValue(0.,'single'))
+			self.tool.setf_param('voltage',RR.VarValue(0.,'single'))
 		except:
 			traceback.print_exc()
 			print('tool service available')
@@ -168,7 +168,7 @@ class fusing_pi(object):
 			
 			image=pipe_ep.ReceivePacket()
 			#Convert the packet to an image and set the global variable
-			current_frame=self.ImageToMat(image)
+			self.current_frame=self.ImageToMat(image)
 
 			return
 
@@ -190,7 +190,8 @@ class fusing_pi(object):
 		self.vel_ctrl.set_velocity_command(np.zeros((6,)))
 
 		#pick
-		self.m1k_obj.setawgconstant('A',v)
+		# self.m1k_obj.setawgconstant('A',v)
+		self.tool.setf_param('voltage',RR.VarValue(v,'single'))
 		time.sleep(0.5)
 		
 
@@ -209,8 +210,8 @@ class fusing_pi(object):
 		self.vel_ctrl.set_velocity_command(np.zeros((6,)))
 
 		###turn off adhesion first, 
-		# tool.setf_param('voltage',RR.VarValue(0.,'single'))
-		self.m1k_obj.setawgconstant('A',0.)
+		self.tool.setf_param('voltage',RR.VarValue(0.,'single'))
+		# self.m1k_obj.setawgconstant('A',0.)
 		###keep moving until perfectly in contact with metal plate
 		#turn on HV relay, pin down
 		q=inv(place_position,R)
@@ -222,14 +223,14 @@ class fusing_pi(object):
 		self.jog_joint_movel(place_position+self.pins_height, 0.01,threshold=0.001,dcc_range=0.1)
 		# time.sleep(2)
 		
-		tool.open()
+		self.tool.open()
 
 		time.sleep(0.1)
 		
 
 		#move up
 		q=inv(place_position+np.array([0,0,0.1]),R)
-		jog_joint(q, 0.3,threshold=0.1,dcc_range=0.12)
+		self.jog_joint(q, 0.3,threshold=0.1,dcc_range=0.12)
 
 		#turn off HV relay
 		self.tool.setf_param('relay',RR.VarValue(0,'int8'))
@@ -274,7 +275,7 @@ class fusing_pi(object):
 		except:
 			traceback.print_exc()
 			pass
-		jog_joint(self.vision_q, 1.5,threshold=0.0001,dcc_range=0.4)
+		self.jog_joint(self.vision_q, 1.5,threshold=0.0001,dcc_range=0.4)
 
 		###brief stop for vision
 		self.vel_ctrl.set_velocity_command(np.zeros((6,)))
@@ -285,32 +286,32 @@ class fusing_pi(object):
 		cv2.imwrite("vision_check.jpg",self.current_frame)
 		roi_frame=cv2.cvtColor(self.current_frame[self.ROI[0]:self.ROI[1],self.ROI[2]:self.ROI[3]], cv2.COLOR_BGR2GRAY)
 
-		angle,center=match_w_ori(roi_frame,template,0,'edge')
+		angle,center=match_w_ori(roi_frame,self.template,0,'edge')
 		###precise angle 
-		angle,center=match_w_ori(roi_frame,template,np.radians(angle),'edge',angle_range=1.,angle_resolution=0.1)
+		angle,center=match_w_ori(roi_frame,self.template,np.radians(angle),'edge',angle_range=1.,angle_resolution=0.1)
 
 		offset_p=(center-np.array([len(roi_frame[0]),len(roi_frame)])/2.)
 		self.vel_ctrl.enable_velocity_mode()
 
 		###jog with large offset first
 
-		while np.linalg.norm(offset_p)>2:
+		while np.linalg.norm(offset_p)>1:
 
 
-			roi_frame=cv2.cvtColor(self.current_frame[ROI[0]:ROI[1],ROI[2]:ROI[3]], cv2.COLOR_BGR2GRAY)
-			angle,center=match_w_ori_single(roi_frame,template,np.radians(angle),'edge')
+			roi_frame=cv2.cvtColor(self.current_frame[self.ROI[0]:self.ROI[1],self.ROI[2]:self.ROI[3]], cv2.COLOR_BGR2GRAY)
+			angle,center=match_w_ori_single(roi_frame,self.template,np.radians(angle),'edge')
 			offset_p=(center-np.array([len(roi_frame[0]),len(roi_frame)])/2.)
 
 			# print(offset_p,np.linalg.norm(offset_p))
 			if np.linalg.norm(offset_p)>10:
-				move(np.array([offset_p[1],-offset_p[0],0.])/1500.,np.eye(3))
+				self.move(np.array([offset_p[1],-offset_p[0],0.])/1500.,np.eye(3))
 			else:
-				move(np.array([offset_p[1],-offset_p[0],0.])/5000.,np.eye(3))
+				self.move(np.array([offset_p[1],-offset_p[0],0.])/5000.,np.eye(3))
 
-		vel_ctrl.set_velocity_command(np.zeros((6,)))
+		self.vel_ctrl.set_velocity_command(np.zeros((6,)))
 
-		p_cur=fwd(state_w.InValue.joint_position).p
-		p_vision=fwd(vision_q).p
+		p_cur=fwd(self.state_w.InValue.joint_position).p
+		p_vision=fwd(self.vision_q).p
 
 		self.cam.stop_streaming()
 
@@ -328,8 +329,8 @@ class fusing_pi(object):
 		self.vel_ctrl.set_velocity_command(np.zeros((6,)))
 
 		###turn off adhesion first
-		# tool.setf_param('voltage',RR.VarValue(0.,'single'))
-		self.m1k_obj.setawgconstant('A',0.)
+		self.tool.setf_param('voltage',RR.VarValue(0.,'single'))
+		# self.m1k_obj.setawgconstant('A',0.)
 
 		###keep jogging down until perfect contact with metal plate
 		q=inv(place_position,R)
@@ -373,7 +374,7 @@ class fusing_pi(object):
 			self.fabric_name='PD19_016C-FR-LFT-UP HICKEY V2 36'
 			self.template=read_template('client_yaml/templates/'+self.fabric_name+'.jpg',self.fabric_dimension[self.fabric_name],self.ppu)
 			
-			self.stack_height1=np.array([0,0,0.003])
+			self.stack_height1=np.array([0,0,-0.001])
 			self.pick(self.bin1_p+self.stack_height1,self.bin1_R,v=5.)
 			offset_p,offset_angle=self.vision_check_fb()
 			self.place(self.place_position-offset_p,offset_angle)
@@ -384,7 +385,7 @@ class fusing_pi(object):
 			# place(self.place_position-offset_p,offset_angle)
 
 			self.stack_height2=np.array([0,0,0.005])
-			self.pick(self.bin2_p+self.stack_height2,self.bin2_R,v=4.5)
+			self.pick(self.bin2_p+self.stack_height2,self.bin2_R,v=3)
 			offset_p,offset_angle=self.vision_check_fb()
 			# place(self.place_position-offset_p,offset_angle)
 			self.place_slide(self.place_position-offset_p,offset_angle)

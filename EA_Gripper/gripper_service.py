@@ -4,9 +4,8 @@ import RobotRaconteurCompanion as RRC
 from RobotRaconteurCompanion.Util.DateTimeUtil import DateTimeUtil
 import numpy as np 
 import time, traceback, threading, signal#, board, busio, adafruit_vl53l0x, adafruit_sht31d
-from gpiozero import Button
-from pysmu import Session, Mode
 from io_test import RAPID
+import RPi.GPIO as GPIO
 
 class EA_Gripper(object):
 	def __init__(self):
@@ -27,24 +26,17 @@ class EA_Gripper(object):
 		self.tool_state_type=RRN.NewStructure("com.robotraconteur.robotics.tool.ToolState")
 		self._date_time_util = DateTimeUtil(RRN)
 
-		###DIO
+		###RPI PWM for HV control
+		GPIO.setwarnings(False)			#disable warnings
+		GPIO.setmode(GPIO.BCM)		#set pin numbering system
+		GPIO.setup(12,GPIO.OUT)
+		self.pi_pwm = GPIO.PWM(12,1000)		#create PWM instance with frequency
+		self.pi_pwm.start(0)
+
+		###ABB DIO
 		self.rapid = RAPID(base_url='http://192.168.51.26:80')
 
-		###M1k setting
-		self.session = Session(ignore_dataflow=True, queue_size=100000)
-		# queue size can be changed, set to 1 Sec of data at 100KSPS
-		self.num_dev = self.session.scan() # get number of connected boards
-		if self.num_dev == 0:
-			print("No M1ks Connected to pi")
 
-		else:
-			# get first (only?) device
-			self.device = self.session.devices[0]
-			#initialize default mode to HI_Z
-			self.CHA = self.device.channels['A']
-			self.CHA.mode = Mode.SVMI
-			self.session.start(0)
-			self.CHA.constant(0)
 
 	def open(self):
 		self.rapid.set_digital_io('valve1', 1) 
@@ -57,7 +49,7 @@ class EA_Gripper(object):
 	def setf_param(self,param_name, value):
 		if param_name=='voltage':
 			print('setting voltage to: ', value.data[0])
-			self.CHA.constant(value.data[0])
+			self.pi_pwm.ChangeDutyCycle(value.data[0]*100/5)
 		if param_name=='relay':
 			print('change relay to: ', value.data[0])
 			self.rapid.set_digital_io('relay', value.data[0]) 
@@ -103,4 +95,4 @@ with RR.ServerNodeSetup("electroadhesion_gripper",22222) as node_setup:
 	print("Press ctrl+c to quit")
 	signal.sigwait([signal.SIGTERM,signal.SIGINT])
 	gripper_inst.StopStreaming()
-	gripper_inst.session.end()
+	gripper_inst.pi_pwm.stop()

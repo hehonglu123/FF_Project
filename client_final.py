@@ -110,7 +110,8 @@ def pick(p,R,v):
 	vel_ctrl.set_velocity_command(np.zeros((6,)))
 
 	#pick
-	m1k_obj.setawgconstant('A',v)
+	# m1k_obj.setawgconstant('A',v)
+	tool.setf_param('voltage',RR.VarValue(v,'single'))
 	time.sleep(0.5)
 	
 
@@ -130,8 +131,8 @@ def place(place_position,angle):
 	vel_ctrl.set_velocity_command(np.zeros((6,)))
 
 	###turn off adhesion first, 
-	# tool.setf_param('voltage',RR.VarValue(0.,'single'))
-	m1k_obj.setawgconstant('A',0.)
+	tool.setf_param('voltage',RR.VarValue(0.,'single'))
+	# m1k_obj.setawgconstant('A',0.)
 	###keep moving until perfectly in contact with metal plate
 	#turn on HV relay, pin down
 	q=inv(place_position,R)
@@ -252,8 +253,8 @@ def place_slide(place_position,angle):
 	vel_ctrl.set_velocity_command(np.zeros((6,)))
 
 	###turn off adhesion first
-	# tool.setf_param('voltage',RR.VarValue(0.,'single'))
-	m1k_obj.setawgconstant('A',0.)
+	tool.setf_param('voltage',RR.VarValue(0.,'single'))
+	# m1k_obj.setawgconstant('A',0.)
 
 	###keep jogging down until perfect contact with metal plate
 	q=inv(place_position,R)
@@ -337,7 +338,7 @@ def main():
 		tool=tool_sub.GetDefaultClientWait(1)
 		tool.open()
 		tool.setf_param('relay',RR.VarValue(0,'int8'))
-		# tool.setf_param('voltage',RR.VarValue(0.,'single'))
+		tool.setf_param('voltage',RR.VarValue(0.,'single'))
 	except:
 		traceback.print_exc()
 		print('rpi not available')
