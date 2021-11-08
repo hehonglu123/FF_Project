@@ -381,16 +381,16 @@ def main():
 		offset_p,offset_angle=vision_check_fb(ROI,ppu,template,vision_q)
 		place(place_position_global-offset_p,offset_angle)
 
-		stack_height1=np.array([0,0,0.003])
-		pick(bin1_p+stack_height1,bin1_R,v=5.)
-		offset_p,offset_angle=vision_check_fb(ROI,ppu,template,vision_q)
-		place(place_position_global-offset_p,offset_angle)
-
-		# stack_height2=np.array([0,0,0.005])
-		# pick(bin2_p+stack_height2,bin2_R,v=4.5)
+		# stack_height1=np.array([0,0,0.003])
+		# pick(bin1_p+stack_height1,bin1_R,v=5.)
 		# offset_p,offset_angle=vision_check_fb(ROI,ppu,template,vision_q)
-		# # place(place_position_global-offset_p,offset_angle)
-		# place_slide(place_position_global-offset_p,offset_angle)
+		# place(place_position_global-offset_p,offset_angle)
+
+		stack_height2=np.array([0,0,0.005])
+		pick(bin2_p+stack_height2,bin2_R,v=4.5)
+		offset_p,offset_angle=vision_check_fb(ROI,ppu,template,vision_q)
+		# place(place_position_global-offset_p,offset_angle)
+		place_slide(place_position_global-offset_p,offset_angle)
 		##home
 		jog_joint(inv(home,R_ee(0)), 0.3)
 		##reset chargepad

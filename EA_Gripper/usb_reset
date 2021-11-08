@@ -1,0 +1,11 @@
+sudo ./hub-ctrl -h 1 -P 1 -p 0
+sudo ./hub-ctrl -h 0 -P 1 -p 0
+sudo ./hub-ctrl -h 2 -P 1 -p 0
+sudo ./hub-ctrl -h 3 -P 1 -p 0
+
+sudo ./hub-ctrl -h 1 -P 1 -p 1
+
+sudo ./hub-ctrl -h 0 -P 1 -p 1
+sudo ./hub-ctrl -h 1 -P 1 -p 1
+
+sudo ./hub-ctrl -h 2 -P 1 -p 1

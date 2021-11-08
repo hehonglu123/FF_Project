@@ -1,0 +1,36 @@
+service edu.rpi.robotics.fusing_system
+
+
+stdver 0.10
+
+import com.robotraconteur.identifier
+import com.robotraconteur.device
+import com.robotraconteur.eventlog
+
+using com.robotraconteur.identifier.Identifier
+using com.robotraconteur.device.DeviceInfo
+using com.robotraconteur.device.Device
+using com.robotraconteur.eventlog.EventLogMessage
+
+struct FabricInfo
+	field Identifier fabric_id
+	field double voltage
+	field string template_file_name
+end
+
+struct FusingOperationTrigger
+	field uint32 number_of_plys
+	field uint32 number_of_interlinings
+end
+
+object FusingSystem
+	implements Device
+	property DeviceInfo device_info [readonly,nolock]
+	property EventLogMessage{list} current_errors [readonly, nolock]
+	pipe FusingOperationTrigger trigger_fusing_system
+	property FabricInfo current_ply_fabric_type
+	property FabricInfo current_interlining_fabric_type
+	callback bool operation_feedback(uint32 current_operation_count)
+	function void stop_fusing()
+end
+	
