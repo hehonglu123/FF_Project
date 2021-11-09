@@ -87,7 +87,7 @@ def gripper_ctrl():
 		gripper.configure(text='gripper off')
 
 	else:
-		tool.setf_param('voltage',RR.VarValue(3.5,'single'))
+		tool.setf_param('voltage',RR.VarValue(5.,'single'))
 		# m1k_obj.setawgconstant('A',4.)
 		gripper.config(relief="sunken")
 		gripper.configure(bg='green')

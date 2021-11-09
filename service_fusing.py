@@ -68,8 +68,8 @@ class fusing_pi(object):
 			self.tool_sub=RRN.SubscribeService('rr+tcp://192.168.50.253:22222?service=tool')
 			self.tool=self.tool_sub.GetDefaultClientWait(1)
 			self.tool.open()
-			self.tool.setf_param('relay',RR.VarValue(0,'int8'))
 			self.tool.setf_param('voltage',RR.VarValue(0.,'single'))
+			self.tool.setf_param('relay',RR.VarValue(0,'int8'))
 		except:
 			traceback.print_exc()
 			print('tool service available')
@@ -295,7 +295,7 @@ class fusing_pi(object):
 
 		###jog with large offset first
 
-		while np.linalg.norm(offset_p)>1:
+		while np.linalg.norm(offset_p)>1.5:
 
 
 			roi_frame=cv2.cvtColor(self.current_frame[self.ROI[0]:self.ROI[1],self.ROI[2]:self.ROI[3]], cv2.COLOR_BGR2GRAY)
@@ -340,7 +340,7 @@ class fusing_pi(object):
 		self.tool.close()
 		time.sleep(0.2)
 		#move up more
-		self.jog_joint_movel(place_position+self.pins_height+np.array([0,0,0.03]), 0.01,threshold=0.001,dcc_range=0.1)
+		self.jog_joint_movel(place_position+self.pins_height+np.array([0,0,0.035]), 0.01,threshold=0.001,acc_range=0.005,dcc_range=0.01)
 		#move back down, pressing the plate
 		self.jog_joint_movel(place_position+self.pins_height, 0.01,threshold=0.001,dcc_range=0.1)
 		###sliding
@@ -375,7 +375,7 @@ class fusing_pi(object):
 			self.template=read_template('client_yaml/templates/'+self.fabric_name+'.jpg',self.fabric_dimension[self.fabric_name],self.ppu)
 			
 			self.stack_height1=np.array([0,0,-0.001])
-			self.pick(self.bin1_p+self.stack_height1,self.bin1_R,v=5.)
+			self.pick(self.bin1_p+self.stack_height1,self.bin1_R,v=4.5)
 			offset_p,offset_angle=self.vision_check_fb()
 			self.place(self.place_position-offset_p,offset_angle)
 
@@ -385,7 +385,7 @@ class fusing_pi(object):
 			# place(self.place_position-offset_p,offset_angle)
 
 			self.stack_height2=np.array([0,0,0.005])
-			self.pick(self.bin2_p+self.stack_height2,self.bin2_R,v=3)
+			self.pick(self.bin2_p+self.stack_height2,self.bin2_R,v=3.5)
 			offset_p,offset_angle=self.vision_check_fb()
 			# place(self.place_position-offset_p,offset_angle)
 			self.place_slide(self.place_position-offset_p,offset_angle)
@@ -400,8 +400,7 @@ class fusing_pi(object):
 			self.vel_ctrl.disable_velocity_mode()
 			self.m1k_obj.EndSession()
 			self.traceback.print_exc()
-		self.m1k_obj.EndSession()
-		self.vel_ctrl.disable_velocity_mode()
+
 
 def main():
 	with RR.ServerNodeSetup("fusing_service",12180) as node_setup:
@@ -410,7 +409,10 @@ def main():
 
 		fusing_pi_obj=fusing_pi()
 		fusing_pi_obj.initialize()
-		fusing_pi_obj.execute()
+
+		for i in range(3):
+			
+			fusing_pi_obj.execute()
 
 	
 		service_ctx = RRN.RegisterService("fusing_service","edu.rpi.robotics.fusing_system.FusingSystem",fusing_pi_obj)
