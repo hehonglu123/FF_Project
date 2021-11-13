@@ -44,7 +44,7 @@ class fusing_pi(object):
 		self.pins_height=np.array([0,0,0.02])
 
 		try:	
-			url='rr+tcp://192.168.50.253:11111?service=m1k'
+			url='rr+tcp://192.168.51.25:11111?service=m1k'
 			m1k_sub=RRN.SubscribeService(url)
 			####get client object
 			self.m1k_obj = m1k_sub.GetDefaultClientWait(1)
@@ -65,18 +65,18 @@ class fusing_pi(object):
 
 		#rpi relay
 		try:
-			self.tool_sub=RRN.SubscribeService('rr+tcp://192.168.50.253:22222?service=tool')
+			self.tool_sub=RRN.SubscribeService('rr+tcp://192.168.51.25:22222?service=tool')
 			self.tool=self.tool_sub.GetDefaultClientWait(1)
 			self.tool.open()
 			self.tool.setf_param('voltage',RR.VarValue(0.,'single'))
 			self.tool.setf_param('relay',RR.VarValue(0,'int8'))
 		except:
 			traceback.print_exc()
-			print('tool service available')
+			print('tool service not available')
 			pass
 
 		try:
-			self.robot_sub=RRN.SubscribeService('rr+tcp://192.168.50.253:58651?service=robot')
+			self.robot_sub=RRN.SubscribeService('rr+tcp://192.168.51.25:58651?service=robot')
 			self.robot=self.robot_sub.GetDefaultClientWait(1)
 			self.state_w = self.robot_sub.SubscribeWire("robot_state")
 			cmd_w=self.robot_sub.SubscribeWire('position_command')
@@ -374,10 +374,10 @@ class fusing_pi(object):
 			self.fabric_name='PD19_016C-FR-LFT-UP HICKEY V2 36'
 			self.template=read_template('client_yaml/templates/'+self.fabric_name+'.jpg',self.fabric_dimension[self.fabric_name],self.ppu)
 			
-			self.stack_height1=np.array([0,0,-0.001])
-			self.pick(self.bin1_p+self.stack_height1,self.bin1_R,v=4.5)
-			offset_p,offset_angle=self.vision_check_fb()
-			self.place(self.place_position-offset_p,offset_angle)
+			# self.stack_height1=np.array([0,0,-0.001])
+			# self.pick(self.bin1_p+self.stack_height1,self.bin1_R,v=4.5)
+			# offset_p,offset_angle=self.vision_check_fb()
+			# self.place(self.place_position-offset_p,offset_angle)
 
 			# stack_height1=np.array([0,0,0.003])
 			# pick(bin1_p+stack_height1,bin1_R,v=5.)
@@ -385,10 +385,11 @@ class fusing_pi(object):
 			# place(self.place_position-offset_p,offset_angle)
 
 			self.stack_height2=np.array([0,0,0.005])
-			self.pick(self.bin2_p+self.stack_height2,self.bin2_R,v=3.5)
+			self.pick(self.bin2_p+self.stack_height2,self.bin2_R,v=2.5)
 			offset_p,offset_angle=self.vision_check_fb()
-			# place(self.place_position-offset_p,offset_angle)
-			self.place_slide(self.place_position-offset_p,offset_angle)
+			self.place(self.place_position-offset_p,offset_angle)
+			# self.place_slide(self.place_position-offset_p,offset_angle)
+
 			##home
 			self.jog_joint(inv(self.home,R_ee(0)), 0.3)
 			##reset chargepad
