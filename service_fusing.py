@@ -52,6 +52,7 @@ class fusing_pi(object):
 			self.m1k_obj.setmode('A', 'SVMI')
 			self.m1k_obj.setawgconstant('A',0.)
 		except:
+			traceback.print_exc()
 			print('m1k not available')
 			pass
 
@@ -185,12 +186,18 @@ class fusing_pi(object):
 		self.jog_joint(q, 1.5,threshold=0.002,dcc_range=0.4)
 
 		#move down 
+		# self.jog_joint_movel(p+np.array([0,0,0.01]),0.3,threshold=0.005,acc_range=0.,dcc_range=0.1,Rd=R)
+		# self.vel_ctrl.set_velocity_command(np.zeros((6,)))
+		# self.tool.close()
+		# time.sleep(1)
+		# self.tool.open()
+
 		self.jog_joint_movel(p,0.3,threshold=0.002,acc_range=0.,dcc_range=0.1,Rd=R)
 
 		self.vel_ctrl.set_velocity_command(np.zeros((6,)))
 
 		#pick
-		# self.m1k_obj.setawgconstant('A',v)
+		self.m1k_obj.setawgconstant('A',v)
 		self.tool.setf_param('voltage',RR.VarValue(v,'single'))
 		time.sleep(0.5)
 		
@@ -211,7 +218,7 @@ class fusing_pi(object):
 
 		###turn off adhesion first, 
 		self.tool.setf_param('voltage',RR.VarValue(0.,'single'))
-		# self.m1k_obj.setawgconstant('A',0.)
+		self.m1k_obj.setawgconstant('A',0.)
 		###keep moving until perfectly in contact with metal plate
 		#turn on HV relay, pin down
 		q=inv(place_position,R)
@@ -230,7 +237,7 @@ class fusing_pi(object):
 
 		#move up
 		q=inv(place_position+np.array([0,0,0.1]),R)
-		self.jog_joint(q, 0.3,threshold=0.1,dcc_range=0.12)
+		self.jog_joint(q, 0.6,threshold=0.15,dcc_range=0.12)
 
 		#turn off HV relay
 		self.tool.setf_param('relay',RR.VarValue(0,'int8'))
@@ -295,7 +302,7 @@ class fusing_pi(object):
 
 		###jog with large offset first
 
-		while np.linalg.norm(offset_p)>1.5:
+		while np.linalg.norm(offset_p)>4:
 
 
 			roi_frame=cv2.cvtColor(self.current_frame[self.ROI[0]:self.ROI[1],self.ROI[2]:self.ROI[3]], cv2.COLOR_BGR2GRAY)
@@ -330,7 +337,7 @@ class fusing_pi(object):
 
 		###turn off adhesion first
 		self.tool.setf_param('voltage',RR.VarValue(0.,'single'))
-		# self.m1k_obj.setawgconstant('A',0.)
+		self.m1k_obj.setawgconstant('A',0.)
 
 		###keep jogging down until perfect contact with metal plate
 		q=inv(place_position,R)
@@ -354,7 +361,7 @@ class fusing_pi(object):
 		time.sleep(0.5)
 		###move up
 		q=inv(place_position+np.array([0.3,0,0.1]),R)
-		self.jog_joint(q, 0.3,threshold=0.1,dcc_range=0.12)
+		self.jog_joint(q, 0.4,threshold=0.1,dcc_range=0.12)
 		self.tool.setf_param('relay',RR.VarValue(0,'int8'))
 
 
@@ -374,24 +381,20 @@ class fusing_pi(object):
 			self.fabric_name='PD19_016C-FR-LFT-UP HICKEY V2 36'
 			self.template=read_template('client_yaml/templates/'+self.fabric_name+'.jpg',self.fabric_dimension[self.fabric_name],self.ppu)
 			
-			# self.stack_height1=np.array([0,0,-0.001])
-			# self.pick(self.bin1_p+self.stack_height1,self.bin1_R,v=4.5)
+			# self.stack_height1=np.array([0,0,-0.00])
+			# self.pick(self.bin1_p+self.stack_height1,self.bin1_R,v=5.)
 			# offset_p,offset_angle=self.vision_check_fb()
 			# self.place(self.place_position-offset_p,offset_angle)
 
-			# stack_height1=np.array([0,0,0.003])
-			# pick(bin1_p+stack_height1,bin1_R,v=5.)
-			# offset_p,offset_angle=vision_check_fb(ROI,ppu,template,vision_q)
-			# place(self.place_position-offset_p,offset_angle)
 
-			self.stack_height2=np.array([0,0,0.005])
-			self.pick(self.bin2_p+self.stack_height2,self.bin2_R,v=2.5)
+			self.stack_height2=np.array([0,0,0.003])
+			self.pick(self.bin2_p+self.stack_height2,self.bin2_R,v=5)
 			offset_p,offset_angle=self.vision_check_fb()
 			self.place(self.place_position-offset_p,offset_angle)
 			# self.place_slide(self.place_position-offset_p,offset_angle)
 
 			##home
-			self.jog_joint(inv(self.home,R_ee(0)), 0.3)
+			self.jog_joint(inv(self.home,R_ee(0)), 0.5, threshold=0.1)
 			##reset chargepad
 			self.tool.setf_param('relay',RR.VarValue(1,'int8'))
 			time.sleep(1.)
