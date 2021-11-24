@@ -186,15 +186,43 @@ class fusing_pi(object):
 		self.jog_joint(q, 1.5,threshold=0.002,dcc_range=0.4)
 
 		#move down 
-		# self.jog_joint_movel(p+np.array([0,0,0.01]),0.3,threshold=0.005,acc_range=0.,dcc_range=0.1,Rd=R)
-		# self.vel_ctrl.set_velocity_command(np.zeros((6,)))
-		# self.tool.close()
-		# time.sleep(1)
-		# self.tool.open()
-
 		self.jog_joint_movel(p,0.3,threshold=0.002,acc_range=0.,dcc_range=0.1,Rd=R)
 
 		self.vel_ctrl.set_velocity_command(np.zeros((6,)))
+
+		#pick
+		self.m1k_obj.setawgconstant('A',v)
+		self.tool.setf_param('voltage',RR.VarValue(v,'single'))
+		time.sleep(0.5)
+		
+
+		#move up
+		self.jog_joint_movel(p+np.array([0,0,0.3]),0.45,acc_range=0.2,threshold=0.05)
+
+	def pick_osc(self,p,R,v):
+		print('go picking')
+		q=inv(p+np.array([0,0,0.5]),R)
+		self.jog_joint(q, 1.5,threshold=0.002,dcc_range=0.4)
+
+		#actuate pins
+		self.jog_joint_movel(p+np.array([0,0,0.01]),0.3,threshold=0.005,acc_range=0.,dcc_range=0.1,Rd=R)
+		self.vel_ctrl.set_velocity_command(np.zeros((6,)))
+		self.tool.close()
+		time.sleep(1)
+		self.tool.open()
+		time.sleep(1)
+		self.tool.close()
+		time.sleep(1)
+		self.tool.open()
+
+		self.jog_joint_movel(p,0.3,threshold=0.002,acc_range=0.,dcc_range=0.1,Rd=R)
+		self.vel_ctrl.set_velocity_command(np.zeros((6,)))
+
+		###oscilate
+		self.m1k_obj.setawgconstant('A',v)
+		self.tool.setf_param('voltage',RR.VarValue(v,'single'))
+		self.jog_joint_movel(p+np.array([0,0,0.02]),0.3,threshold=0.005,acc_range=0.,dcc_range=0.1,Rd=R)
+		self.jog_joint_movel(p,0.3,threshold=0.002,acc_range=0.,dcc_range=0.1,Rd=R)
 
 		#pick
 		self.m1k_obj.setawgconstant('A',v)
@@ -284,46 +312,48 @@ class fusing_pi(object):
 			pass
 		self.jog_joint(self.vision_q, 1.5,threshold=0.0001,dcc_range=0.4)
 
+		return np.array([0,0,0]),0
+
 		###brief stop for vision
-		self.vel_ctrl.set_velocity_command(np.zeros((6,)))
-		self.vel_ctrl.disable_velocity_mode()
-		time.sleep(0.5)
+		# self.vel_ctrl.set_velocity_command(np.zeros((6,)))
+		# self.vel_ctrl.disable_velocity_mode()
+		# time.sleep(0.5)
 
-		###write for reference
-		cv2.imwrite("vision_check.jpg",self.current_frame)
-		roi_frame=cv2.cvtColor(self.current_frame[self.ROI[0]:self.ROI[1],self.ROI[2]:self.ROI[3]], cv2.COLOR_BGR2GRAY)
+		# ###write for reference
+		# cv2.imwrite("vision_check.jpg",self.current_frame)
+		# roi_frame=cv2.cvtColor(self.current_frame[self.ROI[0]:self.ROI[1],self.ROI[2]:self.ROI[3]], cv2.COLOR_BGR2GRAY)
 
-		angle,center=match_w_ori(roi_frame,self.template,0,'edge')
-		###precise angle 
-		angle,center=match_w_ori(roi_frame,self.template,np.radians(angle),'edge',angle_range=1.,angle_resolution=0.1)
+		# angle,center=match_w_ori(roi_frame,self.template,0,'edge')
+		# ###precise angle 
+		# angle,center=match_w_ori(roi_frame,self.template,np.radians(angle),'edge',angle_range=1.,angle_resolution=0.1)
 
-		offset_p=(center-np.array([len(roi_frame[0]),len(roi_frame)])/2.)
-		self.vel_ctrl.enable_velocity_mode()
+		# offset_p=(center-np.array([len(roi_frame[0]),len(roi_frame)])/2.)
+		# self.vel_ctrl.enable_velocity_mode()
 
-		###jog with large offset first
+		# ###jog with large offset first
 
-		while np.linalg.norm(offset_p)>4:
+		# while np.linalg.norm(offset_p)>4:
 
 
-			roi_frame=cv2.cvtColor(self.current_frame[self.ROI[0]:self.ROI[1],self.ROI[2]:self.ROI[3]], cv2.COLOR_BGR2GRAY)
-			angle,center=match_w_ori_single(roi_frame,self.template,np.radians(angle),'edge')
-			offset_p=(center-np.array([len(roi_frame[0]),len(roi_frame)])/2.)
+		# 	roi_frame=cv2.cvtColor(self.current_frame[self.ROI[0]:self.ROI[1],self.ROI[2]:self.ROI[3]], cv2.COLOR_BGR2GRAY)
+		# 	angle,center=match_w_ori_single(roi_frame,self.template,np.radians(angle),'edge')
+		# 	offset_p=(center-np.array([len(roi_frame[0]),len(roi_frame)])/2.)
+		# 	print(offset_p)
+		# 	# print(offset_p,np.linalg.norm(offset_p))
+		# 	if np.linalg.norm(offset_p)>10:
+		# 		self.move(np.array([offset_p[1],-offset_p[0],0.])/1500.,np.eye(3))
+		# 	else:
+		# 		self.move(np.array([offset_p[1],-offset_p[0],0.])/5000.,np.eye(3))
 
-			# print(offset_p,np.linalg.norm(offset_p))
-			if np.linalg.norm(offset_p)>10:
-				self.move(np.array([offset_p[1],-offset_p[0],0.])/1500.,np.eye(3))
-			else:
-				self.move(np.array([offset_p[1],-offset_p[0],0.])/5000.,np.eye(3))
+		# self.vel_ctrl.set_velocity_command(np.zeros((6,)))
 
-		self.vel_ctrl.set_velocity_command(np.zeros((6,)))
+		# p_cur=fwd(self.state_w.InValue.joint_position).p
+		# p_vision=fwd(self.vision_q).p
 
-		p_cur=fwd(self.state_w.InValue.joint_position).p
-		p_vision=fwd(self.vision_q).p
+		# self.cam.stop_streaming()
 
-		self.cam.stop_streaming()
-
-		print('offset_angle: ',angle)
-		return p_vision-p_cur,np.radians(angle)
+		# print('offset_angle: ',angle)
+		# return p_vision-p_cur,np.radians(angle)
 
 
 
@@ -387,11 +417,11 @@ class fusing_pi(object):
 			# self.place(self.place_position-offset_p,offset_angle)
 
 
-			self.stack_height2=np.array([0,0,0.003])
-			self.pick(self.bin2_p+self.stack_height2,self.bin2_R,v=5)
+			self.stack_height2=np.array([0,0,0.004])
+			self.pick(self.bin2_p+self.stack_height2,self.bin2_R,v=2.1)
 			offset_p,offset_angle=self.vision_check_fb()
 			self.place(self.place_position-offset_p,offset_angle)
-			# self.place_slide(self.place_position-offset_p,offset_angle)
+			###self.place_slide(self.place_position-offset_p,offset_angle)
 
 			##home
 			self.jog_joint(inv(self.home,R_ee(0)), 0.5, threshold=0.1)
@@ -414,7 +444,7 @@ def main():
 		fusing_pi_obj=fusing_pi()
 		fusing_pi_obj.initialize()
 
-		for i in range(3):
+		for i in range(5):
 			
 			fusing_pi_obj.execute()
 
@@ -422,5 +452,9 @@ def main():
 		service_ctx = RRN.RegisterService("fusing_service","edu.rpi.robotics.fusing_system.FusingSystem",fusing_pi_obj)
 
 		# print("Press ctrl+c to quit")
+
+		fusing_pi_obj.vel_ctrl.disable_velocity_mode()
+		fusing_pi_obj.m1k_obj.EndSession()
+
 if __name__ == '__main__':
 	main()
