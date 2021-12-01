@@ -44,7 +44,8 @@ class fusing_pi(object):
 		self.pins_height=np.array([0,0,0.02])
 
 		try:	
-			url='rr+tcp://192.168.51.25:11111?service=m1k'
+			# url='rr+tcp://192.168.51.25:11111?service=m1k'
+			url='rr+tcp://192.168.51.181:11111?service=m1k'
 			m1k_sub=RRN.SubscribeService(url)
 			####get client object
 			self.m1k_obj = m1k_sub.GetDefaultClientWait(1)
@@ -303,7 +304,7 @@ class fusing_pi(object):
 			traceback.print_exc()
 		return
 
-	def	vision_check_fb(self):
+	def	vision_check_fb(self,interlining=False):
 		print("vision check")
 		try:
 			self.cam.start_streaming()
@@ -323,9 +324,9 @@ class fusing_pi(object):
 		cv2.imwrite("vision_check.jpg",self.current_frame)
 		roi_frame=cv2.cvtColor(self.current_frame[self.ROI[0]:self.ROI[1],self.ROI[2]:self.ROI[3]], cv2.COLOR_BGR2GRAY)
 
-		angle,center=match_w_ori(roi_frame,self.template,0,'edge')
+		angle,center=match_w_ori(roi_frame,self.template,0,'edge',interlining=interlining)
 		###precise angle 
-		angle,center=match_w_ori(roi_frame,self.template,np.radians(angle),'edge',angle_range=1.,angle_resolution=0.1)
+		angle,center=match_w_ori(roi_frame,self.template,np.radians(angle),'edge',angle_range=1.,angle_resolution=0.1,interlining=interlining)
 
 		offset_p=(center-np.array([len(roi_frame[0]),len(roi_frame)])/2.)
 		self.vel_ctrl.enable_velocity_mode()
@@ -336,7 +337,7 @@ class fusing_pi(object):
 
 
 			roi_frame=cv2.cvtColor(self.current_frame[self.ROI[0]:self.ROI[1],self.ROI[2]:self.ROI[3]], cv2.COLOR_BGR2GRAY)
-			angle,center=match_w_ori_single(roi_frame,self.template,np.radians(angle),'edge')
+			angle,center=match_w_ori_single(roi_frame,self.template,np.radians(angle),'edge',interlining=interlining)
 			offset_p=(center-np.array([len(roi_frame[0]),len(roi_frame)])/2.)
 			print(offset_p)
 			# print(offset_p,np.linalg.norm(offset_p))
@@ -376,14 +377,14 @@ class fusing_pi(object):
 		self.tool.setf_param('relay',RR.VarValue(1,'int8'))
 		self.tool.close()
 		time.sleep(0.2)
-		#move up more
-		self.jog_joint_movel(place_position+self.pins_height+np.array([0,0,0.035]), 0.01,threshold=0.001,acc_range=0.005,dcc_range=0.01)
+		###move up more
+		# self.jog_joint_movel(place_position+self.pins_height+np.array([0,0,0.035]), 0.01,threshold=0.001,acc_range=0.005,dcc_range=0.01)
 		#move back down, pressing the plate
 		self.jog_joint_movel(place_position+self.pins_height, 0.01,threshold=0.001,dcc_range=0.1)
 		###sliding
 
 		now=time.time()
-		while time.time()-now<6:
+		while time.time()-now<7:
 			self.move(np.array([0.08,0,0]),np.eye(3))
 
 		self.tool.open()
@@ -404,22 +405,22 @@ class fusing_pi(object):
 		##home
 		self.jog_joint(inv(self.home,R_ee(0)), 0.5,threshold=0.1)
 
-	def execute(self):
+	def execute(self, stacks):
 
 		
 		try:
-			self.fabric_name='PD19_016C-FR-LFT-LWR HICKEY V2 44'
+			self.fabric_name='PD19_016C-FR-LFT-LWR HICKEY V2 36'
 			self.template=read_template('client_yaml/templates/'+self.fabric_name+'.jpg',self.fabric_dimension[self.fabric_name],self.ppu)
 			
-			self.stack_height1=np.array([0,0,-0.00])
-			self.pick(self.bin1_p+self.stack_height1,self.bin1_R,v=4.5)
+			self.stack_height1=np.array([0,0,0.003-stacks*0.00075])
+			self.pick(self.bin1_p+self.stack_height1,self.bin1_R,v=4.2)
 			offset_p,offset_angle=self.vision_check_fb()
 			self.place(self.place_position-offset_p,offset_angle)
 
 
-			self.stack_height2=np.array([0,0,0.004])
-			self.pick(self.bin2_p+self.stack_height2,self.bin2_R,v=4.5)
-			offset_p,offset_angle=self.vision_check_fb()
+			self.stack_height2=np.array([0,0,0.004-stacks*0.00045])
+			self.pick(self.bin2_p+self.stack_height2,self.bin2_R,v=4.1)
+			offset_p,offset_angle=self.vision_check_fb(interlining=True)
 			# self.place(self.place_position-offset_p,offset_angle)
 			self.place_slide(self.place_position-offset_p,offset_angle)
 
@@ -441,16 +442,20 @@ def main():
 		RRC.RegisterStdRobDefServiceTypes(RRN)
 		RRN.RegisterServiceTypeFromFile("edu.rpi.robotics.fusing_system")
 
-		fusing_pi_obj=fusing_pi()
-		fusing_pi_obj.initialize()
+		try:
+			fusing_pi_obj=fusing_pi()
+			fusing_pi_obj.initialize()
 
-		for i in range(5):
-			
-			fusing_pi_obj.execute()
+			for i in range(10):
+				
+				fusing_pi_obj.execute(i)
 
-	
-		service_ctx = RRN.RegisterService("fusing_service","edu.rpi.robotics.fusing_system.FusingSystem",fusing_pi_obj)
+		
+			service_ctx = RRN.RegisterService("fusing_service","edu.rpi.robotics.fusing_system.FusingSystem",fusing_pi_obj)
 
+		except:
+			fusing_pi_obj.vel_ctrl.disable_velocity_mode()
+			fusing_pi_obj.m1k_obj.EndSession()
 		# print("Press ctrl+c to quit")
 
 		fusing_pi_obj.vel_ctrl.disable_velocity_mode()

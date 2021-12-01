@@ -44,18 +44,21 @@ def rotate_image(mat, angle, background):
 
 
 
-def edge_temp_match(image,template):	#edge based match with alpha channel
-	cv2.imshow("image", image)
-	cv2.imshow("template", template)
-	cv2.waitKey(0)
+def edge_temp_match(image,template,interlining=False):	#edge based match with alpha channel
+	# cv2.imshow("image", image)
+	# cv2.imshow("template", template)
+	# cv2.waitKey(0)
 
 	#matching
-	res = cv2.matchTemplate(image, template , cv2.TM_SQDIFF, mask=create_mask(template))
+	if interlining:
+		res = cv2.matchTemplate(image, template , cv2.TM_SQDIFF, mask=template)
+	else:
+		res = cv2.matchTemplate(image, template , cv2.TM_SQDIFF, mask=create_mask(template))
 	min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
 
 	return min_val, min_loc
 
-def bold_edge(image,num_pix=4):
+def bold_edge(image,num_pix=10):
 	bolded = cv2.filter2D(image,-1,np.ones((num_pix,num_pix))/num_pix**2,borderType=cv2.BORDER_CONSTANT)
 	bolded = cv2.threshold(bolded, 5, 255, cv2.THRESH_BINARY)[1]
 	return bolded
@@ -71,7 +74,7 @@ def create_mask(template):
 	cv2.drawContours(result, [big_contour], 0, (255,255,255), cv2.FILLED)
 	return result
 
-def match_w_ori(image,template,orientation,alg='hsva',edge_raw=None,angle_range=10,angle_resolution=1.):
+def match_w_ori(image,template,orientation,alg='hsva',edge_raw=None,angle_range=10,angle_resolution=1.,interlining=False):
 	min_error=9999999999
 	act_angle=0
 
@@ -101,7 +104,7 @@ def match_w_ori(image,template,orientation,alg='hsva',edge_raw=None,angle_range=
 		template_rt=rotate_image(tEdged,angle,[0,0,0])
 		###make template binary
 		template_rt=cv2.threshold(template_rt, 50, 255, cv2.THRESH_BINARY)[1]
-		min_val, min_loc=edge_temp_match(edged,template_rt)
+		min_val, min_loc=edge_temp_match(edged,template_rt,interlining)
 
 
 		if min_val<min_error:
@@ -117,7 +120,7 @@ def match_w_ori(image,template,orientation,alg='hsva',edge_raw=None,angle_range=
 	return act_angle,loc
 
 
-def match_w_ori_single(image,template,orientation,alg='hsva',edge_raw=None):
+def match_w_ori_single(image,template,orientation,alg='hsva',edge_raw=None,interlining=False):
 
 	min_error=9999999999
 	act_angle=0
@@ -134,7 +137,7 @@ def match_w_ori_single(image,template,orientation,alg='hsva',edge_raw=None):
 	except:
 		# traceback.print_exc()
 		pass
-	edged = bold_edge(image_edge,5)
+	edged = bold_edge(image_edge)
 
 
 	
@@ -144,7 +147,7 @@ def match_w_ori_single(image,template,orientation,alg='hsva',edge_raw=None):
 	template_rt=rotate_image(tEdged,angle,[0,0,0])
 	###make template binary
 	template_rt=cv2.threshold(template_rt, 50, 255, cv2.THRESH_BINARY)[1]
-	min_val, min_loc=edge_temp_match(edged,template_rt)
+	min_val, min_loc=edge_temp_match(edged,template_rt,interlining)
 
 
 	w=len(template_rt[0])
