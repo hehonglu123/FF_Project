@@ -18,6 +18,16 @@ from R_abb import *
 
 class fusing_pi(object):
 	def __init__(self):
+		##################################IP configurations#######################################
+		self.fusing_laptop='192.168.51.188'
+		self.pi_fuse='192.168.51.25'
+		self.robosewclient='192.168.51.61'
+		self.my_laptop='192.168.51.181'
+
+		##################################Fabric Names###############################################
+		self.fabric_name='PD19_016C-TOP-CLLR 56'
+		self.interlining_name='PD19_016C-FR-RGT-UP-INT HICKEY 36'
+
 		self.current_ply_fabric_type=RRN.NewStructure("edu.rpi.robotics.fusing_system.FabricInfo")
 		self.current_interlining_fabric_type=RRN.NewStructure("edu.rpi.robotics.fusing_system.FabricInfo")
 
@@ -45,7 +55,7 @@ class fusing_pi(object):
 
 		try:	
 			# url='rr+tcp://192.168.51.25:11111?service=m1k'
-			url='rr+tcp://192.168.51.181:11111?service=m1k'
+			url='rr+tcp://'+self.my_laptop+':11111?service=m1k'
 			m1k_sub=RRN.SubscribeService(url)
 			####get client object
 			self.m1k_obj = m1k_sub.GetDefaultClientWait(1)
@@ -67,7 +77,7 @@ class fusing_pi(object):
 
 		#rpi relay
 		try:
-			self.tool_sub=RRN.SubscribeService('rr+tcp://192.168.51.25:22222?service=tool')
+			self.tool_sub=RRN.SubscribeService('rr+tcp://'+self.pi_fuse+':22222?service=tool')
 			self.tool=self.tool_sub.GetDefaultClientWait(1)
 			self.tool.open()
 			self.tool.setf_param('voltage',RR.VarValue(0.,'single'))
@@ -194,45 +204,42 @@ class fusing_pi(object):
 		#pick
 		self.m1k_obj.setawgconstant('A',v)
 		self.tool.setf_param('voltage',RR.VarValue(v,'single'))
-		time.sleep(0.5)
+		# time.sleep(0.5)
 		
 
 		#move up
-		self.jog_joint_movel(p+np.array([0,0,0.3]),0.45,acc_range=0.2,threshold=0.05)
+		self.jog_joint_movel(p+np.array([0,0,0.3]),0.45,acc_range=0.1,threshold=0.05)
 
 	def pick_osc(self,p,R,v):
 		print('go picking')
 		q=inv(p+np.array([0,0,0.5]),R)
 		self.jog_joint(q, 1.5,threshold=0.002,dcc_range=0.4)
 
-		#actuate pins
-		self.jog_joint_movel(p+np.array([0,0,0.01]),0.3,threshold=0.005,acc_range=0.,dcc_range=0.1,Rd=R)
-		self.vel_ctrl.set_velocity_command(np.zeros((6,)))
-		self.tool.close()
-		time.sleep(1)
-		self.tool.open()
-		time.sleep(1)
-		self.tool.close()
-		time.sleep(1)
-		self.tool.open()
-
+		#move down 
 		self.jog_joint_movel(p,0.3,threshold=0.002,acc_range=0.,dcc_range=0.1,Rd=R)
-		self.vel_ctrl.set_velocity_command(np.zeros((6,)))
 
-		###oscilate
-		self.m1k_obj.setawgconstant('A',v)
-		self.tool.setf_param('voltage',RR.VarValue(v,'single'))
-		self.jog_joint_movel(p+np.array([0,0,0.02]),0.3,threshold=0.005,acc_range=0.,dcc_range=0.1,Rd=R)
-		self.jog_joint_movel(p,0.3,threshold=0.002,acc_range=0.,dcc_range=0.1,Rd=R)
+		self.vel_ctrl.set_velocity_command(np.zeros((6,)))
 
 		#pick
 		self.m1k_obj.setawgconstant('A',v)
 		self.tool.setf_param('voltage',RR.VarValue(v,'single'))
 		time.sleep(0.5)
+
+		###osc
+		self.jog_joint_movel(p+np.array([0,0,0.023]),0.3,threshold=0.005,acc_range=0.,dcc_range=0.1,Rd=R)
+		self.m1k_obj.setawgconstant('A',0.)
+		time.sleep(0.2)
+		self.tool.setf_param('relay',RR.VarValue(1,'int8'))
+		self.tool.close()
+		time.sleep(2.)
+		self.tool.open()
+		self.tool.setf_param('relay',RR.VarValue(0,'int8'))
+		self.jog_joint_movel(p,0.3,threshold=0.002,acc_range=0.,dcc_range=0.1,Rd=R)
+		self.m1k_obj.setawgconstant('A',v)
 		
 
 		#move up
-		self.jog_joint_movel(p+np.array([0,0,0.3]),0.45,acc_range=0.2,threshold=0.05)
+		self.jog_joint_movel(p+np.array([0,0,0.3]),0.45,acc_range=0.1,threshold=0.05)
 
 
 
@@ -251,12 +258,12 @@ class fusing_pi(object):
 		###keep moving until perfectly in contact with metal plate
 		#turn on HV relay, pin down
 		q=inv(place_position,R)
-		self.jog_joint(q, 0.1,threshold=0.0005,dcc_range=0.1)
+		self.jog_joint(q, 0.1,threshold=0.001,dcc_range=0.05)
 		self.tool.setf_param('relay',RR.VarValue(1,'int8'))
 
 		self.tool.close()
 		time.sleep(0.2)
-		self.jog_joint_movel(place_position+self.pins_height, 0.01,threshold=0.001,dcc_range=0.1)
+		self.jog_joint_movel(place_position+self.pins_height, 0.2,threshold=0.002,dcc_range=0.1)
 		# time.sleep(2)
 		
 		self.tool.open()
@@ -304,7 +311,7 @@ class fusing_pi(object):
 			traceback.print_exc()
 		return
 
-	def	vision_check_fb(self,interlining=False):
+	def	vision_check_fb(self,template,interlining=False):
 		print("vision check")
 		try:
 			self.cam.start_streaming()
@@ -324,27 +331,27 @@ class fusing_pi(object):
 		cv2.imwrite("vision_check.jpg",self.current_frame)
 		roi_frame=cv2.cvtColor(self.current_frame[self.ROI[0]:self.ROI[1],self.ROI[2]:self.ROI[3]], cv2.COLOR_BGR2GRAY)
 
-		angle,center=match_w_ori(roi_frame,self.template,0,'edge',interlining=interlining)
+		angle,center=match_w_ori(roi_frame,template,0,'edge',interlining=interlining)
 		###precise angle 
-		angle,center=match_w_ori(roi_frame,self.template,np.radians(angle),'edge',angle_range=1.,angle_resolution=0.1,interlining=interlining)
+		angle,center=match_w_ori(roi_frame,template,np.radians(angle),'edge',angle_range=1.,angle_resolution=0.1,interlining=interlining)
 
 		offset_p=(center-np.array([len(roi_frame[0]),len(roi_frame)])/2.)
 		self.vel_ctrl.enable_velocity_mode()
 
 		###jog with large offset first
 
-		while np.linalg.norm(offset_p)>4:
+		while np.linalg.norm(offset_p)>3:
 
 
 			roi_frame=cv2.cvtColor(self.current_frame[self.ROI[0]:self.ROI[1],self.ROI[2]:self.ROI[3]], cv2.COLOR_BGR2GRAY)
-			angle,center=match_w_ori_single(roi_frame,self.template,np.radians(angle),'edge',interlining=interlining)
+			angle,center=match_w_ori_single(roi_frame,template,np.radians(angle),'edge',interlining=interlining)
 			offset_p=(center-np.array([len(roi_frame[0]),len(roi_frame)])/2.)
 			print(offset_p)
-			# print(offset_p,np.linalg.norm(offset_p))
-			if np.linalg.norm(offset_p)>10:
-				self.move(np.array([offset_p[1],-offset_p[0],0.])/1500.,np.eye(3))
-			else:
-				self.move(np.array([offset_p[1],-offset_p[0],0.])/5000.,np.eye(3))
+			self.move(np.array([offset_p[1],-offset_p[0],0.])/1000.,np.eye(3))
+			# if np.linalg.norm(offset_p)>10:
+			# 	self.move(np.array([offset_p[1],-offset_p[0],0.])/1000.,np.eye(3))
+			# else:
+			# 	self.move(np.array([offset_p[1],-offset_p[0],0.])/3000.,np.eye(3))
 
 		self.vel_ctrl.set_velocity_command(np.zeros((6,)))
 
@@ -372,7 +379,7 @@ class fusing_pi(object):
 
 		###keep jogging down until perfect contact with metal plate
 		q=inv(place_position,R)
-		self.jog_joint(q, 0.1,threshold=0.0005,dcc_range=0.1)
+		self.jog_joint(q, 0.1,threshold=0.001,dcc_range=0.05)
 
 		self.tool.setf_param('relay',RR.VarValue(1,'int8'))
 		self.tool.close()
@@ -380,7 +387,11 @@ class fusing_pi(object):
 		###move up more
 		# self.jog_joint_movel(place_position+self.pins_height+np.array([0,0,0.035]), 0.01,threshold=0.001,acc_range=0.005,dcc_range=0.01)
 		#move back down, pressing the plate
-		self.jog_joint_movel(place_position+self.pins_height, 0.01,threshold=0.001,dcc_range=0.1)
+		self.jog_joint_movel(place_position+self.pins_height, 0.2, threshold=0.002,dcc_range=0.1)
+
+		self.jog_joint_movel(place_position+self.pins_height/6, 0.1, threshold=0.002,dcc_range=0.1)
+
+
 		###sliding
 
 		now=time.time()
@@ -409,20 +420,31 @@ class fusing_pi(object):
 
 		
 		try:
-			self.fabric_name='PD19_016C-FR-LFT-LWR HICKEY V2 36'
-			self.template=read_template('client_yaml/templates/'+self.fabric_name+'.jpg',self.fabric_dimension[self.fabric_name],self.ppu)
 			
-			self.stack_height1=np.array([0,0,0.003-stacks*0.00075])
-			self.pick(self.bin1_p+self.stack_height1,self.bin1_R,v=4.2)
-			offset_p,offset_angle=self.vision_check_fb()
+			self.fabric_template=read_template('client_yaml/templates/'+self.fabric_name+'.jpg',self.fabric_dimension[self.fabric_name],self.ppu)
+			
+			self.stack_height1=np.array([0,0,0.00-stacks*0.00075])
+			self.pick(self.bin1_p+self.stack_height1,self.bin1_R,v=4.3)
+			# self.pick_osc(self.bin1_p+self.stack_height1,self.bin1_R,v=3.8)
+			offset_p,offset_angle=self.vision_check_fb(self.fabric_template)
+			######no-vision block
+			# offset_p=np.array([0,0,0])
+			# offset_angle=0.
+			# ######no-vision block end
 			self.place(self.place_position-offset_p,offset_angle)
 
 
-			self.stack_height2=np.array([0,0,0.004-stacks*0.00045])
-			self.pick(self.bin2_p+self.stack_height2,self.bin2_R,v=4.1)
-			offset_p,offset_angle=self.vision_check_fb(interlining=True)
-			# self.place(self.place_position-offset_p,offset_angle)
-			self.place_slide(self.place_position-offset_p,offset_angle)
+			# self.interlining_template=read_template('client_yaml/templates/'+self.interlining_name+'.jpg',self.fabric_dimension[self.interlining_name],self.ppu)
+			
+			# self.stack_height2=np.array([0,0,0.004-stacks*0.00045])
+			# # self.pick(self.bin2_p+self.stack_height2,self.bin2_R,v=4.1)
+			# self.pick_osc(self.bin2_p+self.stack_height2,self.bin2_R,v=3.3)
+			# offset_p,offset_angle=self.vision_check_fb(self.interlining_template,interlining=True)
+			# ######no-vision block
+			# # offset_p=np.array([0,0,0])
+			# # offset_angle=0.
+			# ######no-vision block end
+			# self.place_slide(self.place_position-offset_p,offset_angle)
 
 			##home
 			self.jog_joint(inv(self.home,R_ee(0)), 0.5, threshold=0.1)
@@ -454,6 +476,7 @@ def main():
 			service_ctx = RRN.RegisterService("fusing_service","edu.rpi.robotics.fusing_system.FusingSystem",fusing_pi_obj)
 
 		except:
+			traceback.print_exc()
 			fusing_pi_obj.vel_ctrl.disable_velocity_mode()
 			fusing_pi_obj.m1k_obj.EndSession()
 		# print("Press ctrl+c to quit")

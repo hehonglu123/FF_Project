@@ -20,12 +20,13 @@ except:
 	print('rpi gripper service not available')
 	pass
 try:	
-	url='rr+tcp://192.168.50.166:11111?service=m1k'
+	url='rr+tcp://robosewclient:11111?service=m1k'
 	m1k_obj = RRN.ConnectService(url)
 	m1k_obj.StartSession()
 	m1k_obj.setmode('A', 'SVMI')
 	m1k_obj.setawgconstant('A',0.)
 except:
+	traceback.print_exc()
 	print('m1k not available')
 	pass
 
@@ -44,8 +45,8 @@ def gripper_ctrl():
 		gripper.configure(text='gripper off')
 
 	else:
-		tool.setf_param('voltage',RR.VarValue(5,'single'))
-		m1k_obj.setawgconstant('A',5.)
+		tool.setf_param('voltage',RR.VarValue(4,'single'))
+		m1k_obj.setawgconstant('A',4.)
 		gripper.config(relief="sunken")
 		gripper.configure(bg='green')
 		gripper.configure(text='gripper on')

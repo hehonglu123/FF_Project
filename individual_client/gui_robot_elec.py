@@ -22,6 +22,12 @@ def Rz(theta):
 global vel_ctrl, robot_def
 
 
+
+fusing_laptop='192.168.51.188'
+robosewclient='192.168.51.61'
+pi_fuse='192.168.51.25'
+my_laptop='192.168.51.181'
+
 #Accept the names of the robots from command line
 parser = argparse.ArgumentParser(description="RR plug and play client")
 parser.add_argument("--robot-name",type=str)
@@ -30,13 +36,14 @@ robot_name=args.robot_name
 
 #rpi relay
 try:
-	tool_sub=RRN.SubscribeService('rr+tcp://pi_fuse:22222?service=tool')
+	tool_sub=RRN.SubscribeService('rr+tcp://'+pi_fuse+':22222?service=tool')
 	tool=tool_sub.GetDefaultClientWait(1)
 except:
 	print('rpi gripper service not available')
 	pass
 try:	
-	url='rr+tcp://pi_fuse:11111?service=m1k'
+	# url='rr+tcp://fusing_laptop:11111?service=m1k'
+	url='rr+tcp://'+my_laptop+':11111?service=m1k'
 	m1k_obj = RRN.ConnectService(url)
 	m1k_obj.StartSession()
 	m1k_obj.setmode('A', 'SVMI')

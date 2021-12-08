@@ -161,7 +161,7 @@ class dxf_robot_motion:
 
 def main():
     dxf_planner=dxf_robot_motion()
-    fabric_name="PD19_016C-FR-LFT-LWR HICKEY V2 36"
+    fabric_name="PD19_016C-FR-RGT-UP-INT HICKEY 36"
     filename="fabric_dxf/"+fabric_name+".dxf"
     points,maxx,maxy=dxf_planner.dxf_grabber_readfile(filename)
     
