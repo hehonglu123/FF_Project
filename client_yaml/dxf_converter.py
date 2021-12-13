@@ -159,10 +159,9 @@ class dxf_robot_motion:
         
         return(all_polylines,maxx,maxy)
 
-def main():
+def conversion(fabric_name,filename):
     dxf_planner=dxf_robot_motion()
-    fabric_name="PD19_016C-FR-RGT-UP-INT HICKEY 36"
-    filename="fabric_dxf/"+fabric_name+".dxf"
+
     points,maxx,maxy=dxf_planner.dxf_grabber_readfile(filename)
     
     draw = dxf.drawing(name='test.dxf')
@@ -178,12 +177,15 @@ def main():
     draw.save()
     intmaxx=math.ceil(maxx*scale)
     intmaxy=math.ceil(maxy*scale)
+
+    if fabric_name=="PD19_016C-FR-RGT-UP-INT HICKEY 36":
+        intmaxy+=1
     
 
     img = Image.new('RGB', (intmaxx,intmaxy), color='black')
     draw = ImageDraw.Draw(img)
     draw.polygon(tupled,outline='white')
-
+    # img.show()
 
 
     enhancer = ImageEnhance.Sharpness(img)
@@ -199,14 +201,27 @@ def main():
         maxx=maxy
         maxy=temp
 
-    cv2.imwrite('templates/'+fabric_name+'.jpg',output)
+    
 
-    with open('fabric.yaml') as file:
-        fabric_yaml = yaml.load(file, Loader=yaml.FullLoader)
+    return output, maxx, maxy
+def main():
+
+    directory="fabric_dxf/"
+
+    fabric_yaml={}
+    for filename in os.listdir(directory):
+
+        fabric_name=filename[:-4]
+        template, maxx, maxy=conversion(fabric_name,directory+filename)
+        print(maxx,maxy)
+        cv2.imwrite('templates/'+fabric_name+'.jpg',template)
+        fabric_yaml[fabric_name]=[25.4*maxx,25.4*maxy]
 
     with open('fabric.yaml','w') as file:
-        fabric_yaml[fabric_name]=[25.4*maxx,25.4*maxy]
         yaml.dump(fabric_yaml,file)
+
+    
+        
 
 if __name__ == "__main__":
 	main()

@@ -12,6 +12,12 @@ parser.add_argument("--tool-name",default='elec',type=str)
 args, _ = parser.parse_known_args()
 tool_name=args.tool_name
 
+fusing_laptop='192.168.51.188'
+robosewclient='192.168.51.61'
+pi_fuse='192.168.51.25'
+my_laptop='192.168.51.181'
+
+
 #rpi relay
 try:
 	tool_sub=RRN.SubscribeService('rr+tcp://pi_fuse:22222?service=tool')
@@ -20,7 +26,7 @@ except:
 	print('rpi gripper service not available')
 	pass
 try:	
-	url='rr+tcp://192.168.51.181:11111?service=m1k'
+	url='rr+tcp://'+robosewclient+':11111?service=m1k'
 	m1k_obj = RRN.ConnectService(url)
 	m1k_obj.StartSession()
 	m1k_obj.setmode('A', 'SVMI')
@@ -38,7 +44,7 @@ def gripper_ctrl():
 
 
 	if gripper.config('relief')[-1] == 'sunken':
-		tool.setf_param('voltage',RR.VarValue(0.,'single'))
+		# tool.setf_param('voltage',RR.VarValue(0.,'single'))
 		try:
 			m1k_obj.setawgconstant('A',0.)
 		except:
@@ -48,7 +54,7 @@ def gripper_ctrl():
 		gripper.configure(text='gripper off')
 
 	else:
-		tool.setf_param('voltage',RR.VarValue(2.5,'single'))
+		# tool.setf_param('voltage',RR.VarValue(2.5,'single'))
 		try:
 			m1k_obj.setawgconstant('A',2.5)
 		except:

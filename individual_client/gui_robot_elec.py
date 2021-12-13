@@ -43,7 +43,7 @@ except:
 	pass
 try:	
 	# url='rr+tcp://fusing_laptop:11111?service=m1k'
-	url='rr+tcp://'+my_laptop+':11111?service=m1k'
+	url='rr+tcp://'+robosewclient+':11111?service=m1k'
 	m1k_obj = RRN.ConnectService(url)
 	m1k_obj.StartSession()
 	m1k_obj.setmode('A', 'SVMI')
@@ -97,9 +97,9 @@ def gripper_ctrl():
 		gripper.configure(text='gripper off')
 
 	else:
-		tool.setf_param('voltage',RR.VarValue(2.,'single'))
+		tool.setf_param('voltage',RR.VarValue(4.,'single'))
 		try:
-			m1k_obj.setawgconstant('A',2.)
+			m1k_obj.setawgconstant('A',4.)
 		except:
 			pass
 		gripper.config(relief="sunken")

@@ -54,8 +54,7 @@ class fusing_pi(object):
 		self.pins_height=np.array([0,0,0.02])
 
 		try:	
-			# url='rr+tcp://192.168.51.25:11111?service=m1k'
-			url='rr+tcp://'+self.my_laptop+':11111?service=m1k'
+			url='rr+tcp://'+self.robosewclient+':11111?service=m1k'
 			m1k_sub=RRN.SubscribeService(url)
 			####get client object
 			self.m1k_obj = m1k_sub.GetDefaultClientWait(1)
@@ -198,8 +197,8 @@ class fusing_pi(object):
 
 		
 		#turn on voltage first
-		# self.m1k_obj.setawgconstant('A',v)
-		self.tool.setf_param('voltage',RR.VarValue(v,'single'))
+		self.m1k_obj.setawgconstant('A',v)
+		# self.tool.setf_param('voltage',RR.VarValue(v,'single'))
 
 		#move down 
 		self.jog_joint_movel(p,0.3,threshold=0.002,acc_range=0.,dcc_range=0.05,Rd=R)
@@ -225,14 +224,14 @@ class fusing_pi(object):
 		self.vel_ctrl.set_velocity_command(np.zeros((6,)))
 
 		#pick
-		# self.m1k_obj.setawgconstant('A',v)
-		self.tool.setf_param('voltage',RR.VarValue(v,'single'))
+		self.m1k_obj.setawgconstant('A',v)
+		# self.tool.setf_param('voltage',RR.VarValue(v,'single'))
 		time.sleep(0.5)
 
 		###osc
 		self.jog_joint_movel(p+np.array([0,0,0.023]),0.3,threshold=0.005,acc_range=0.,dcc_range=0.1,Rd=R)
-		# self.m1k_obj.setawgconstant('A',0.)
-		self.tool.setf_param('voltage',RR.VarValue(0,'single'))
+		self.m1k_obj.setawgconstant('A',0.)
+		# self.tool.setf_param('voltage',RR.VarValue(0,'single'))
 
 		time.sleep(0.2)
 		self.tool.setf_param('relay',RR.VarValue(1,'int8'))
@@ -241,8 +240,8 @@ class fusing_pi(object):
 		self.tool.open()
 		self.tool.setf_param('relay',RR.VarValue(0,'int8'))
 		self.jog_joint_movel(p,0.3,threshold=0.002,acc_range=0.,dcc_range=0.1,Rd=R)
-		# self.m1k_obj.setawgconstant('A',v)
-		self.tool.setf_param('voltage',RR.VarValue(v,'single'))
+		self.m1k_obj.setawgconstant('A',v)
+		# self.tool.setf_param('voltage',RR.VarValue(v,'single'))
 		
 
 		#move up
@@ -260,8 +259,8 @@ class fusing_pi(object):
 		self.vel_ctrl.set_velocity_command(np.zeros((6,)))
 
 		###turn off adhesion first, 
-		self.tool.setf_param('voltage',RR.VarValue(0.,'single'))
-		# self.m1k_obj.setawgconstant('A',0.)
+		# self.tool.setf_param('voltage',RR.VarValue(0.,'single'))
+		self.m1k_obj.setawgconstant('A',0.)
 		###keep moving until perfectly in contact with metal plate
 		#turn on HV relay, pin down
 		q=inv(place_position,R)
@@ -381,8 +380,8 @@ class fusing_pi(object):
 		self.vel_ctrl.set_velocity_command(np.zeros((6,)))
 
 		###turn off adhesion first
-		self.tool.setf_param('voltage',RR.VarValue(0.,'single'))
-		# self.m1k_obj.setawgconstant('A',0.)
+		# self.tool.setf_param('voltage',RR.VarValue(0.,'single'))
+		self.m1k_obj.setawgconstant('A',0.)
 
 		###keep jogging down until perfect contact with metal plate
 		q=inv(place_position,R)
