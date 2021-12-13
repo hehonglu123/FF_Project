@@ -88,14 +88,20 @@ def gripper_ctrl():
 
 	if gripper.config('relief')[-1] == 'sunken':
 		tool.setf_param('voltage',RR.VarValue(0.,'single'))
-		m1k_obj.setawgconstant('A',0.)
+		try:
+			m1k_obj.setawgconstant('A',0.)
+		except:
+			pass
 		gripper.config(relief="raised")
 		gripper.configure(bg='red')
 		gripper.configure(text='gripper off')
 
 	else:
-		tool.setf_param('voltage',RR.VarValue(2.5,'single'))
-		m1k_obj.setawgconstant('A',2.5)
+		tool.setf_param('voltage',RR.VarValue(2.,'single'))
+		try:
+			m1k_obj.setawgconstant('A',2.)
+		except:
+			pass
 		gripper.config(relief="sunken")
 		gripper.configure(bg='green')
 		gripper.configure(text='gripper on')

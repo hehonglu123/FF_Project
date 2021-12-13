@@ -29,8 +29,8 @@ class EA_Gripper(object):
 		###RPI PWM for HV control
 		GPIO.setwarnings(False)			#disable warnings
 		GPIO.setmode(GPIO.BCM)		#set pin numbering system
-		GPIO.setup(12,GPIO.OUT)
-		self.pi_pwm = GPIO.PWM(12,1000)		#create PWM instance with frequency
+		GPIO.setup(20,GPIO.OUT)
+		self.pi_pwm = GPIO.PWM(20,1000)		#create PWM instance with frequency
 		self.pi_pwm.start(0)
 
 		###ABB DIO

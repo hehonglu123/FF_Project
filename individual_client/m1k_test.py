@@ -13,20 +13,27 @@ from pysmu import Session, Mode
 if __name__ == '__main__':
     session = Session()
 
-    if not session.devices:
-        sys.exit(1)
+    session.start(0)
 
-    for idx, dev in enumerate(session.devices):
-        # Set all devices in the session to use source voltage, measure current
-        # mode for channel A with a constant value based on their index.
-        dev.channels['A'].mode = Mode.SVMI
-        dev.channels['A'].constant(3.3)
-        dev.channels['A'].mode = Mode.SVMI
-        dev.channels['A'].constant(3.3)
-        # Set all devices in the session to use source current, measure voltage
-        # mode for channel B with a constant value of 0.05.
-        dev.channels['B'].mode = Mode.SIMV
-        dev.channels['B'].constant(0.05)
+    time.sleep(2)
+
+    print('ending')
+    session.end()
+
+    # if not session.devices:
+    #     sys.exit(1)
+
+    # for idx, dev in enumerate(session.devices):
+    #     # Set all devices in the session to use source voltage, measure current
+    #     # mode for channel A with a constant value based on their index.
+    #     dev.channels['A'].mode = Mode.SVMI
+    #     dev.channels['A'].constant(3.3)
+    #     dev.channels['A'].mode = Mode.SVMI
+    #     dev.channels['A'].constant(3.3)
+    #     # Set all devices in the session to use source current, measure voltage
+    #     # mode for channel B with a constant value of 0.05.
+    #     dev.channels['B'].mode = Mode.SIMV
+    #     dev.channels['B'].constant(0.05)
 
     # time.sleep(5)
     # # Run the session for at least 10 captured samples in noncontinuous mode.

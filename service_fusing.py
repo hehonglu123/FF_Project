@@ -193,17 +193,21 @@ class fusing_pi(object):
 
 	def pick(self,p,R,v):
 		print('go picking')
-		q=inv(p+np.array([0,0,0.5]),R)
-		self.jog_joint(q, 1.5,threshold=0.002,dcc_range=0.4)
+		q=inv(p+np.array([0,0,0.3]),R)
+		self.jog_joint(q, 1.5,threshold=0.002,dcc_range=0.3)
+
+		
+		#turn on voltage first
+		# self.m1k_obj.setawgconstant('A',v)
+		self.tool.setf_param('voltage',RR.VarValue(v,'single'))
 
 		#move down 
-		self.jog_joint_movel(p,0.3,threshold=0.002,acc_range=0.,dcc_range=0.1,Rd=R)
+		self.jog_joint_movel(p,0.3,threshold=0.002,acc_range=0.,dcc_range=0.05,Rd=R)
 
 		self.vel_ctrl.set_velocity_command(np.zeros((6,)))
 
-		#pick
-		self.m1k_obj.setawgconstant('A',v)
-		self.tool.setf_param('voltage',RR.VarValue(v,'single'))
+		
+		
 		# time.sleep(0.5)
 		
 
@@ -221,13 +225,15 @@ class fusing_pi(object):
 		self.vel_ctrl.set_velocity_command(np.zeros((6,)))
 
 		#pick
-		self.m1k_obj.setawgconstant('A',v)
+		# self.m1k_obj.setawgconstant('A',v)
 		self.tool.setf_param('voltage',RR.VarValue(v,'single'))
 		time.sleep(0.5)
 
 		###osc
 		self.jog_joint_movel(p+np.array([0,0,0.023]),0.3,threshold=0.005,acc_range=0.,dcc_range=0.1,Rd=R)
-		self.m1k_obj.setawgconstant('A',0.)
+		# self.m1k_obj.setawgconstant('A',0.)
+		self.tool.setf_param('voltage',RR.VarValue(0,'single'))
+
 		time.sleep(0.2)
 		self.tool.setf_param('relay',RR.VarValue(1,'int8'))
 		self.tool.close()
@@ -235,7 +241,8 @@ class fusing_pi(object):
 		self.tool.open()
 		self.tool.setf_param('relay',RR.VarValue(0,'int8'))
 		self.jog_joint_movel(p,0.3,threshold=0.002,acc_range=0.,dcc_range=0.1,Rd=R)
-		self.m1k_obj.setawgconstant('A',v)
+		# self.m1k_obj.setawgconstant('A',v)
+		self.tool.setf_param('voltage',RR.VarValue(v,'single'))
 		
 
 		#move up
@@ -254,7 +261,7 @@ class fusing_pi(object):
 
 		###turn off adhesion first, 
 		self.tool.setf_param('voltage',RR.VarValue(0.,'single'))
-		self.m1k_obj.setawgconstant('A',0.)
+		# self.m1k_obj.setawgconstant('A',0.)
 		###keep moving until perfectly in contact with metal plate
 		#turn on HV relay, pin down
 		q=inv(place_position,R)
@@ -375,7 +382,7 @@ class fusing_pi(object):
 
 		###turn off adhesion first
 		self.tool.setf_param('voltage',RR.VarValue(0.,'single'))
-		self.m1k_obj.setawgconstant('A',0.)
+		# self.m1k_obj.setawgconstant('A',0.)
 
 		###keep jogging down until perfect contact with metal plate
 		q=inv(place_position,R)
@@ -421,29 +428,30 @@ class fusing_pi(object):
 		
 		try:
 			
-			self.fabric_template=read_template('client_yaml/templates/'+self.fabric_name+'.jpg',self.fabric_dimension[self.fabric_name],self.ppu)
+			# self.fabric_template=read_template('client_yaml/templates/'+self.fabric_name+'.jpg',self.fabric_dimension[self.fabric_name],self.ppu)
 			
-			self.stack_height1=np.array([0,0,0.00-stacks*0.00075])
-			self.pick(self.bin1_p+self.stack_height1,self.bin1_R,v=4.3)
-			# self.pick_osc(self.bin1_p+self.stack_height1,self.bin1_R,v=3.8)
-			offset_p,offset_angle=self.vision_check_fb(self.fabric_template)
-			######no-vision block
+			# self.stack_height1=np.array([0,0,0.00-stacks*0.00075])
+			# self.pick(self.bin1_p+self.stack_height1,self.bin1_R,v=3.5)
+			# # self.pick_osc(self.bin1_p+self.stack_height1,self.bin1_R,v=3.8)
+			# # offset_p,offset_angle=self.vision_check_fb(self.fabric_template)
+			# ######no-vision block
 			# offset_p=np.array([0,0,0])
 			# offset_angle=0.
-			# ######no-vision block end
-			self.place(self.place_position-offset_p,offset_angle)
+			# # ######no-vision block end
+			# self.place(self.place_position-offset_p,offset_angle)
 
 
-			# self.interlining_template=read_template('client_yaml/templates/'+self.interlining_name+'.jpg',self.fabric_dimension[self.interlining_name],self.ppu)
+			self.interlining_template=read_template('client_yaml/templates/'+self.interlining_name+'.jpg',self.fabric_dimension[self.interlining_name],self.ppu)
 			
-			# self.stack_height2=np.array([0,0,0.004-stacks*0.00045])
-			# # self.pick(self.bin2_p+self.stack_height2,self.bin2_R,v=4.1)
-			# self.pick_osc(self.bin2_p+self.stack_height2,self.bin2_R,v=3.3)
+			self.stack_height2=np.array([0,0,0.004-stacks*0.00045])
+			self.pick(self.bin2_p+self.stack_height2,self.bin2_R,v=3.5)
+			# self.pick_osc(self.bin2_p+self.stack_height2,self.bin2_R,v=4.1)
 			# offset_p,offset_angle=self.vision_check_fb(self.interlining_template,interlining=True)
-			# ######no-vision block
-			# # offset_p=np.array([0,0,0])
-			# # offset_angle=0.
-			# ######no-vision block end
+			######no-vision block
+			offset_p=np.array([0,0,0])
+			offset_angle=0.
+			######no-vision block end
+			self.place(self.place_position-offset_p,offset_angle)
 			# self.place_slide(self.place_position-offset_p,offset_angle)
 
 			##home
