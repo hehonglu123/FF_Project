@@ -31,23 +31,27 @@ class fusing_pi(object):
 		self.error_message_type=RRN.NewStructure("com.robotraconteur.eventlog.EventLogMessage")
 		self.current_errors=[]
 
-		self.current_ply_fabric_type.fabric_name='PD19_016C-TOP-CLLR 56'
-		self.current_interlining_fabric_type.fabric_name='PD19_016C-FR-RGT-UP-INT HICKEY 36'
+		self.current_ply_fabric_type.fabric_name='PD19_016C-FR-LFT-LWR HICKEY 36'
+		self.current_interlining_fabric_type.fabric_name='PD19_016C-FR-LFT-LWR-INT HICKEY 36'
 		#triggering pipe
 		@property
 		def trigger_fusing_system(self):
+			print('here')
 			return self._trigger_fusing_system
 		@trigger_fusing_system.setter
 		def trigger_fusing_system(self,value):
+			print('here')
 			self._trigger_fusing_system=value
 			value.PipeConnectCallback=(self.p1_connect_callback)
 
 		def p1_connect_callback(self,p):
+			print('here')
 			p.RequestPacketAck=True
 			p.PacketReceivedEvent+=self.p1_packet_received
 
 		def p1_packet_received(self,p):
 			while p.Available:
+				print('here')
 				try:
 					dat=p.ReceivePacket()
 					self.execute(dat.number_of_operations)
@@ -225,7 +229,7 @@ class fusing_pi(object):
 	def pick(self,p,R,v):
 		print('go picking')
 		q=inv(p+np.array([0,0,0.3]),R)
-		self.jog_joint(q, 1.5,threshold=0.002,dcc_range=0.3)
+		self.jog_joint(q, 1.2,threshold=0.002,dcc_range=0.4)
 
 		
 		#turn on voltage first
@@ -233,7 +237,7 @@ class fusing_pi(object):
 		# self.tool.setf_param('voltage',RR.VarValue(v,'single'))
 
 		#move down 
-		self.jog_joint_movel(p,0.3,threshold=0.002,acc_range=0.,dcc_range=0.05,Rd=R)
+		self.jog_joint_movel(p,0.3,threshold=0.002,acc_range=0.,dcc_range=0.1,Rd=R)
 
 		self.vel_ctrl.set_velocity_command(np.zeros((6,)))
 
@@ -446,6 +450,17 @@ class fusing_pi(object):
 
 
 	def initialize(self):
+		try:
+			self.m1k_obj.StartSession()
+		except:
+			pass
+		self.m1k_obj.setmode('A', 'SVMI')
+		self.m1k_obj.setawgconstant('A',0.)
+		self.tool.open()
+		self.tool.setf_param('voltage',RR.VarValue(0.,'single'))
+		self.tool.setf_param('relay',RR.VarValue(0,'int8'))
+
+
 		###temp, lift up
 		q=self.state_w.InValue.joint_position
 		p_cur=fwd(q).p
@@ -473,7 +488,7 @@ class fusing_pi(object):
 				# self.place(self.place_position-offset_p,offset_angle)
 
 
-				self.interlining_template=read_template('client_yaml/templates/'+current_interlining_fabric_type.fabric_name+'.jpg',self.fabric_dimension[current_interlining_fabric_type.fabric_name],self.ppu)
+				self.interlining_template=read_template('client_yaml/templates/'+self.current_interlining_fabric_type.fabric_name+'.jpg',self.fabric_dimension[self.current_interlining_fabric_type.fabric_name],self.ppu)
 				
 				self.stack_height2=np.array([0,0,0.004-cur_stack*0.00045])
 				self.pick(self.bin2_p+self.stack_height2,self.bin2_R,v=3.5)
@@ -496,7 +511,7 @@ class fusing_pi(object):
 			except:
 				self.vel_ctrl.disable_velocity_mode()
 				self.m1k_obj.EndSession()
-				self.traceback.print_exc()
+				traceback.print_exc()
 
 
 def main():
@@ -507,12 +522,11 @@ def main():
 		try:
 			fusing_pi_obj=fusing_pi()
 			fusing_pi_obj.initialize()
-
-			fusing_pi_obj.execute(5)
-
 		
 			service_ctx = RRN.RegisterService("fusing_service","edu.rpi.robotics.fusing_system.FusingSystem",fusing_pi_obj)
 
+
+			input('press enter to quit')
 		except:
 			traceback.print_exc()
 			fusing_pi_obj.vel_ctrl.disable_velocity_mode()

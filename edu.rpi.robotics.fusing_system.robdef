@@ -32,11 +32,12 @@ object FusingSystem
 	implements Device
 	property DeviceInfo device_info [readonly,nolock]
 	property EventLogMessage{list} current_errors [readonly, nolock]
-	pipe FusingOperationTrigger trigger_fusing_system
+	pipe FusingOperationTrigger trigger_fusing_system [writeonly]
 	property FabricInfo current_ply_fabric_type
 	property FabricInfo current_interlining_fabric_type
 	property FusingConfigData fusing_config_data
 	callback bool operation_feedback(uint32 current_operation_count)
+	function void initialize()
 	function void stop_fusing()
 end
 	
