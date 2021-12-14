@@ -1,6 +1,5 @@
 service edu.rpi.robotics.fusing_system
 
-
 stdver 0.10
 
 import com.robotraconteur.identifier
@@ -15,12 +14,18 @@ using com.robotraconteur.eventlog.EventLogMessage
 struct FabricInfo
 	field Identifier fabric_id
 	field double voltage
-	field string template_file_name
+	field string fabric_name
 end
 
 struct FusingOperationTrigger
-	field uint32 number_of_plys
-	field uint32 number_of_interlinings
+	field uint32 number_of_operations
+	field bool finished
+end
+
+struct FusingConfigData
+	field double[] over_fuse_pose
+	field double[] over_interlining_pose
+	field double[] over_ply_pose
 end
 
 object FusingSystem
@@ -30,6 +35,7 @@ object FusingSystem
 	pipe FusingOperationTrigger trigger_fusing_system
 	property FabricInfo current_ply_fabric_type
 	property FabricInfo current_interlining_fabric_type
+	property FusingConfigData fusing_config_data
 	callback bool operation_feedback(uint32 current_operation_count)
 	function void stop_fusing()
 end

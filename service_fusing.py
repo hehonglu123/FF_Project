@@ -24,15 +24,45 @@ class fusing_pi(object):
 		self.robosewclient='192.168.51.61'
 		self.my_laptop='192.168.51.181'
 
-		##################################Fabric Names###############################################
-		self.fabric_name='PD19_016C-TOP-CLLR 56'
-		self.interlining_name='PD19_016C-FR-RGT-UP-INT HICKEY 36'
 
+		##################################RR param initialization###############################################
 		self.current_ply_fabric_type=RRN.NewStructure("edu.rpi.robotics.fusing_system.FabricInfo")
 		self.current_interlining_fabric_type=RRN.NewStructure("edu.rpi.robotics.fusing_system.FabricInfo")
+		self.error_message_type=RRN.NewStructure("com.robotraconteur.eventlog.EventLogMessage")
+		self.current_errors=[]
 
+		self.current_ply_fabric_type.fabric_name='PD19_016C-TOP-CLLR 56'
+		self.current_interlining_fabric_type.fabric_name='PD19_016C-FR-RGT-UP-INT HICKEY 36'
+		#triggering pipe
+		@property
+		def trigger_fusing_system(self):
+			return self._trigger_fusing_system
+		@trigger_fusing_system.setter
+		def trigger_fusing_system(self,value):
+			self._trigger_fusing_system=value
+			value.PipeConnectCallback=(self.p1_connect_callback)
+
+		def p1_connect_callback(self,p):
+			p.RequestPacketAck=True
+			p.PacketReceivedEvent+=self.p1_packet_received
+
+		def p1_packet_received(self,p):
+			while p.Available:
+				try:
+					dat=p.ReceivePacket()
+					self.execute(dat.number_of_operations)
+				except:
+					self.trigger_error(traceback.format_exc())
+
+
+		def trigger_error(self,error_msg):
+			self.error_message_type.message=error_msg
+			self.current_errors=[self.error_message_type.message]
+			self.trigger_fusing_system.SendPacket(self.current_errors)
+			print(error_msg)
+
+		##################################Load Local params######################################
 		self.current_frame=None
-
 		###read yamls
 		with open(r'client_yaml/testbed.yaml') as file:
 			testbed_yaml = yaml.load(file, Loader=yaml.FullLoader)
@@ -53,6 +83,8 @@ class fusing_pi(object):
 		self.ppu=vision_yaml['ppu']
 		self.pins_height=np.array([0,0,0.02])
 
+
+		##################################Other RR services connection#######################################
 		try:	
 			url='rr+tcp://'+self.robosewclient+':11111?service=m1k'
 			m1k_sub=RRN.SubscribeService(url)
@@ -424,46 +456,47 @@ class fusing_pi(object):
 
 	def execute(self, stacks):
 
+		for cur_stack in range(stacks):
 		
-		try:
-			
-			# self.fabric_template=read_template('client_yaml/templates/'+self.fabric_name+'.jpg',self.fabric_dimension[self.fabric_name],self.ppu)
-			
-			# self.stack_height1=np.array([0,0,0.00-stacks*0.00075])
-			# self.pick(self.bin1_p+self.stack_height1,self.bin1_R,v=3.5)
-			# # self.pick_osc(self.bin1_p+self.stack_height1,self.bin1_R,v=3.8)
-			# # offset_p,offset_angle=self.vision_check_fb(self.fabric_template)
-			# ######no-vision block
-			# offset_p=np.array([0,0,0])
-			# offset_angle=0.
-			# # ######no-vision block end
-			# self.place(self.place_position-offset_p,offset_angle)
+			try:
+				
+				# self.fabric_template=read_template('client_yaml/templates/'+self.current_ply_fabric_type.fabric_name+'.jpg',self.fabric_dimension[self.current_ply_fabric_type.fabric_name],self.ppu)
+				
+				# self.stack_height1=np.array([0,0,0.00-cur_stack*0.00075])
+				# self.pick(self.bin1_p+self.stack_height1,self.bin1_R,v=3.5)
+				# # self.pick_osc(self.bin1_p+self.stack_height1,self.bin1_R,v=3.8)
+				# # offset_p,offset_angle=self.vision_check_fb(self.fabric_template)
+				# ######no-vision block
+				# offset_p=np.array([0,0,0])
+				# offset_angle=0.
+				# # ######no-vision block end
+				# self.place(self.place_position-offset_p,offset_angle)
 
 
-			self.interlining_template=read_template('client_yaml/templates/'+self.interlining_name+'.jpg',self.fabric_dimension[self.interlining_name],self.ppu)
-			
-			self.stack_height2=np.array([0,0,0.004-stacks*0.00045])
-			self.pick(self.bin2_p+self.stack_height2,self.bin2_R,v=3.5)
-			# self.pick_osc(self.bin2_p+self.stack_height2,self.bin2_R,v=4.1)
-			# offset_p,offset_angle=self.vision_check_fb(self.interlining_template,interlining=True)
-			######no-vision block
-			offset_p=np.array([0,0,0])
-			offset_angle=0.
-			######no-vision block end
-			self.place(self.place_position-offset_p,offset_angle)
-			# self.place_slide(self.place_position-offset_p,offset_angle)
+				self.interlining_template=read_template('client_yaml/templates/'+current_interlining_fabric_type.fabric_name+'.jpg',self.fabric_dimension[current_interlining_fabric_type.fabric_name],self.ppu)
+				
+				self.stack_height2=np.array([0,0,0.004-cur_stack*0.00045])
+				self.pick(self.bin2_p+self.stack_height2,self.bin2_R,v=3.5)
+				# self.pick_osc(self.bin2_p+self.stack_height2,self.bin2_R,v=4.1)
+				# offset_p,offset_angle=self.vision_check_fb(self.interlining_template,interlining=True)
+				######no-vision block
+				offset_p=np.array([0,0,0])
+				offset_angle=0.
+				######no-vision block end
+				self.place(self.place_position-offset_p,offset_angle)
+				# self.place_slide(self.place_position-offset_p,offset_angle)
 
-			##home
-			self.jog_joint(inv(self.home,R_ee(0)), 0.5, threshold=0.1)
-			##reset chargepad
-			self.tool.setf_param('relay',RR.VarValue(1,'int8'))
-			time.sleep(1.)
-			self.tool.setf_param('relay',RR.VarValue(0,'int8'))
+				##home
+				self.jog_joint(inv(self.home,R_ee(0)), 0.5, threshold=0.1)
+				##reset chargepad
+				self.tool.setf_param('relay',RR.VarValue(1,'int8'))
+				time.sleep(1.)
+				self.tool.setf_param('relay',RR.VarValue(0,'int8'))
 
-		except:
-			self.vel_ctrl.disable_velocity_mode()
-			self.m1k_obj.EndSession()
-			self.traceback.print_exc()
+			except:
+				self.vel_ctrl.disable_velocity_mode()
+				self.m1k_obj.EndSession()
+				self.traceback.print_exc()
 
 
 def main():
@@ -475,9 +508,7 @@ def main():
 			fusing_pi_obj=fusing_pi()
 			fusing_pi_obj.initialize()
 
-			for i in range(10):
-				
-				fusing_pi_obj.execute(i)
+			fusing_pi_obj.execute(5)
 
 		
 			service_ctx = RRN.RegisterService("fusing_service","edu.rpi.robotics.fusing_system.FusingSystem",fusing_pi_obj)
