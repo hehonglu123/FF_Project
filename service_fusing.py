@@ -33,37 +33,7 @@ class fusing_pi(object):
 
 		self.current_ply_fabric_type.fabric_name='PD19_016C-FR-LFT-LWR HICKEY 36'
 		self.current_interlining_fabric_type.fabric_name='PD19_016C-FR-LFT-LWR-INT HICKEY 36'
-		#triggering pipe
-		@property
-		def trigger_fusing_system(self):
-			print('here')
-			return self._trigger_fusing_system
-		@trigger_fusing_system.setter
-		def trigger_fusing_system(self,value):
-			print('here')
-			self._trigger_fusing_system=value
-			value.PipeConnectCallback=(self.p1_connect_callback)
-
-		def p1_connect_callback(self,p):
-			print('here')
-			p.RequestPacketAck=True
-			p.PacketReceivedEvent+=self.p1_packet_received
-
-		def p1_packet_received(self,p):
-			while p.Available:
-				print('here')
-				try:
-					dat=p.ReceivePacket()
-					self.execute(dat.number_of_operations)
-				except:
-					self.trigger_error(traceback.format_exc())
-
-
-		def trigger_error(self,error_msg):
-			self.error_message_type.message=error_msg
-			self.current_errors=[self.error_message_type.message]
-			self.trigger_fusing_system.SendPacket(self.current_errors)
-			print(error_msg)
+		
 
 		##################################Load Local params######################################
 		self.current_frame=None
@@ -142,6 +112,45 @@ class fusing_pi(object):
 			self.vel_ctrl.enable_velocity_mode()
 		except:
 			print('robot not available')
+
+
+	#triggering pipe
+	@property
+	def trigger_fusing_system(self):
+		return self._trigger_fusing_system
+	@trigger_fusing_system.setter
+	def trigger_fusing_system(self,value):
+		self._trigger_fusing_system=value
+		value.PipeConnectCallback=(self.p1_connect_callback)
+
+	def p1_connect_callback(self,p):
+		p.PacketReceivedEvent+=self.p1_packet_received
+
+	def p1_packet_received(self,p):
+		while p.Available:
+			try:
+				dat=p.ReceivePacket()
+				self.execute(dat.number_of_operations)
+			except:
+				self.trigger_error(traceback.format_exc())
+
+	###ESTOP
+	def stop_fusing(self):
+		self.vel_ctrl.set_velocity_command(np.zeros((6,)))
+		self.m1k_obj.setawgconstant('A',0.)
+		self.tool.open()
+		self.tool.setf_param('voltage',RR.VarValue(0.,'single'))
+		self.tool.setf_param('relay',RR.VarValue(0,'int8'))
+
+		
+
+
+	###error handling
+	def trigger_error(self,error_msg):
+		self.error_message_type.message=error_msg
+		self.current_errors=[self.error_message_type.message]
+		self.trigger_fusing_system.SendPacket(self.current_errors)
+		print(error_msg)
 
 	def jog_joint(self,q,max_v,threshold=0.01,dcc_range=0.1):
 
@@ -450,10 +459,10 @@ class fusing_pi(object):
 
 
 	def initialize(self):
-		try:
-			self.m1k_obj.StartSession()
-		except:
-			pass
+		# try:
+		# 	self.m1k_obj.StartSession()
+		# except:
+		# 	pass
 		self.m1k_obj.setmode('A', 'SVMI')
 		self.m1k_obj.setawgconstant('A',0.)
 		self.tool.open()
@@ -468,6 +477,7 @@ class fusing_pi(object):
 
 		##home
 		self.jog_joint(inv(self.home,R_ee(0)), 0.5,threshold=0.1)
+		self.vel_ctrl.set_velocity_command(np.zeros((6,)))
 
 	def execute(self, stacks):
 
