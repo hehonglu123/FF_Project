@@ -28,7 +28,5 @@ print(fusing_obj.current_interlining_fabric_type.fabric_name)
 
 ##############################################pipe check############################################
 p=fusing_obj.trigger_fusing_system.Connect(-1)
-while True:
-	p.SendPacket(trigger)  
-	print('sent')
-	time.sleep(1)
+
+p.SendPacket(trigger)  

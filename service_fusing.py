@@ -60,7 +60,7 @@ class fusing_pi(object):
 
 		##################################Other RR services connection#######################################
 		try:	
-			url='rr+tcp://'+self.robosewclient+':11111?service=m1k'
+			url='rr+tcp://'+self.fusing_laptop+':11111?service=m1k'
 			m1k_sub=RRN.SubscribeService(url)
 			####get client object
 			self.m1k_obj = m1k_sub.GetDefaultClientWait(1)
