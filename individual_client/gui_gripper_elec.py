@@ -26,11 +26,12 @@ except:
 	print('rpi gripper service not available')
 	pass
 try:	
-	url='rr+tcp://'+robosewclient+':11111?service=m1k'
+	url='rr+tcp://'+fusing_laptop+':11111?service=m1k'
 	m1k_obj = RRN.ConnectService(url)
-	m1k_obj.StartSession()
-	m1k_obj.setmode('A', 'SVMI')
-	m1k_obj.setawgconstant('A',0.)
+	# m1k_obj.StartSession()
+	# m1k_obj.setmode('A', 'SVMI')
+	# m1k_obj.setawgconstant('A',0.)
+	m1k_obj.setvoltage(0)
 except:
 	traceback.print_exc()
 	print('m1k not available')
@@ -46,7 +47,8 @@ def gripper_ctrl():
 	if gripper.config('relief')[-1] == 'sunken':
 		# tool.setf_param('voltage',RR.VarValue(0.,'single'))
 		try:
-			m1k_obj.setawgconstant('A',0.)
+			# m1k_obj.setawgconstant('A',0.)
+			m1k_obj.setvoltage(0)
 		except:
 			pass
 		gripper.config(relief="raised")
@@ -56,7 +58,8 @@ def gripper_ctrl():
 	else:
 		# tool.setf_param('voltage',RR.VarValue(2.5,'single'))
 		try:
-			m1k_obj.setawgconstant('A',2.5)
+			# m1k_obj.setawgconstant('A',2.5)
+			m1k_obj.setvoltage(2.5)
 		except:
 			pass
 		gripper.config(relief="sunken")

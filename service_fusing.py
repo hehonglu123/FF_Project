@@ -64,9 +64,7 @@ class fusing_pi(object):
 			m1k_sub=RRN.SubscribeService(url)
 			####get client object
 			self.m1k_obj = m1k_sub.GetDefaultClientWait(1)
-			self.m1k_obj.StartSession()
-			self.m1k_obj.setmode('A', 'SVMI')
-			self.m1k_obj.setawgconstant('A',0.)
+			self.m1k_obj.setvoltage(0)
 		except:
 			traceback.print_exc()
 			print('m1k not available')
@@ -137,7 +135,8 @@ class fusing_pi(object):
 	###ESTOP
 	def stop_fusing(self):
 		self.vel_ctrl.set_velocity_command(np.zeros((6,)))
-		self.m1k_obj.setawgconstant('A',0.)
+		# self.m1k_obj.setawgconstant('A',0.)
+		self.m1k_obj.setvoltage(0)
 		self.tool.open()
 		self.tool.setf_param('voltage',RR.VarValue(0.,'single'))
 		self.tool.setf_param('relay',RR.VarValue(0,'int8'))
@@ -242,7 +241,8 @@ class fusing_pi(object):
 
 		
 		#turn on voltage first
-		self.m1k_obj.setawgconstant('A',v)
+		# self.m1k_obj.setawgconstant('A',v)
+		self.m1k_obj.setvoltage(v)
 		# self.tool.setf_param('voltage',RR.VarValue(v,'single'))
 
 		#move down 
@@ -269,13 +269,15 @@ class fusing_pi(object):
 		self.vel_ctrl.set_velocity_command(np.zeros((6,)))
 
 		#pick
-		self.m1k_obj.setawgconstant('A',v)
+		# self.m1k_obj.setawgconstant('A',v)
+		self.m1k_obj.setvoltage(v)
 		# self.tool.setf_param('voltage',RR.VarValue(v,'single'))
 		time.sleep(0.5)
 
 		###osc
 		self.jog_joint_movel(p+np.array([0,0,0.023]),0.3,threshold=0.005,acc_range=0.,dcc_range=0.1,Rd=R)
-		self.m1k_obj.setawgconstant('A',0.)
+		# self.m1k_obj.setawgconstant('A',0.)
+		self.m1k_obj.setvoltage(0)
 		# self.tool.setf_param('voltage',RR.VarValue(0,'single'))
 
 		time.sleep(0.2)
@@ -285,7 +287,8 @@ class fusing_pi(object):
 		self.tool.open()
 		self.tool.setf_param('relay',RR.VarValue(0,'int8'))
 		self.jog_joint_movel(p,0.3,threshold=0.002,acc_range=0.,dcc_range=0.1,Rd=R)
-		self.m1k_obj.setawgconstant('A',v)
+		# self.m1k_obj.setawgconstant('A',v)
+		self.m1k_obj.setvoltage(v)
 		# self.tool.setf_param('voltage',RR.VarValue(v,'single'))
 		
 
@@ -305,7 +308,8 @@ class fusing_pi(object):
 
 		###turn off adhesion first, 
 		# self.tool.setf_param('voltage',RR.VarValue(0.,'single'))
-		self.m1k_obj.setawgconstant('A',0.)
+		# self.m1k_obj.setawgconstant('A',0.)
+		self.m1k_obj.setvoltage(0)
 		###keep moving until perfectly in contact with metal plate
 		#turn on HV relay, pin down
 		q=inv(place_position,R)
@@ -426,7 +430,8 @@ class fusing_pi(object):
 
 		###turn off adhesion first
 		# self.tool.setf_param('voltage',RR.VarValue(0.,'single'))
-		self.m1k_obj.setawgconstant('A',0.)
+		# self.m1k_obj.setawgconstant('A',0.)
+		self.m1k_obj.setvoltage(0)
 
 		###keep jogging down until perfect contact with metal plate
 		q=inv(place_position,R)
@@ -459,12 +464,8 @@ class fusing_pi(object):
 
 
 	def initialize(self):
-		# try:
-		# 	self.m1k_obj.StartSession()
-		# except:
-		# 	pass
-		self.m1k_obj.setmode('A', 'SVMI')
-		self.m1k_obj.setawgconstant('A',0.)
+		self.m1k_obj.setvoltage(0)
+		
 		self.tool.open()
 		self.tool.setf_param('voltage',RR.VarValue(0.,'single'))
 		self.tool.setf_param('relay',RR.VarValue(0,'int8'))
@@ -520,7 +521,7 @@ class fusing_pi(object):
 
 			except:
 				self.vel_ctrl.disable_velocity_mode()
-				self.m1k_obj.EndSession()
+				# self.m1k_obj.EndSession()
 				traceback.print_exc()
 
 
@@ -535,16 +536,16 @@ def main():
 		
 			service_ctx = RRN.RegisterService("fusing_service","edu.rpi.robotics.fusing_system.FusingSystem",fusing_pi_obj)
 
-
-			input('press enter to quit')
+			fusing_pi_obj.execute(5)
+			# input('press enter to quit')
 		except:
 			traceback.print_exc()
 			fusing_pi_obj.vel_ctrl.disable_velocity_mode()
-			fusing_pi_obj.m1k_obj.EndSession()
+			# fusing_pi_obj.m1k_obj.EndSession()
 		# print("Press ctrl+c to quit")
 
 		fusing_pi_obj.vel_ctrl.disable_velocity_mode()
-		fusing_pi_obj.m1k_obj.EndSession()
+		# fusing_pi_obj.m1k_obj.EndSession()
 
 if __name__ == '__main__':
 	main()
