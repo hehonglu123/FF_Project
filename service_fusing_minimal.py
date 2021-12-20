@@ -51,7 +51,7 @@ class fusing_pi(object):
 			time.sleep(0.2)
 			with self._lock:
 				try:
-					self.sensor_readings.OutValue=bool(np.zeros(6))
+					self.sensor_readings.OutValue=np.zeros(6,dtype=bool)
 				except:
 					traceback.print_exc()
 

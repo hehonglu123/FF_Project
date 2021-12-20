@@ -23,13 +23,22 @@ fusing_obj=fusing_sub.GetDefaultClientWait(1)
 sensor_readings = fusing_sub.SubscribeWire("sensor_readings")
 
 ##############################################property check#######################################
-fusing_obj.current_ply_fabric_type.fabric_name='PD19_016C-FR-LFT-LWR HICKEY 44'
-fusing_obj.current_interlining_fabric_type.fabric_name='PD19_016C-FR-LFT-LWR-INT HICKEY 44'
+print(fusing_obj.current_ply_fabric_type.fabric_name)
+print(fusing_obj.current_interlining_fabric_type.fabric_name)
+
+fabric_type=RRN.NewStructure("edu.rpi.robotics.fusing_system.FabricInfo")
+interlining_type=RRN.NewStructure("edu.rpi.robotics.fusing_system.FabricInfo")
+fabric_type.fabric_name='PD19_016C-FR-LFT-LWR HICKEY 44'
+interlining_type.fabric_name='PD19_016C-FR-LFT-LWR-INT HICKEY 44'
+
+fusing_obj.current_ply_fabric_type=fabric_type
+fusing_obj.current_interlining_fabric_type=interlining_type
 
 print(fusing_obj.current_ply_fabric_type.fabric_name)
 print(fusing_obj.current_interlining_fabric_type.fabric_name)
 
 ##############################################sensor wire check############################################
+time.sleep(0.5)
 now=time.time()
 while time.time()-now <5:
 	print(sensor_readings.InValue)
