@@ -3,7 +3,7 @@ import RobotRaconteur as RR
 RRN=RR.RobotRaconteurNode.s
 import RobotRaconteurCompanion as RRC
 from RobotRaconteurCompanion.Util.DateTimeUtil import DateTimeUtil
-import sys, os, time, argparse, traceback, cv2, copy, yaml
+import sys, os, time, argparse, traceback, cv2, copy, yaml, threading
 import numpy as np
 from importlib import import_module
 robot_name='abb'
@@ -23,6 +23,10 @@ class fusing_pi(object):
 		self.pi_fuse='192.168.51.25'
 		self.robosewclient='192.168.51.61'
 		self.my_laptop='192.168.51.181'
+
+		##################################sensor background threading#######################################
+		self._streaming=False
+		self._lock = threading.Lock()
 
 
 		##################################RR param initialization###############################################
@@ -80,11 +84,13 @@ class fusing_pi(object):
 
 		#rpi relay
 		try:
+			###sensor_state [IDEC1,IDEC2,IDEC3,IDEC4,LOCK1,LOCK]
 			self.tool_sub=RRN.SubscribeService('rr+tcp://'+self.pi_fuse+':22222?service=tool')
 			self.tool=self.tool_sub.GetDefaultClientWait(1)
 			self.tool.open()
 			self.tool.setf_param('voltage',RR.VarValue(0.,'single'))
 			self.tool.setf_param('relay',RR.VarValue(0,'int8'))
+			self.sensor_state = self.tool_sub.SubscribeWire("tool_state")
 		except:
 			traceback.print_exc()
 			print('tool service not available')
@@ -108,6 +114,9 @@ class fusing_pi(object):
 
 			#enable velocity mode
 			self.vel_ctrl.enable_velocity_mode()
+
+			#start getting sensor data
+			self.StartStreaming()
 		except:
 			print('robot not available')
 
@@ -131,6 +140,28 @@ class fusing_pi(object):
 				self.execute(dat.number_of_operations)
 			except:
 				self.trigger_error(traceback.format_exc())
+
+	#sensor reading
+	def threadfunc(self):
+		while(self._streaming):
+			time.sleep(0.2)
+			with self._lock:
+				try:
+					self.sensor_readings.OutValue=self.sensor_state[:6]
+				except:
+					traceback.print_exc()
+
+	def StartStreaming(self):
+		if (self._streaming):
+			raise RR.InvalidOperationException("Already streaming")
+		self._streaming=True
+		t=threading.Thread(target=self.threadfunc)
+		t.start()
+	def StopStreaming(self):
+		if (not self._streaming):
+			raise RR.InvalidOperationException("Not streaming")
+		self._streaming=False
+
 
 	###ESTOP
 	def stop_fusing(self):
@@ -229,323 +260,4 @@ class fusing_pi(object):
 
 	def ImageToMat(self,image):
 
-		frame2=image.data.reshape([image.image_info.height, image.image_info.width, int(len(image.data)/(image.image_info.height*image.image_info.width))], order='C')
-
-		return frame2
-
-
-	def pick(self,p,R,v):
-		print('go picking')
-		q=inv(p+np.array([0,0,0.3]),R)
-		self.jog_joint(q, 1.2,threshold=0.002,dcc_range=0.4)
-
-		
-		#turn on voltage first
-		# self.m1k_obj.setawgconstant('A',v)
-		self.m1k_obj.setvoltage(v)
-		# self.tool.setf_param('voltage',RR.VarValue(v,'single'))
-
-		#move down 
-		self.jog_joint_movel(p,0.3,threshold=0.002,acc_range=0.,dcc_range=0.1,Rd=R)
-
-		self.vel_ctrl.set_velocity_command(np.zeros((6,)))
-
-		
-		
-		# time.sleep(0.5)
-		
-
-		#move up
-		self.jog_joint_movel(p+np.array([0,0,0.3]),0.45,acc_range=0.1,threshold=0.05)
-
-	def pick_osc(self,p,R,v):
-		print('go picking')
-		q=inv(p+np.array([0,0,0.5]),R)
-		self.jog_joint(q, 1.5,threshold=0.002,dcc_range=0.4)
-
-		#move down 
-		self.jog_joint_movel(p,0.3,threshold=0.002,acc_range=0.,dcc_range=0.1,Rd=R)
-
-		self.vel_ctrl.set_velocity_command(np.zeros((6,)))
-
-		#pick
-		# self.m1k_obj.setawgconstant('A',v)
-		self.m1k_obj.setvoltage(v)
-		# self.tool.setf_param('voltage',RR.VarValue(v,'single'))
-		time.sleep(0.5)
-
-		###osc
-		self.jog_joint_movel(p+np.array([0,0,0.023]),0.3,threshold=0.005,acc_range=0.,dcc_range=0.1,Rd=R)
-		# self.m1k_obj.setawgconstant('A',0.)
-		self.m1k_obj.setvoltage(0)
-		# self.tool.setf_param('voltage',RR.VarValue(0,'single'))
-
-		time.sleep(0.2)
-		self.tool.setf_param('relay',RR.VarValue(1,'int8'))
-		self.tool.close()
-		time.sleep(2.)
-		self.tool.open()
-		self.tool.setf_param('relay',RR.VarValue(0,'int8'))
-		self.jog_joint_movel(p,0.3,threshold=0.002,acc_range=0.,dcc_range=0.1,Rd=R)
-		# self.m1k_obj.setawgconstant('A',v)
-		self.m1k_obj.setvoltage(v)
-		# self.tool.setf_param('voltage',RR.VarValue(v,'single'))
-		
-
-		#move up
-		self.jog_joint_movel(p+np.array([0,0,0.3]),0.45,acc_range=0.1,threshold=0.05)
-
-
-
-	def place(self,place_position,angle):
-		print('go placing')
-		R=np.dot(self.place_orientation,Rx(-angle))
-
-		#start joggging to place position
-		q=inv(place_position+self.pins_height,R)
-		self.jog_joint(q, 0.7,threshold=0.001,dcc_range=0.1)
-		self.vel_ctrl.set_velocity_command(np.zeros((6,)))
-
-		###turn off adhesion first, 
-		# self.tool.setf_param('voltage',RR.VarValue(0.,'single'))
-		# self.m1k_obj.setawgconstant('A',0.)
-		self.m1k_obj.setvoltage(0)
-		###keep moving until perfectly in contact with metal plate
-		#turn on HV relay, pin down
-		q=inv(place_position,R)
-		self.jog_joint(q, 0.1,threshold=0.001,dcc_range=0.05)
-		self.tool.setf_param('relay',RR.VarValue(1,'int8'))
-
-		self.tool.close()
-		time.sleep(0.2)
-		self.jog_joint_movel(place_position+self.pins_height, 0.2,threshold=0.002,dcc_range=0.1)
-		# time.sleep(2)
-		
-		self.tool.open()
-
-		time.sleep(0.1)
-		
-
-		#move up
-		q=inv(place_position+np.array([0,0,0.1]),R)
-		self.jog_joint(q, 0.6,threshold=0.15,dcc_range=0.12)
-
-		#turn off HV relay
-		self.tool.setf_param('relay',RR.VarValue(0,'int8'))
-
-
-	def move(self,vd, ER):
-		try:
-			w=1.
-			Kq=.01*np.eye(6)    #small value to make sure positive definite
-			KR=np.eye(3)        #gains for position and orientation error
-
-			q_cur=self.vel_ctrl.joint_position()
-			J=jacobian(q_cur)       #calculate current Jacobian
-			Jp=J[3:,:]
-			JR=J[:3,:] 
-			H=np.dot(np.transpose(Jp),Jp)+Kq+w*np.dot(np.transpose(JR),JR)
-
-			H=(H+np.transpose(H))/2
-
-
-			k,theta = R2rot(ER)
-			k=np.array(k)
-			s=np.sin(theta/2)*k         #eR2
-			wd=-np.dot(KR,s)  
-			f=-np.dot(np.transpose(Jp),vd)-w*np.dot(np.transpose(JR),wd)
-			###Don't put bound here, will affect cartesian motion outcome
-			qdot=solve_qp(H, f)
-			###For safty, make sure robot not moving too fast
-			if np.max(np.abs(qdot))>1.:
-				qdot=np.zeros(6)
-				print('too fast')
-			self.vel_ctrl.set_velocity_command(qdot)
-
-		except:
-			traceback.print_exc()
-		return
-
-	def	vision_check_fb(self,template,interlining=False):
-		print("vision check")
-		try:
-			self.cam.start_streaming()
-		except:
-			traceback.print_exc()
-			pass
-		self.jog_joint(self.vision_q, 1.5,threshold=0.0001,dcc_range=0.4)
-
-		# return np.array([0,0,0]),0
-
-		#####brief stop for vision
-		self.vel_ctrl.set_velocity_command(np.zeros((6,)))
-		self.vel_ctrl.disable_velocity_mode()
-		time.sleep(0.5)
-
-		###write for reference
-		cv2.imwrite("vision_check.jpg",self.current_frame)
-		roi_frame=cv2.cvtColor(self.current_frame[self.ROI[0]:self.ROI[1],self.ROI[2]:self.ROI[3]], cv2.COLOR_BGR2GRAY)
-
-		angle,center=match_w_ori(roi_frame,template,0,'edge',interlining=interlining)
-		###precise angle 
-		angle,center=match_w_ori(roi_frame,template,np.radians(angle),'edge',angle_range=1.,angle_resolution=0.1,interlining=interlining)
-
-		offset_p=(center-np.array([len(roi_frame[0]),len(roi_frame)])/2.)
-		self.vel_ctrl.enable_velocity_mode()
-
-		###jog with large offset first
-
-		while np.linalg.norm(offset_p)>3:
-
-
-			roi_frame=cv2.cvtColor(self.current_frame[self.ROI[0]:self.ROI[1],self.ROI[2]:self.ROI[3]], cv2.COLOR_BGR2GRAY)
-			angle,center=match_w_ori_single(roi_frame,template,np.radians(angle),'edge',interlining=interlining)
-			offset_p=(center-np.array([len(roi_frame[0]),len(roi_frame)])/2.)
-			print(offset_p)
-			self.move(np.array([offset_p[1],-offset_p[0],0.])/1000.,np.eye(3))
-			# if np.linalg.norm(offset_p)>10:
-			# 	self.move(np.array([offset_p[1],-offset_p[0],0.])/1000.,np.eye(3))
-			# else:
-			# 	self.move(np.array([offset_p[1],-offset_p[0],0.])/3000.,np.eye(3))
-
-		self.vel_ctrl.set_velocity_command(np.zeros((6,)))
-
-		p_cur=fwd(self.state_w.InValue.joint_position).p
-		p_vision=fwd(self.vision_q).p
-
-		self.cam.stop_streaming()
-
-		print('offset_angle: ',angle)
-		return p_vision-p_cur,np.radians(angle)
-
-
-
-	def place_slide(self,place_position,angle):
-		print('go placing')
-		R=np.dot(self.place_orientation,Rx(-angle))
-		#start joggging to place position
-		q=inv(place_position+self.pins_height,R)
-		self.jog_joint(q, 0.7,threshold=0.001,dcc_range=0.1)
-		self.vel_ctrl.set_velocity_command(np.zeros((6,)))
-
-		###turn off adhesion first
-		# self.tool.setf_param('voltage',RR.VarValue(0.,'single'))
-		# self.m1k_obj.setawgconstant('A',0.)
-		self.m1k_obj.setvoltage(0)
-
-		###keep jogging down until perfect contact with metal plate
-		q=inv(place_position,R)
-		self.jog_joint(q, 0.1,threshold=0.001,dcc_range=0.05)
-
-		self.tool.setf_param('relay',RR.VarValue(1,'int8'))
-		self.tool.close()
-		time.sleep(0.2)
-		###move up more
-		# self.jog_joint_movel(place_position+self.pins_height+np.array([0,0,0.035]), 0.01,threshold=0.001,acc_range=0.005,dcc_range=0.01)
-		#move back down, pressing the plate
-		self.jog_joint_movel(place_position+self.pins_height, 0.2, threshold=0.002,dcc_range=0.1)
-
-		self.jog_joint_movel(place_position+self.pins_height/6, 0.1, threshold=0.002,dcc_range=0.1)
-
-
-		###sliding
-
-		now=time.time()
-		while time.time()-now<7:
-			self.move(np.array([0.08,0,0]),np.eye(3))
-
-		self.tool.open()
-		# vel_ctrl.set_velocity_command(np.zeros((6,)))
-		time.sleep(0.5)
-		###move up
-		q=inv(place_position+np.array([0.3,0,0.1]),R)
-		self.jog_joint(q, 0.4,threshold=0.1,dcc_range=0.12)
-		self.tool.setf_param('relay',RR.VarValue(0,'int8'))
-
-
-	def initialize(self):
-		self.m1k_obj.setvoltage(0)
-		
-		self.tool.open()
-		self.tool.setf_param('voltage',RR.VarValue(0.,'single'))
-		self.tool.setf_param('relay',RR.VarValue(0,'int8'))
-
-
-		###temp, lift up
-		q=self.state_w.InValue.joint_position
-		p_cur=fwd(q).p
-		self.jog_joint_movel([p_cur[0],p_cur[1],0.6], 0.2,threshold=0.05, acc_range=0.)
-
-		##home
-		self.jog_joint(inv(self.home,R_ee(0)), 0.5,threshold=0.1)
-		self.vel_ctrl.set_velocity_command(np.zeros((6,)))
-
-	def execute(self, stacks):
-
-		for cur_stack in range(stacks):
-		
-			try:
-				
-				# self.fabric_template=read_template('client_yaml/templates/'+self.current_ply_fabric_type.fabric_name+'.jpg',self.fabric_dimension[self.current_ply_fabric_type.fabric_name],self.ppu)
-				
-				# self.stack_height1=np.array([0,0,0.00-cur_stack*0.00075])
-				# self.pick(self.bin1_p+self.stack_height1,self.bin1_R,v=3.5)
-				# # self.pick_osc(self.bin1_p+self.stack_height1,self.bin1_R,v=3.8)
-				# # offset_p,offset_angle=self.vision_check_fb(self.fabric_template)
-				# ######no-vision block
-				# offset_p=np.array([0,0,0])
-				# offset_angle=0.
-				# # ######no-vision block end
-				# self.place(self.place_position-offset_p,offset_angle)
-
-
-				self.interlining_template=read_template('client_yaml/templates/'+self.current_interlining_fabric_type.fabric_name+'.jpg',self.fabric_dimension[self.current_interlining_fabric_type.fabric_name],self.ppu)
-				
-				self.stack_height2=np.array([0,0,0.004-cur_stack*0.00045])
-				self.pick(self.bin2_p+self.stack_height2,self.bin2_R,v=3.5)
-				# self.pick_osc(self.bin2_p+self.stack_height2,self.bin2_R,v=4.1)
-				# offset_p,offset_angle=self.vision_check_fb(self.interlining_template,interlining=True)
-				######no-vision block
-				offset_p=np.array([0,0,0])
-				offset_angle=0.
-				######no-vision block end
-				self.place(self.place_position-offset_p,offset_angle)
-				# self.place_slide(self.place_position-offset_p,offset_angle)
-
-				##home
-				self.jog_joint(inv(self.home,R_ee(0)), 0.5, threshold=0.1)
-				##reset chargepad
-				self.tool.setf_param('relay',RR.VarValue(1,'int8'))
-				time.sleep(1.)
-				self.tool.setf_param('relay',RR.VarValue(0,'int8'))
-
-			except:
-				self.vel_ctrl.disable_velocity_mode()
-				# self.m1k_obj.EndSession()
-				traceback.print_exc()
-
-
-def main():
-	with RR.ServerNodeSetup("fusing_service",12180) as node_setup:
-		RRC.RegisterStdRobDefServiceTypes(RRN)
-		RRN.RegisterServiceTypeFromFile("edu.rpi.robotics.fusing_system")
-
-		try:
-			fusing_pi_obj=fusing_pi()
-			fusing_pi_obj.initialize()
-		
-			service_ctx = RRN.RegisterService("fusing_service","edu.rpi.robotics.fusing_system.FusingSystem",fusing_pi_obj)
-
-			fusing_pi_obj.execute(5)
-			# input('press enter to quit')
-		except:
-			traceback.print_exc()
-			fusing_pi_obj.vel_ctrl.disable_velocity_mode()
-			# fusing_pi_obj.m1k_obj.EndSession()
-		# print("Press ctrl+c to quit")
-
-		fusing_pi_obj.vel_ctrl.disable_velocity_mode()
-		# fusing_pi_obj.m1k_obj.EndSession()
-
-if __name__ == '__main__':
-	main()
+		frame2=image.data.reshape([image.image_info.height, image.image_info.width, int(len(i

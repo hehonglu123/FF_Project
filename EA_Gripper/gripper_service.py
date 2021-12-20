@@ -61,8 +61,15 @@ class EA_Gripper(object):
 			with self._lock:
 				try:
 					ToolState=self.tool_state_type
-					self.sensor_list=[]
-					# self.sensor_list=[self.sensor_28.range,self.sensor_29.range,self.ht_sensor.temperature,self.ht_sensor.relative_humidity]
+					IDEC1=self.rapid.get_digital_io('IDEC1')
+					IDEC2=self.rapid.get_digital_io('IDEC2')
+					IDEC3=self.rapid.get_digital_io('IDEC3')
+					IDEC4=self.rapid.get_digital_io('IDEC4')
+					LOCK1=self.rapid.get_digital_io('LOCK1')
+					LOCK2=self.rapid.get_digital_io('LOCK2')
+
+					self.sensor_list=[IDEC1,IDEC2,IDEC3,IDEC4,LOCK1,LOCK2]
+
 					# print(self.sensor_list)
 					ToolState.sensor=self.sensor_list
 					ToolState.ts=self._date_time_util.TimeSpec3Now()

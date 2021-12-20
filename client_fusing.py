@@ -18,13 +18,23 @@ pi_fuse='192.168.51.25'
 my_laptop='192.168.51.181'
 
 url='rr+tcp://rpi:12180/?service=fusing_service'
-# fusing_sub=RRN.SubscribeService(url)
-# fusing_obj=fusing_sub.GetDefaultClientWait(1)
-fusing_obj=RRN.ConnectService(url)
+fusing_sub=RRN.SubscribeService(url)
+fusing_obj=fusing_sub.GetDefaultClientWait(1)
+sensor_readings = fusing_sub.SubscribeWire("sensor_readings")
 
 ##############################################property check#######################################
+fusing_obj.current_ply_fabric_type.fabric_name='PD19_016C-FR-LFT-LWR HICKEY 44'
+fusing_obj.current_interlining_fabric_type.fabric_name='PD19_016C-FR-LFT-LWR-INT HICKEY 44'
+
 print(fusing_obj.current_ply_fabric_type.fabric_name)
 print(fusing_obj.current_interlining_fabric_type.fabric_name)
+
+##############################################sensor wire check############################################
+now=time.time()
+while time.time()-now <5:
+	print(sensor_readings.InValue)
+	time.sleep(0.5)
+
 
 ##############################################pipe check############################################
 p=fusing_obj.trigger_fusing_system.Connect(-1)
