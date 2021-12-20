@@ -16,11 +16,13 @@ class fusing_pi(object):
 		self.current_ply_fabric_type=RRN.NewStructure("edu.rpi.robotics.fusing_system.FabricInfo")
 		self.current_interlining_fabric_type=RRN.NewStructure("edu.rpi.robotics.fusing_system.FabricInfo")
 		self.error_message_type=RRN.NewStructure("com.robotraconteur.eventlog.EventLogMessage")
+		self.trigger=RRN.NewStructure("edu.rpi.robotics.fusing_system.FusingOperationTrigger")
 		self.current_errors=[]
 
 		self.current_ply_fabric_type.fabric_name='PD19_016C-FR-LFT-LWR HICKEY 36'
 		self.current_interlining_fabric_type.fabric_name='PD19_016C-FR-LFT-LWR-INT HICKEY 36'
 
+		self.actuator_position={'bin1':None,'bin2':None,'robot':None}
 		##################################sensor background threading#######################################
 		self._streaming=False
 		self._lock = threading.Lock()
@@ -66,10 +68,28 @@ class fusing_pi(object):
 			raise RR.InvalidOperationException("Not streaming")
 		self._streaming=False
 
+	def actuate(self,position,action):
+		try:
+			self.actuator_position[position]
+			print('set '+position+' to '+str(action))
+		except:
+			self.trigger_error('actuator wrong',traceback.format_exc())
 
 	###ESTOP
 	def stop_fusing(self):
 		print('stop')
+
+	###error handling
+	def trigger_error(self,title,error_msg):
+		self.error_message_type.title=title
+		self.error_message_type.message=error_msg
+		self.current_errors=[self.error_message_type]
+		self.trigger.finished=True
+		print(error_msg)
+		###send stop signal to WGC
+		self.trigger_fusing_system.SendPacket(self.trigger)
+		
+
 
 
 def main():
