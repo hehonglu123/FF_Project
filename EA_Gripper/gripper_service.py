@@ -5,7 +5,7 @@ from RobotRaconteurCompanion.Util.DateTimeUtil import DateTimeUtil
 import numpy as np 
 import time, traceback, threading, signal#, board, busio, adafruit_vl53l0x, adafruit_sht31d
 from io_test import RAPID
-import RPi.GPIO as GPIO
+# import RPi.GPIO as GPIO
 
 class EA_Gripper(object):
 	def __init__(self):
@@ -27,11 +27,11 @@ class EA_Gripper(object):
 		self._date_time_util = DateTimeUtil(RRN)
 
 		###RPI PWM for HV control
-		GPIO.setwarnings(False)			#disable warnings
-		GPIO.setmode(GPIO.BCM)		#set pin numbering system
-		GPIO.setup(20,GPIO.OUT)
-		self.pi_pwm = GPIO.PWM(20,1000)		#create PWM instance with frequency
-		self.pi_pwm.start(0)
+		# GPIO.setwarnings(False)			#disable warnings
+		# GPIO.setmode(GPIO.BCM)		#set pin numbering system
+		# GPIO.setup(20,GPIO.OUT)
+		# self.pi_pwm = GPIO.PWM(20,1000)		#create PWM instance with frequency
+		# self.pi_pwm.start(0)
 
 		###ABB DIO
 		self.rapid = RAPID(base_url='http://192.168.51.26:80')
@@ -49,7 +49,7 @@ class EA_Gripper(object):
 	def setf_param(self,param_name, value):
 		if param_name=='voltage':
 			print('setting voltage to: ', value.data[0])
-			self.pi_pwm.ChangeDutyCycle(value.data[0]*100/5)
+			# self.pi_pwm.ChangeDutyCycle(value.data[0]*100/5)
 		if param_name=='relay':
 			print('change relay to: ', value.data[0])
 			self.rapid.set_digital_io('relay', value.data[0]) 
@@ -99,7 +99,8 @@ with RR.ServerNodeSetup("electroadhesion_gripper",22222) as node_setup:
 	gripper_inst.StartStreaming()
 	service_ctx = RRN.RegisterService("tool","com.robotraconteur.robotics.tool.Tool",gripper_inst)
 
-	print("Press ctrl+c to quit")
-	signal.sigwait([signal.SIGTERM,signal.SIGINT])
+	# print("Press ctrl+c to quit")
+	# signal.sigwait([signal.SIGTERM,signal.SIGINT])
+	input('press enter to quit')
 	gripper_inst.StopStreaming()
-	gripper_inst.pi_pwm.stop()
+	# gripper_inst.pi_pwm.stop()
