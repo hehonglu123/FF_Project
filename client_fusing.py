@@ -6,6 +6,12 @@ from importlib import import_module
 sys.path.append('../toolbox/')
 from general_robotics_toolbox import *    
 
+###connection failed callback
+def connect_failed(s, client_id, url, err):
+	error_msg="Client connect failed: " + str(client_id.NodeID) + " url: " + str(url) + " error: " + str(err)
+	print('Reconnecting')
+	fusing_obj=fusing_sub.GetDefaultClientWait(1)
+
 
 
 ############################register RR params#############################################
@@ -20,6 +26,8 @@ my_laptop='192.168.51.181'
 
 url='rr+tcp://rpi:12180/?service=fusing_service'
 fusing_sub=RRN.SubscribeService(url)
+fusing_sub.ClientConnectFailed += connect_failed
+
 fusing_obj=fusing_sub.GetDefaultClientWait(1)
 sensor_readings = fusing_sub.SubscribeWire("sensor_readings")
 
@@ -62,10 +70,10 @@ fusing_obj.actuate('robot',False)
 p=fusing_obj.trigger_fusing_system.Connect(-1)
 
 p.SendPacket(1)  
-p.SendPacket(1)  
-p.SendPacket(1)  
-p.SendPacket(1)  
-p.SendPacket(1)  
+# p.SendPacket(1)  
+# p.SendPacket(1)  
+# p.SendPacket(1)  
+# p.SendPacket(1)  
 
 ##############################################error check############################################
 def finish_trigger_cb(pipe_ep):

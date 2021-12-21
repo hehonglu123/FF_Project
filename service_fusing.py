@@ -33,7 +33,7 @@ class fusing_pi(object):
 		self.current_ply_fabric_type=RRN.NewStructure("edu.rpi.robotics.fusing_system.FabricInfo")
 		self.current_interlining_fabric_type=RRN.NewStructure("edu.rpi.robotics.fusing_system.FabricInfo")
 		self.error_message_type=RRN.NewStructure("com.robotraconteur.eventlog.EventLogMessage")
-		self.trigger=RRN.NewStructure("edu.rpi.robotics.fusing_system.FusingOperationTrigger")
+		self.finish_signal_type=RRN.NewStructure("edu.rpi.robotics.fusing_system.FinishSignal")
 
 		self.current_errors=[]
 
@@ -69,43 +69,91 @@ class fusing_pi(object):
 		##################################Other RR services connection#######################################
 		try:	
 			url='rr+tcp://'+self.fusing_laptop+':11111?service=m1k'
-			m1k_sub=RRN.SubscribeService(url)
+			self.m1k_sub=RRN.SubscribeService(url)
+			self.m1k_sub.ClientConnectFailed += self.connect_failed
+
 			####get client object
-			self.m1k_obj = m1k_sub.GetDefaultClientWait(1)
+			self.m1k_obj = self.m1k_sub.GetDefaultClientWait(1)
 			self.m1k_obj.setvoltage(0)
 		except:
-			traceback.print_exc()
 			print('m1k not available')
 			pass
 
+		try:
+			###camera connect
+			url='rr+tcp://robosewclient:59823?service=camera'
+			#Startup, connect, and pull out the camera from the objref    
+			self.cam_sub=RRN.SubscribeService(url)
+			self.cam_sub.ClientConnectFailed += self.connect_failed
+			####get client object
+			self.cam = self.cam_sub.GetDefaultClientWait(1)
+			cam_pipe=self.cam.frame_stream.Connect(-1)
+			cam_pipe.PacketReceivedEvent+=self.new_frame
+		except:
+			print('camera not available')
+			pass
 
-		###camera connect
-		url='rr+tcp://robosewclient:59823?service=camera'
-		#Startup, connect, and pull out the camera from the objref    
-		self.cam=RRN.ConnectService(url)
-		cam_pipe=self.cam.frame_stream.Connect(-1)
-		cam_pipe.PacketReceivedEvent+=self.new_frame
-
-		#rpi relay
+		#tool
 		try:
 			###sensor_state [IDEC1,IDEC2,IDEC3,IDEC4,LOCK1,LOCK]
 			self.tool_sub=RRN.SubscribeService('rr+tcp://'+self.pi_fuse+':22222?service=tool')
+			self.tool_state = self.tool_sub.SubscribeWire("tool_state")
+			self.tool_sub.ClientConnectFailed += self.connect_failed
 			self.tool=self.tool_sub.GetDefaultClientWait(1)
 			self.tool.open()
 			self.tool.setf_param('voltage',RR.VarValue(0.,'single'))
 			self.tool.setf_param('relay',RR.VarValue(0,'int8'))
-			self.tool_state = self.tool_sub.SubscribeWire("tool_state")
+			
 		except:
-			traceback.print_exc()
 			print('tool service not available')
 			pass
 
 		try:
 			self.robot_sub=RRN.SubscribeService('rr+tcp://192.168.51.25:58651?service=robot')
-			self.robot=self.robot_sub.GetDefaultClientWait(1)
+			self.robot_sub.ClientConnectFailed += self.connect_failed
 			self.state_w = self.robot_sub.SubscribeWire("robot_state")
-			cmd_w=self.robot_sub.SubscribeWire('position_command')
-			self.vel_ctrl = EmulatedVelocityControl(self.robot,self.state_w, cmd_w)
+			self.cmd_w=self.robot_sub.SubscribeWire('position_command')
+
+			self.robot=self.robot_sub.GetDefaultClientWait(1)
+			self.vel_ctrl = EmulatedVelocityControl(self.robot,self.state_w, self.cmd_w)
+
+			##########Initialize robot constants
+			robot_const = RRN.GetConstants("com.robotraconteur.robotics.robot", self.robot)
+			self.halt_mode = robot_const["RobotCommandMode"]["halt"]
+			self.position_mode = robot_const["RobotCommandMode"]["position_command"]
+
+			self.robot.command_mode = self.halt_mode
+			time.sleep(0.1)
+			self.robot.command_mode = self.position_mode
+
+			#enable velocity mode
+			self.vel_ctrl.enable_velocity_mode()
+
+		except:
+			print('robot not available')
+			pass
+
+	def initialize(self):
+
+		try:
+			####m1k client object
+			self.m1k_obj = self.m1k_sub.GetDefaultClientWait(1)
+			self.m1k_obj.setvoltage(0)
+
+			####camera client object
+			self.cam = self.cam_sub.GetDefaultClientWait(1)
+			cam_pipe=self.cam.frame_stream.Connect(-1)
+			cam_pipe.PacketReceivedEvent+=self.new_frame
+			
+			###tool client object
+			self.tool=self.tool_sub.GetDefaultClientWait(1)
+			self.tool.open()
+			self.tool.setf_param('voltage',RR.VarValue(0.,'single'))
+			self.tool.setf_param('relay',RR.VarValue(0,'int8'))
+
+			###robot client object
+			self.robot=self.robot_sub.GetDefaultClientWait(1)
+			self.vel_ctrl = EmulatedVelocityControl(self.robot,self.state_w, self.cmd_w)
 
 			##########Initialize robot constants
 			robot_const = RRN.GetConstants("com.robotraconteur.robotics.robot", self.robot)
@@ -121,9 +169,27 @@ class fusing_pi(object):
 
 			#start getting sensor data
 			self.StartStreaming()
-		except:
-			print('robot not available')
 
+
+			###temp, lift up
+			q=self.state_w.InValue.joint_position
+			p_cur=fwd(q).p
+			self.jog_joint_movel([p_cur[0],p_cur[1],0.6], 0.2,threshold=0.05, acc_range=0.)
+
+			##home
+			self.jog_joint(inv(self.home,R_ee(0)), 0.5,threshold=0.1)
+			self.vel_ctrl.set_velocity_command(np.zeros((6,)))
+
+			return True
+		except:
+			self.trigger_error('initialization failed ',traceback.format_exc())
+			return False
+
+
+	###connection failed callback
+	def connect_failed(self, s, client_id, url, err):
+		error_msg="Client connect failed: " + str(client_id.NodeID) + " url: " + str(url) + " error: " + str(err)
+		self.trigger_error('Connection Error',error_msg)
 
 	#triggering pipe
 	@property
@@ -141,9 +207,9 @@ class fusing_pi(object):
 		while p.Available:
 			try:
 				dat=p.ReceivePacket()
-				self.execute(dat.number_of_operations)
+				self.execute(dat)
 			except:
-				self.trigger_error(traceback.format_exc())
+				self.trigger_error('execution failed ',traceback.format_exc())
 
 	#sensor reading
 	def threadfunc(self):
@@ -151,20 +217,17 @@ class fusing_pi(object):
 			time.sleep(0.2)
 			with self._lock:
 				try:
-					print(self.tool_state.InValue.sensor[:6].astype(bool))
 					self.sensor_readings.OutValue=self.tool_state.InValue.sensor[:6].astype(bool)
 				except:
-					traceback.print_exc()
+					pass
 
 	def StartStreaming(self):
 		if (self._streaming):
-			raise RR.InvalidOperationException("Already streaming")
+			return
 		self._streaming=True
 		t=threading.Thread(target=self.threadfunc)
 		t.start()
 	def StopStreaming(self):
-		if (not self._streaming):
-			raise RR.InvalidOperationException("Not streaming")
 		self._streaming=False
 
 	###pressure actuator locks placeholders
@@ -187,11 +250,16 @@ class fusing_pi(object):
 	def trigger_error(self,title,error_msg):
 		self.error_message_type.title=title
 		self.error_message_type.message=error_msg
-		self.current_errors=[self.error_message_type]
-		self.trigger.finished=True
-		###send stop signal to WGC
-		self.trigger_fusing_system.SendPacket(self.trigger)
+		self.finish_signal_type.current_errors=[self.error_message_type]
+		self.finish_signal_type.finished=True
+
 		print(error_msg)
+		###send stop signal to WGC
+		try:
+			self.finish_signal.SendPacket(self.finish_signal_type)
+		except:
+			print('pipe not initialized yet')
+			pass
 
 	def jog_joint(self,q,max_v,threshold=0.01,dcc_range=0.1):
 
@@ -262,7 +330,6 @@ class fusing_pi(object):
 		#Loop to get the newest frame
 		while (pipe_ep.Available > 0):
 			#Receive the packet
-			
 			image=pipe_ep.ReceivePacket()
 			#Convert the packet to an image and set the global variable
 			self.current_frame=self.ImageToMat(image)
@@ -405,7 +472,7 @@ class fusing_pi(object):
 			self.vel_ctrl.set_velocity_command(qdot)
 
 		except:
-			traceback.print_exc()
+			self.trigger_error('QP Motion Error',traceback.format_exc())
 		return
 
 	def	vision_check_fb(self,template,interlining=False):
@@ -445,10 +512,6 @@ class fusing_pi(object):
 			offset_p=(center-np.array([len(roi_frame[0]),len(roi_frame)])/2.)
 			print(offset_p)
 			self.move(np.array([offset_p[1],-offset_p[0],0.])/1000.,np.eye(3))
-			# if np.linalg.norm(offset_p)>10:
-			# 	self.move(np.array([offset_p[1],-offset_p[0],0.])/1000.,np.eye(3))
-			# else:
-			# 	self.move(np.array([offset_p[1],-offset_p[0],0.])/3000.,np.eye(3))
 
 		self.vel_ctrl.set_velocity_command(np.zeros((6,)))
 
@@ -505,23 +568,6 @@ class fusing_pi(object):
 		self.tool.setf_param('relay',RR.VarValue(0,'int8'))
 
 
-	def initialize(self):
-		self.m1k_obj.setvoltage(0)
-		
-		self.tool.open()
-		self.tool.setf_param('voltage',RR.VarValue(0.,'single'))
-		self.tool.setf_param('relay',RR.VarValue(0,'int8'))
-
-
-		###temp, lift up
-		q=self.state_w.InValue.joint_position
-		p_cur=fwd(q).p
-		self.jog_joint_movel([p_cur[0],p_cur[1],0.6], 0.2,threshold=0.05, acc_range=0.)
-
-		##home
-		self.jog_joint(inv(self.home,R_ee(0)), 0.5,threshold=0.1)
-		self.vel_ctrl.set_velocity_command(np.zeros((6,)))
-
 	def execute(self, stacks):
 
 		for cur_stack in range(stacks):
@@ -564,7 +610,7 @@ class fusing_pi(object):
 			except:
 				self.vel_ctrl.disable_velocity_mode()
 				# self.m1k_obj.EndSession()
-				traceback.print_exc()
+				self.trigger_error('Execution Error',traceback.format_exc())
 
 
 def main():

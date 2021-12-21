@@ -39,7 +39,7 @@ object FusingSystem
 	#[IDEC1,IDEC2,IDEC3,IDEC4,LOCK1,LOCK]
 	wire     bool[] sensor_readings		[readonly]	
 	callback bool operation_feedback(uint32 current_operation_count)
-	function void initialize()
+	function bool initialize()
 	function void stop_fusing()
 	function void actuate(string position, bool action)
 end

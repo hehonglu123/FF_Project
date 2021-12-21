@@ -76,6 +76,9 @@ class fusing_pi(object):
 		except:
 			self.trigger_error('actuator wrong',traceback.format_exc())
 
+	def initialize(self):
+		print('initializing')
+		return True
 	###ESTOP
 	def stop_fusing(self):
 		print('stop')
@@ -89,10 +92,7 @@ class fusing_pi(object):
 
 		print('sending pipe '+error_msg)
 		###send stop signal to WGC
-		try:
-			self.finish_signal.SendPacket(self.finish_signal_type)
-		except:
-			traceback.print_exc()
+		self.finish_signal.SendPacket(self.finish_signal_type)
 		
 
 
