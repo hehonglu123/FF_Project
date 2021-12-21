@@ -19,7 +19,7 @@ from R_abb import *
 class fusing_pi(object):
 	def __init__(self):
 		##################################IP configurations#######################################
-		self.fusing_laptop='192.168.51.188'
+		self.fusing_laptop='192.168.51.116'
 		self.pi_fuse='192.168.51.25'
 		self.robosewclient='192.168.51.61'
 		self.my_laptop='192.168.51.181'
@@ -96,7 +96,7 @@ class fusing_pi(object):
 		#tool
 		try:
 			###sensor_state [IDEC1,IDEC2,IDEC3,IDEC4,LOCK1,LOCK]
-			self.tool_sub=RRN.SubscribeService('rr+tcp://'+self.pi_fuse+':22222?service=tool')
+			self.tool_sub=RRN.SubscribeService('rr+tcp://'+self.fusing_laptop+':22222?service=tool')
 			self.tool_state = self.tool_sub.SubscribeWire("tool_state")
 			self.tool_sub.ClientConnectFailed += self.connect_failed
 			self.tool=self.tool_sub.GetDefaultClientWait(1)
@@ -109,7 +109,7 @@ class fusing_pi(object):
 			pass
 
 		try:
-			self.robot_sub=RRN.SubscribeService('rr+tcp://192.168.51.25:58651?service=robot')
+			self.robot_sub=RRN.SubscribeService('rr+tcp://'+self.fusing_laptop+':58651?service=robot')
 			self.robot_sub.ClientConnectFailed += self.connect_failed
 			self.state_w = self.robot_sub.SubscribeWire("robot_state")
 			self.cmd_w=self.robot_sub.SubscribeWire('position_command')
@@ -137,35 +137,58 @@ class fusing_pi(object):
 
 		try:
 			####m1k client object
-			self.m1k_obj = self.m1k_sub.GetDefaultClientWait(1)
-			self.m1k_obj.setvoltage(0)
+			try:
+				self.m1k_obj.setvoltage(0)
+			except:
+				self.m1k_obj = self.m1k_sub.GetDefaultClientWait(1)
+				self.m1k_obj.setvoltage(0)
 
 			####camera client object
-			self.cam = self.cam_sub.GetDefaultClientWait(1)
-			cam_pipe=self.cam.frame_stream.Connect(-1)
-			cam_pipe.PacketReceivedEvent+=self.new_frame
+			try:
+				self.cam.start_streaming()
+				self.cam.stop_streaming()
+			except:
+				self.cam = self.cam_sub.GetDefaultClientWait(1)
+				cam_pipe=self.cam.frame_stream.Connect(-1)
+				cam_pipe.PacketReceivedEvent+=self.new_frame
 			
 			###tool client object
-			self.tool=self.tool_sub.GetDefaultClientWait(1)
-			self.tool.open()
-			self.tool.setf_param('voltage',RR.VarValue(0.,'single'))
-			self.tool.setf_param('relay',RR.VarValue(0,'int8'))
+			try:
+				self.tool.setf_param('relay',RR.VarValue(1,'int8'))
+				self.tool.close()
+				time.sleep(1)
+				self.tool.setf_param('relay',RR.VarValue(0,'int8'))
+				self.tool.open()
+			except:
+				self.tool=self.tool_sub.GetDefaultClientWait(1)
+				# self.tool.setf_param('voltage',RR.VarValue(0.,'single'))
+				self.tool.setf_param('relay',RR.VarValue(1,'int8'))
+				self.tool.close()
+				time.sleep(1)
+				self.tool.setf_param('relay',RR.VarValue(0,'int8'))
+				self.tool.open()
 
 			###robot client object
-			self.robot=self.robot_sub.GetDefaultClientWait(1)
-			self.vel_ctrl = EmulatedVelocityControl(self.robot,self.state_w, self.cmd_w)
+			try:
+				self.robot.command_mode = self.halt_mode
+				time.sleep(0.1)
+				self.robot.command_mode = self.position_mode
+			except:
+				print('Reconnect Robot')
+				self.robot=self.robot_sub.GetDefaultClientWait(1)
+				self.vel_ctrl = EmulatedVelocityControl(self.robot,self.state_w, self.cmd_w)
 
-			##########Initialize robot constants
-			robot_const = RRN.GetConstants("com.robotraconteur.robotics.robot", self.robot)
-			self.halt_mode = robot_const["RobotCommandMode"]["halt"]
-			self.position_mode = robot_const["RobotCommandMode"]["position_command"]
+				##########Initialize robot constants
+				robot_const = RRN.GetConstants("com.robotraconteur.robotics.robot", self.robot)
+				self.halt_mode = robot_const["RobotCommandMode"]["halt"]
+				self.position_mode = robot_const["RobotCommandMode"]["position_command"]
 
-			self.robot.command_mode = self.halt_mode
-			time.sleep(0.1)
-			self.robot.command_mode = self.position_mode
+				self.robot.command_mode = self.halt_mode
+				time.sleep(0.1)
+				self.robot.command_mode = self.position_mode
 
-			#enable velocity mode
-			self.vel_ctrl.enable_velocity_mode()
+				#enable velocity mode
+				self.vel_ctrl.enable_velocity_mode()
 
 			#start getting sensor data
 			self.StartStreaming()
@@ -267,15 +290,18 @@ class fusing_pi(object):
 		diff=q-self.vel_ctrl.joint_position()
 
 		while np.linalg.norm(diff)>threshold:
-			
-			diff=q-self.vel_ctrl.joint_position()
-			diff_norm=np.linalg.norm(diff)
-			# qdot=np.where(np.abs(diff) > dcc_range, max_v*diff/np.linalg.norm(diff), gain*diff)
-			if diff_norm<dcc_range:
-				qdot=gain*diff
-			else:
-				qdot=max_v*diff/diff_norm
-			self.vel_ctrl.set_velocity_command(qdot)
+			try:
+				diff=q-self.vel_ctrl.joint_position()
+				diff_norm=np.linalg.norm(diff)
+				# qdot=np.where(np.abs(diff) > dcc_range, max_v*diff/np.linalg.norm(diff), gain*diff)
+				if diff_norm<dcc_range:
+					qdot=gain*diff
+				else:
+					qdot=max_v*diff/diff_norm
+				self.vel_ctrl.set_velocity_command(qdot)
+			except:
+				self.trigger_error('Jogging Error',traceback.format_exc())
+				return
 		
 
 
@@ -444,35 +470,32 @@ class fusing_pi(object):
 
 
 	def move(self,vd, ER):
-		try:
-			w=1.
-			Kq=.01*np.eye(6)    #small value to make sure positive definite
-			KR=np.eye(3)        #gains for position and orientation error
+		w=1.
+		Kq=.01*np.eye(6)    #small value to make sure positive definite
+		KR=np.eye(3)        #gains for position and orientation error
 
-			q_cur=self.vel_ctrl.joint_position()
-			J=jacobian(q_cur)       #calculate current Jacobian
-			Jp=J[3:,:]
-			JR=J[:3,:] 
-			H=np.dot(np.transpose(Jp),Jp)+Kq+w*np.dot(np.transpose(JR),JR)
+		q_cur=self.vel_ctrl.joint_position()
+		J=jacobian(q_cur)       #calculate current Jacobian
+		Jp=J[3:,:]
+		JR=J[:3,:] 
+		H=np.dot(np.transpose(Jp),Jp)+Kq+w*np.dot(np.transpose(JR),JR)
 
-			H=(H+np.transpose(H))/2
+		H=(H+np.transpose(H))/2
 
 
-			k,theta = R2rot(ER)
-			k=np.array(k)
-			s=np.sin(theta/2)*k         #eR2
-			wd=-np.dot(KR,s)  
-			f=-np.dot(np.transpose(Jp),vd)-w*np.dot(np.transpose(JR),wd)
-			###Don't put bound here, will affect cartesian motion outcome
-			qdot=solve_qp(H, f)
-			###For safty, make sure robot not moving too fast
-			if np.max(np.abs(qdot))>1.:
-				qdot=np.zeros(6)
-				print('too fast')
-			self.vel_ctrl.set_velocity_command(qdot)
+		k,theta = R2rot(ER)
+		k=np.array(k)
+		s=np.sin(theta/2)*k         #eR2
+		wd=-np.dot(KR,s)  
+		f=-np.dot(np.transpose(Jp),vd)-w*np.dot(np.transpose(JR),wd)
+		###Don't put bound here, will affect cartesian motion outcome
+		qdot=solve_qp(H, f)
+		###For safty, make sure robot not moving too fast
+		if np.max(np.abs(qdot))>1.:
+			qdot=np.zeros(6)
+			print('too fast')
+		self.vel_ctrl.set_velocity_command(qdot)
 
-		except:
-			self.trigger_error('QP Motion Error',traceback.format_exc())
 		return
 
 	def	vision_check_fb(self,template,interlining=False):
@@ -483,8 +506,6 @@ class fusing_pi(object):
 			traceback.print_exc()
 			pass
 		self.jog_joint(self.vision_q, 1.5,threshold=0.0001,dcc_range=0.4)
-
-		# return np.array([0,0,0]),0
 
 		#####brief stop for vision
 		self.vel_ctrl.set_velocity_command(np.zeros((6,)))
@@ -506,12 +527,16 @@ class fusing_pi(object):
 
 		while np.linalg.norm(offset_p)>3:
 
-
-			roi_frame=cv2.cvtColor(self.current_frame[self.ROI[0]:self.ROI[1],self.ROI[2]:self.ROI[3]], cv2.COLOR_BGR2GRAY)
-			angle,center=match_w_ori_single(roi_frame,template,np.radians(angle),'edge',interlining=interlining)
-			offset_p=(center-np.array([len(roi_frame[0]),len(roi_frame)])/2.)
-			print(offset_p)
-			self.move(np.array([offset_p[1],-offset_p[0],0.])/1000.,np.eye(3))
+			try:
+				roi_frame=cv2.cvtColor(self.current_frame[self.ROI[0]:self.ROI[1],self.ROI[2]:self.ROI[3]], cv2.COLOR_BGR2GRAY)
+				angle,center=match_w_ori_single(roi_frame,template,np.radians(angle),'edge',interlining=interlining)
+				offset_p=(center-np.array([len(roi_frame[0]),len(roi_frame)])/2.)
+				print(offset_p)
+				self.move(np.array([offset_p[1],-offset_p[0],0.])/1000.,np.eye(3))
+			except:
+				self.trigger_error('Vision Error',traceback.format_exc())
+				raise AssertionError(traceback.format_exc())
+				return
 
 		self.vel_ctrl.set_velocity_command(np.zeros((6,)))
 
@@ -579,10 +604,11 @@ class fusing_pi(object):
 				# self.stack_height1=np.array([0,0,0.00-cur_stack*0.00075])
 				# self.pick(self.bin1_p+self.stack_height1,self.bin1_R,v=3.5)
 				# # self.pick_osc(self.bin1_p+self.stack_height1,self.bin1_R,v=3.8)
-				# # offset_p,offset_angle=self.vision_check_fb(self.fabric_template)
+
+				# offset_p,offset_angle=self.vision_check_fb(self.fabric_template)
 				# ######no-vision block
-				# offset_p=np.array([0,0,0])
-				# offset_angle=0.
+				# # offset_p=np.array([0,0,0])
+				# # offset_angle=0.
 				# # ######no-vision block end
 				# self.place(self.place_position-offset_p,offset_angle)
 
@@ -592,16 +618,16 @@ class fusing_pi(object):
 				self.stack_height2=np.array([0,0,0.004-cur_stack*0.00045])
 				self.pick(self.bin2_p+self.stack_height2,self.bin2_R,v=3.5)
 				# self.pick_osc(self.bin2_p+self.stack_height2,self.bin2_R,v=4.1)
-				# offset_p,offset_angle=self.vision_check_fb(self.interlining_template,interlining=True)
+				offset_p,offset_angle=self.vision_check_fb(self.interlining_template,interlining=True)
 				######no-vision block
-				offset_p=np.array([0,0,0])
-				offset_angle=0.
+				# offset_p=np.array([0,0,0])
+				# offset_angle=0.
 				######no-vision block end
 				self.place(self.place_position-offset_p,offset_angle)
 				# self.place_slide(self.place_position-offset_p,offset_angle)
 
 				##home
-				self.jog_joint(inv(self.home,R_ee(0)), 0.5, threshold=0.1)
+				self.jog_joint(inv(self.home,R_ee(0)), 0.5, threshold=0.1,dcc_range=0.12)
 				##reset chargepad
 				self.tool.setf_param('relay',RR.VarValue(1,'int8'))
 				time.sleep(1.)
@@ -611,6 +637,7 @@ class fusing_pi(object):
 				self.vel_ctrl.disable_velocity_mode()
 				# self.m1k_obj.EndSession()
 				self.trigger_error('Execution Error',traceback.format_exc())
+				return
 
 
 def main():

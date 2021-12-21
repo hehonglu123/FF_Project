@@ -24,12 +24,16 @@ robosewclient='192.168.51.61'
 pi_fuse='192.168.51.25'
 my_laptop='192.168.51.181'
 
-url='rr+tcp://rpi:12180/?service=fusing_service'
+url='rr+tcp://localhost:12180/?service=fusing_service'
 fusing_sub=RRN.SubscribeService(url)
 fusing_sub.ClientConnectFailed += connect_failed
 
 fusing_obj=fusing_sub.GetDefaultClientWait(1)
 sensor_readings = fusing_sub.SubscribeWire("sensor_readings")
+
+##############################################initialization check#######################################
+res=fusing_obj.initialize()
+print('initialization '+str(res))
 
 ##############################################property check#######################################
 print(fusing_obj.current_ply_fabric_type.fabric_name)
@@ -37,8 +41,8 @@ print(fusing_obj.current_interlining_fabric_type.fabric_name)
 
 fabric_type=RRN.NewStructure("edu.rpi.robotics.fusing_system.FabricInfo")
 interlining_type=RRN.NewStructure("edu.rpi.robotics.fusing_system.FabricInfo")
-fabric_type.fabric_name='PD19_016C-FR-LFT-LWR HICKEY 44'
-interlining_type.fabric_name='PD19_016C-FR-LFT-LWR-INT HICKEY 44'
+fabric_type.fabric_name='PD19_016C-FR-LFT-LWR HICKEY 36'
+interlining_type.fabric_name='PD19_016C-FR-LFT-LWR-INT HICKEY 36'
 
 fusing_obj.current_ply_fabric_type=fabric_type
 fusing_obj.current_interlining_fabric_type=interlining_type

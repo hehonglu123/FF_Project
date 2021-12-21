@@ -23,7 +23,7 @@ global vel_ctrl, robot_def
 
 
 
-fusing_laptop='192.168.51.188'
+fusing_laptop='192.168.51.116'
 robosewclient='192.168.51.61'
 pi_fuse='192.168.51.25'
 my_laptop='192.168.51.181'
@@ -36,24 +36,22 @@ robot_name=args.robot_name
 
 #rpi relay
 try:
-	tool_sub=RRN.SubscribeService('rr+tcp://'+pi_fuse+':22222?service=tool')
+	tool_sub=RRN.SubscribeService('rr+tcp://'+fusing_laptop+':22222?service=tool')
 	tool=tool_sub.GetDefaultClientWait(1)
 except:
 	print('rpi gripper service not available')
 	pass
 try:	
 	# url='rr+tcp://fusing_laptop:11111?service=m1k'
-	url='rr+tcp://'+robosewclient+':11111?service=m1k'
+	url='rr+tcp://'+fusing_laptop+':11111?service=m1k'
 	m1k_obj = RRN.ConnectService(url)
-	m1k_obj.StartSession()
-	m1k_obj.setmode('A', 'SVMI')
-	m1k_obj.setawgconstant('A',0.)
+
 except:
 	print('m1k not available')
 	pass
 
 #connect robot services
-url='rr+tcp://pi_fuse:58651?service=robot'
+url='rr+tcp://'+fusing_laptop+':58651?service=robot'
 robot_sub=RRN.SubscribeService(url)
 robot=robot_sub.GetDefaultClientWait(1)
 state_w = robot_sub.SubscribeWire("robot_state")
@@ -89,7 +87,7 @@ def gripper_ctrl():
 	if gripper.config('relief')[-1] == 'sunken':
 		tool.setf_param('voltage',RR.VarValue(0.,'single'))
 		try:
-			m1k_obj.setawgconstant('A',0.)
+			m1k_obj.setvoltage(0)
 		except:
 			pass
 		gripper.config(relief="raised")
@@ -99,7 +97,7 @@ def gripper_ctrl():
 	else:
 		tool.setf_param('voltage',RR.VarValue(4.,'single'))
 		try:
-			m1k_obj.setawgconstant('A',4.)
+			m1k_obj.setvoltage(4)
 		except:
 			pass
 		gripper.config(relief="sunken")
@@ -349,8 +347,6 @@ try:
 	top.mainloop()
 except:
 	vel_ctrl.disable_velocity_mode()
-	m1k_obj.EndSession()
 
 
 vel_ctrl.disable_velocity_mode()
-m1k_obj.EndSession()

@@ -12,7 +12,7 @@ parser.add_argument("--tool-name",default='elec',type=str)
 args, _ = parser.parse_known_args()
 tool_name=args.tool_name
 
-fusing_laptop='192.168.51.188'
+fusing_laptop='192.168.51.116'
 robosewclient='192.168.51.61'
 pi_fuse='192.168.51.25'
 my_laptop='192.168.51.181'
