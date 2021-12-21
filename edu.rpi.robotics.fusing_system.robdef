@@ -17,9 +17,9 @@ struct FabricInfo
 	field string fabric_name
 end
 
-struct FusingOperationTrigger
-	field uint32 number_of_operations
+struct FinishSignal
 	field bool finished
+	field EventLogMessage{list} current_errors
 end
 
 struct FusingConfigData
@@ -31,8 +31,8 @@ end
 object FusingSystem
 	implements Device
 	property DeviceInfo device_info [readonly,nolock]
-	property EventLogMessage{list} current_errors [readonly, nolock]
-	pipe FusingOperationTrigger trigger_fusing_system 
+	pipe uint32 trigger_fusing_system [writeonly]
+	pipe FinishSignal finish_signal [readonly]
 	property FabricInfo current_ply_fabric_type
 	property FabricInfo current_interlining_fabric_type
 	property FusingConfigData fusing_config_data

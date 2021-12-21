@@ -16,7 +16,7 @@ class fusing_pi(object):
 		self.current_ply_fabric_type=RRN.NewStructure("edu.rpi.robotics.fusing_system.FabricInfo")
 		self.current_interlining_fabric_type=RRN.NewStructure("edu.rpi.robotics.fusing_system.FabricInfo")
 		self.error_message_type=RRN.NewStructure("com.robotraconteur.eventlog.EventLogMessage")
-		self.trigger=RRN.NewStructure("edu.rpi.robotics.fusing_system.FusingOperationTrigger")
+		self.finish_signal_type=RRN.NewStructure("edu.rpi.robotics.fusing_system.FinishSignal")
 		self.current_errors=[]
 
 		self.current_ply_fabric_type.fabric_name='PD19_016C-FR-LFT-LWR HICKEY 36'
@@ -36,6 +36,7 @@ class fusing_pi(object):
 		self._trigger_fusing_system=value
 		value.PipeConnectCallback=(self.p1_connect_callback)
 
+
 	def p1_connect_callback(self,p):
 		p.PacketReceivedEvent+=self.p1_packet_received
 
@@ -43,7 +44,7 @@ class fusing_pi(object):
 		while p.Available:
 			try:
 				dat=p.ReceivePacket()
-				print('executing '+str(dat.number_of_operations))
+				print('executing '+str(dat))
 			except:
 				print(traceback.format_exc())
 
@@ -83,11 +84,15 @@ class fusing_pi(object):
 	def trigger_error(self,title,error_msg):
 		self.error_message_type.title=title
 		self.error_message_type.message=error_msg
-		self.current_errors=[self.error_message_type]
-		self.trigger.finished=True
-		print(error_msg)
+		self.finish_signal_type.current_errors=[self.error_message_type]
+		self.finish_signal_type.finished=True
+
+		print('sending pipe '+error_msg)
 		###send stop signal to WGC
-		self.trigger_fusing_system.SendPacket(self.trigger)
+		try:
+			self.finish_signal.SendPacket(self.finish_signal_type)
+		except:
+			traceback.print_exc()
 		
 
 

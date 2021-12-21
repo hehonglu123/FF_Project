@@ -11,8 +11,7 @@ from general_robotics_toolbox import *
 ############################register RR params#############################################
 RRC.RegisterStdRobDefServiceTypes(RRN)
 RRN.RegisterServiceTypeFromFile("edu.rpi.robotics.fusing_system")
-trigger=RRN.NewStructure("edu.rpi.robotics.fusing_system.FusingOperationTrigger")
-trigger.number_of_operations=1
+
 
 fusing_laptop='192.168.51.188'
 robosewclient='192.168.51.61'
@@ -62,21 +61,30 @@ fusing_obj.actuate('robot',False)
 ##############################################trigger pipe check############################################
 p=fusing_obj.trigger_fusing_system.Connect(-1)
 
-p.SendPacket(trigger)  
+p.SendPacket(1)  
+p.SendPacket(1)  
+p.SendPacket(1)  
+p.SendPacket(1)  
+p.SendPacket(1)  
 
 ##############################################error check############################################
 def finish_trigger_cb(pipe_ep):
     #Loop to get the newest frame
     while (pipe_ep.Available > 0):
         #Receive the packet
-        trigger=pipe_ep.ReceivePacket()
-        if trigger.finished and len(fusing_obj.current_errors)==0:
+        finish_signal=pipe_ep.ReceivePacket()
+
+        if finish_signal.finished and len(finish_signal.current_errors)==0:
         	print('finished')
         else:
-        	for error in fusing_obj.current_errors:
-        		print(error.title+' '+error.message)
+        	i=0
+        	for error in finish_signal.current_errors:
+        		print('Error '+str(i)+': '+error.title+' '+error.message)
+        		i+=1
 
-p=fusing_obj.trigger_fusing_system.Connect(-1)
+p=fusing_obj.finish_signal.Connect(-1)
 p.PacketReceivedEvent+=finish_trigger_cb
 
 fusing_obj.actuate('operator',True)
+
+time.sleep(5)
