@@ -101,6 +101,6 @@ with RR.ServerNodeSetup("electroadhesion_gripper",22222) as node_setup:
 
 	# print("Press ctrl+c to quit")
 	# signal.sigwait([signal.SIGTERM,signal.SIGINT])
-	input('press enter to quit')
+	input('Gripper Started, press enter to quit')
 	gripper_inst.StopStreaming()
 	# gripper_inst.pi_pwm.stop()

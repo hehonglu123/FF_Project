@@ -10,6 +10,11 @@ import numpy
 import cv2
 import sys
 
+fusing_laptop='192.168.51.116'
+robosewclient='192.168.51.61'
+pi_fuse='192.168.51.25'
+my_laptop='192.168.51.181'
+
 def ImageToMat(image):
 
     frame2=image.data.reshape([image.image_info.height, image.image_info.width, int(len(image.data)/(image.image_info.height*image.image_info.width))], order='C')
@@ -20,7 +25,7 @@ current_frame=None
 
 def main():
 
-    url='rr+tcp://robosewclient:59823?service=camera'
+    url='rr+tcp://'+fusing_laptop+':59823?service=camera'
     if (len(sys.argv)>=2):
         url=sys.argv[1]
 

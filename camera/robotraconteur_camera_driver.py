@@ -213,13 +213,13 @@ def main():
 
         if args.wait_signal:  
             #Wait for shutdown signal if running in service mode          
-            print("Press Ctrl-C to quit...")
+            print("Camera Started, Press Ctrl-C to quit...")
             import signal
             signal.sigwait([signal.SIGTERM,signal.SIGINT])
         else:
             #Wait for the user to shutdown the service
             if (sys.version_info > (3, 0)):
-                input("Server started, press enter to quit...")
+                input("Camera Started, Server started, press enter to quit...")
             else:
                 raw_input("Server started, press enter to quit...")
 

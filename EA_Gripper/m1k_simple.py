@@ -52,10 +52,10 @@ def main():
 
         #Wait for program exit to quit
         if sys.platform=="linux":
-            print("Press ctrl+c to quit")
+            print("M1k Started, Press ctrl+c to quit")
             signal.sigwait([signal.SIGTERM,signal.SIGINT])
         else:
-            input("Press enter to quit")
+            input("M1k Started, Press enter to quit")
 
         m1k_obj.device.channels['A'].constant(0)
         m1k_obj.session.end()
