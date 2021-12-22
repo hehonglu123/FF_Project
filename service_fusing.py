@@ -27,7 +27,10 @@ class fusing_pi(object):
 		##################################sensor background threading#######################################
 		self._streaming=False
 		self._lock = threading.Lock()
-
+		self._robot_ready=False
+		self._robot_enabled=False
+		self._robot_running=False
+		self._robot_failure=False
 
 		##################################RR param initialization###############################################
 		self.current_ply_fabric_type=RRN.NewStructure("edu.rpi.robotics.fusing_system.FabricInfo")
@@ -81,7 +84,7 @@ class fusing_pi(object):
 
 		try:
 			###camera connect
-			url='rr+tcp://robosewclient:59823?service=camera'
+			url='rr+tcp://'+self.fusing_laptop+':59823?service=camera'
 			#Startup, connect, and pull out the camera from the objref    
 			self.cam_sub=RRN.SubscribeService(url)
 			self.cam_sub.ClientConnectFailed += self.connect_failed
@@ -115,12 +118,16 @@ class fusing_pi(object):
 			self.cmd_w=self.robot_sub.SubscribeWire('position_command')
 
 			self.robot=self.robot_sub.GetDefaultClientWait(1)
-			self.vel_ctrl = EmulatedVelocityControl(self.robot,self.state_w, self.cmd_w)
-
 			##########Initialize robot constants
 			robot_const = RRN.GetConstants("com.robotraconteur.robotics.robot", self.robot)
 			self.halt_mode = robot_const["RobotCommandMode"]["halt"]
 			self.position_mode = robot_const["RobotCommandMode"]["position_command"]
+			self.state_flags_enum = robot_const['RobotStateFlags']
+
+
+			self.vel_ctrl = EmulatedVelocityControl(self.robot,self.state_w, self.cmd_w)
+
+			
 
 			self.robot.command_mode = self.halt_mode
 			time.sleep(0.1)
@@ -129,13 +136,18 @@ class fusing_pi(object):
 			#enable velocity mode
 			self.vel_ctrl.enable_velocity_mode()
 
+			self._robot_running=True
+
 		except:
+			self._robot_running=False
 			print('robot not available')
 			pass
 
 	def initialize(self):
 
 		try:
+			#start getting sensor data
+			self.StartStreaming()
 			####m1k client object
 			try:
 				self.m1k_obj.setvoltage(0)
@@ -173,6 +185,7 @@ class fusing_pi(object):
 				self.robot.command_mode = self.halt_mode
 				time.sleep(0.1)
 				self.robot.command_mode = self.position_mode
+				self._robot_running=True
 			except:
 				print('Reconnect Robot')
 				self.robot=self.robot_sub.GetDefaultClientWait(1)
@@ -189,10 +202,7 @@ class fusing_pi(object):
 
 				#enable velocity mode
 				self.vel_ctrl.enable_velocity_mode()
-
-			#start getting sensor data
-			self.StartStreaming()
-
+				self._robot_running=True
 
 			###temp, lift up
 			q=self.state_w.InValue.joint_position
@@ -243,6 +253,26 @@ class fusing_pi(object):
 					self.sensor_readings.OutValue=self.tool_state.InValue.sensor[:6].astype(bool)
 				except:
 					pass
+				###robot state checking
+				try:
+					self._robot_ready=False
+					self._robot_enabled=False
+					self._robot_failure=False
+					for flag_name, flag_code in self.state_flags_enum.items():
+						if flag_code & self.state_w.InValue.robot_state_flags != 0:
+							if flag_code==262144:
+								self._robot_ready=True
+							if flag_code==131072:
+								self._robot_enabled=True
+							if flag_code==2097152:
+								self._robot_failure=True
+					if self._robot_ready and self._robot_enabled and not self._robot_failure:
+						self._robot_running=True
+					else:
+						self._robot_running=False
+
+				except:
+					self._robot_running=False
 
 	def StartStreaming(self):
 		if (self._streaming):
@@ -290,17 +320,19 @@ class fusing_pi(object):
 		diff=q-self.vel_ctrl.joint_position()
 
 		while np.linalg.norm(diff)>threshold:
-			try:
-				diff=q-self.vel_ctrl.joint_position()
-				diff_norm=np.linalg.norm(diff)
-				# qdot=np.where(np.abs(diff) > dcc_range, max_v*diff/np.linalg.norm(diff), gain*diff)
-				if diff_norm<dcc_range:
-					qdot=gain*diff
-				else:
-					qdot=max_v*diff/diff_norm
-				self.vel_ctrl.set_velocity_command(qdot)
-			except:
-				self.trigger_error('Jogging Error',traceback.format_exc())
+
+			diff=q-self.vel_ctrl.joint_position()
+			diff_norm=np.linalg.norm(diff)
+			# qdot=np.where(np.abs(diff) > dcc_range, max_v*diff/np.linalg.norm(diff), gain*diff)
+			if diff_norm<dcc_range:
+				qdot=gain*diff
+			else:
+				qdot=max_v*diff/diff_norm
+			self.vel_ctrl.set_velocity_command(qdot)
+
+			if self._robot_running==False:
+				self.vel_ctrl.set_velocity_command(np.zeros((6,)))
+				raise AssertionError('robot not ready')
 				return
 		
 
@@ -334,6 +366,11 @@ class fusing_pi(object):
 				self.move(v,np.eye(3))
 			else:
 				self.move(v,np.dot(pose_cur.R,Rd.T))
+
+			if self._robot_running==False:
+				self.vel_ctrl.set_velocity_command(np.zeros((6,)))
+				raise AssertionError('robot not ready')
+				return
 
 
 	def read_template(self,im_path,dimension,ppu):
@@ -370,28 +407,31 @@ class fusing_pi(object):
 
 
 	def pick(self,p,R,v):
-		print('go picking')
-		q=inv(p+np.array([0,0,0.3]),R)
-		self.jog_joint(q, 1.2,threshold=0.002,dcc_range=0.4)
+		try:
+			print('go picking')
+			q=inv(p+np.array([0,0,0.3]),R)
+			self.jog_joint(q, 1.2,threshold=0.002,dcc_range=0.4)
 
-		
-		#turn on voltage first
-		# self.m1k_obj.setawgconstant('A',v)
-		self.m1k_obj.setvoltage(v)
-		# self.tool.setf_param('voltage',RR.VarValue(v,'single'))
+			
+			#turn on voltage first
+			# self.m1k_obj.setawgconstant('A',v)
+			self.m1k_obj.setvoltage(v)
+			# self.tool.setf_param('voltage',RR.VarValue(v,'single'))
 
-		#move down 
-		self.jog_joint_movel(p,0.3,threshold=0.002,acc_range=0.,dcc_range=0.1,Rd=R)
+			#move down 
+			self.jog_joint_movel(p,0.3,threshold=0.002,acc_range=0.,dcc_range=0.1,Rd=R)
 
-		self.vel_ctrl.set_velocity_command(np.zeros((6,)))
+			self.vel_ctrl.set_velocity_command(np.zeros((6,)))
 
-		
-		
-		# time.sleep(0.5)
-		
+			
+			
+			# time.sleep(0.5)
+			
 
-		#move up
-		self.jog_joint_movel(p+np.array([0,0,0.3]),0.45,acc_range=0.1,threshold=0.05)
+			#move up
+			self.jog_joint_movel(p+np.array([0,0,0.3]),0.45,acc_range=0.1,threshold=0.05)
+		except:
+			self.trigger_error("Robot not ready",traceback.format_exc())
 
 	def pick_osc(self,p,R,v):
 		print('go picking')
@@ -526,7 +566,9 @@ class fusing_pi(object):
 		###jog with large offset first
 
 		while np.linalg.norm(offset_p)>3:
-
+			if self._robot_running==False:
+				self.trigger_error('Vision Error',traceback.format_exc())
+				return
 			try:
 				roi_frame=cv2.cvtColor(self.current_frame[self.ROI[0]:self.ROI[1],self.ROI[2]:self.ROI[3]], cv2.COLOR_BGR2GRAY)
 				angle,center=match_w_ori_single(roi_frame,template,np.radians(angle),'edge',interlining=interlining)
@@ -535,7 +577,6 @@ class fusing_pi(object):
 				self.move(np.array([offset_p[1],-offset_p[0],0.])/1000.,np.eye(3))
 			except:
 				self.trigger_error('Vision Error',traceback.format_exc())
-				raise AssertionError(traceback.format_exc())
 				return
 
 		self.vel_ctrl.set_velocity_command(np.zeros((6,)))
@@ -599,32 +640,32 @@ class fusing_pi(object):
 		
 			try:
 				
-				# self.fabric_template=read_template('client_yaml/templates/'+self.current_ply_fabric_type.fabric_name+'.jpg',self.fabric_dimension[self.current_ply_fabric_type.fabric_name],self.ppu)
+				self.fabric_template=read_template('client_yaml/templates/'+self.current_ply_fabric_type.fabric_name+'.jpg',self.fabric_dimension[self.current_ply_fabric_type.fabric_name],self.ppu)
 				
-				# self.stack_height1=np.array([0,0,0.00-cur_stack*0.00075])
-				# self.pick(self.bin1_p+self.stack_height1,self.bin1_R,v=3.5)
-				# # self.pick_osc(self.bin1_p+self.stack_height1,self.bin1_R,v=3.8)
+				self.stack_height1=np.array([0,0,0.00-cur_stack*0.00075])
+				self.pick(self.bin1_p+self.stack_height1,self.bin1_R,v=3.5)
+				# self.pick_osc(self.bin1_p+self.stack_height1,self.bin1_R,v=3.8)
 
-				# offset_p,offset_angle=self.vision_check_fb(self.fabric_template)
-				# ######no-vision block
-				# # offset_p=np.array([0,0,0])
-				# # offset_angle=0.
-				# # ######no-vision block end
-				# self.place(self.place_position-offset_p,offset_angle)
-
-
-				self.interlining_template=read_template('client_yaml/templates/'+self.current_interlining_fabric_type.fabric_name+'.jpg',self.fabric_dimension[self.current_interlining_fabric_type.fabric_name],self.ppu)
-				
-				self.stack_height2=np.array([0,0,0.004-cur_stack*0.00045])
-				self.pick(self.bin2_p+self.stack_height2,self.bin2_R,v=3.5)
-				# self.pick_osc(self.bin2_p+self.stack_height2,self.bin2_R,v=4.1)
-				offset_p,offset_angle=self.vision_check_fb(self.interlining_template,interlining=True)
+				offset_p,offset_angle=self.vision_check_fb(self.fabric_template)
 				######no-vision block
 				# offset_p=np.array([0,0,0])
 				# offset_angle=0.
-				######no-vision block end
+				# ######no-vision block end
 				self.place(self.place_position-offset_p,offset_angle)
-				# self.place_slide(self.place_position-offset_p,offset_angle)
+
+
+				# self.interlining_template=read_template('client_yaml/templates/'+self.current_interlining_fabric_type.fabric_name+'.jpg',self.fabric_dimension[self.current_interlining_fabric_type.fabric_name],self.ppu)
+				
+				# self.stack_height2=np.array([0,0,0.004-cur_stack*0.00045])
+				# self.pick(self.bin2_p+self.stack_height2,self.bin2_R,v=3.5)
+				# # self.pick_osc(self.bin2_p+self.stack_height2,self.bin2_R,v=4.1)
+				# offset_p,offset_angle=self.vision_check_fb(self.interlining_template,interlining=True)
+				# ######no-vision block
+				# # offset_p=np.array([0,0,0])
+				# # offset_angle=0.
+				# ######no-vision block end
+				# self.place(self.place_position-offset_p,offset_angle)
+				# # self.place_slide(self.place_position-offset_p,offset_angle)
 
 				##home
 				self.jog_joint(inv(self.home,R_ee(0)), 0.5, threshold=0.1,dcc_range=0.12)
@@ -656,13 +697,14 @@ def main():
 
 		except:
 			traceback.print_exc()
-			fusing_pi_obj.vel_ctrl.disable_velocity_mode()
 			fusing_pi_obj.StopStreaming()
+			fusing_pi_obj.vel_ctrl.disable_velocity_mode()
 			# fusing_pi_obj.m1k_obj.EndSession()
 		# print("Press ctrl+c to quit")
 
-		fusing_pi_obj.vel_ctrl.disable_velocity_mode()
 		fusing_pi_obj.StopStreaming()
+		fusing_pi_obj.vel_ctrl.disable_velocity_mode()
+		
 		# fusing_pi_obj.m1k_obj.EndSession()
 
 if __name__ == '__main__':

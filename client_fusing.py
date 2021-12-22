@@ -12,6 +12,20 @@ def connect_failed(s, client_id, url, err):
 	print('Reconnecting')
 	fusing_obj=fusing_sub.GetDefaultClientWait(1)
 
+def finish_trigger_cb(pipe_ep):
+    #Loop to get the newest frame
+    while (pipe_ep.Available > 0):
+        #Receive the packet
+        finish_signal=pipe_ep.ReceivePacket()
+
+        if finish_signal.finished and len(finish_signal.current_errors)==0:
+            print('finished')
+        else:
+            i=0
+            for error in finish_signal.current_errors:
+                print('Error '+str(i)+': '+error.title+' '+error.message)
+                i+=1
+
 
 
 ############################register RR params#############################################
@@ -30,6 +44,11 @@ fusing_sub.ClientConnectFailed += connect_failed
 
 fusing_obj=fusing_sub.GetDefaultClientWait(1)
 sensor_readings = fusing_sub.SubscribeWire("sensor_readings")
+
+##############################################Error pipe #######################################
+
+p=fusing_obj.finish_signal.Connect(-1)
+p.PacketReceivedEvent+=finish_trigger_cb
 
 ##############################################initialization check#######################################
 res=fusing_obj.initialize()
@@ -80,23 +99,6 @@ p.SendPacket(1)
 # p.SendPacket(1)  
 
 ##############################################error check############################################
-def finish_trigger_cb(pipe_ep):
-    #Loop to get the newest frame
-    while (pipe_ep.Available > 0):
-        #Receive the packet
-        finish_signal=pipe_ep.ReceivePacket()
-
-        if finish_signal.finished and len(finish_signal.current_errors)==0:
-        	print('finished')
-        else:
-        	i=0
-        	for error in finish_signal.current_errors:
-        		print('Error '+str(i)+': '+error.title+' '+error.message)
-        		i+=1
-
-p=fusing_obj.finish_signal.Connect(-1)
-p.PacketReceivedEvent+=finish_trigger_cb
-
 fusing_obj.actuate('operator',True)
 
 time.sleep(5)
