@@ -33,12 +33,12 @@ object FusingSystem
 	property DeviceInfo device_info [readonly,nolock]
 	pipe uint32 trigger_fusing_system [writeonly]
 	pipe FinishSignal finish_signal [readonly]
+	property uint32 current_operation_count
 	property FabricInfo current_ply_fabric_type
 	property FabricInfo current_interlining_fabric_type
 	property FusingConfigData fusing_config_data
 	#[IDEC1,IDEC2,IDEC3,IDEC4,LOCK1,LOCK]
 	wire     bool[] sensor_readings		[readonly]	
-	callback bool operation_feedback(uint32 current_operation_count)
 	function bool initialize()
 	function void stop_fusing()
 	function void actuate(string position, bool action)
