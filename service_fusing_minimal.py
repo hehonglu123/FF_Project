@@ -22,6 +22,8 @@ class fusing_pi(object):
 		self.current_ply_fabric_type.fabric_name='PD19_016C-FR-LFT-LWR HICKEY 36'
 		self.current_interlining_fabric_type.fabric_name='PD19_016C-FR-LFT-LWR-INT HICKEY 36'
 
+		self.current_operation_count=0
+
 		self.actuator_position={'bin1':None,'bin2':None,'robot':None}
 		##################################sensor background threading#######################################
 		self._streaming=False
@@ -44,7 +46,8 @@ class fusing_pi(object):
 		while p.Available:
 			try:
 				dat=p.ReceivePacket()
-				print('executing '+str(dat))
+				self.current_operation_count=0
+				self.execute(dat)
 			except:
 				print(traceback.format_exc())
 
@@ -82,6 +85,16 @@ class fusing_pi(object):
 	###ESTOP
 	def stop_fusing(self):
 		print('stop')
+
+	def execute(self,stacks):
+		for i in range(stacks):
+			time.sleep(1)
+			self.current_operation_count+=1
+
+		###send finish signal
+		self.finish_signal_type.current_errors=[]
+		self.finish_signal_type.finished=True
+		self.finish_signal.SendPacket(self.finish_signal_type)
 
 	###error handling
 	def trigger_error(self,title,error_msg):

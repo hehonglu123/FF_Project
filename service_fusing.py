@@ -435,7 +435,7 @@ class fusing_pi(object):
 		try:
 			print('go picking')
 			q=inv(p+np.array([0,0,0.3]),R)
-			self.jog_joint(q, 1.2,threshold=0.002,dcc_range=0.4)
+			self.jog_joint(q, 0.7,threshold=0.002,dcc_range=0.4)
 
 			
 			#turn on voltage first
@@ -715,6 +715,10 @@ class fusing_pi(object):
 			self.current_operation_count+=1
 
 		self.vel_ctrl.set_velocity_command(np.zeros((6,)))
+		###send finish signal
+		self.finish_signal_type.current_errors=[]
+		self.finish_signal_type.finished=True
+		self.finish_signal.SendPacket(self.finish_signal_type)
 
 
 def main():

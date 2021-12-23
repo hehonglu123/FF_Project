@@ -19,7 +19,7 @@ def finish_trigger_cb(pipe_ep):
         finish_signal=pipe_ep.ReceivePacket()
 
         if finish_signal.finished and len(finish_signal.current_errors)==0:
-            print('finished')
+            print('finished successfully')
         else:
             i=0
             for error in finish_signal.current_errors:
@@ -92,13 +92,11 @@ fusing_obj.actuate('robot',False)
 ##############################################trigger pipe check############################################
 p=fusing_obj.trigger_fusing_system.Connect(-1)
 
-p.SendPacket(1)  
-# p.SendPacket(1)  
-# p.SendPacket(1)  
-# p.SendPacket(1)  
-# p.SendPacket(1)  
+p.SendPacket(3)  
 
 ##############################################error check############################################
 fusing_obj.actuate('operator',True)
 
-time.sleep(5)
+while True:
+    print (fusing_obj.current_operation_count)
+    time.sleep(0.1)
