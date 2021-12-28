@@ -189,7 +189,9 @@ class fusing_pi(object):
 				self.robot.command_mode = self.halt_mode
 				time.sleep(0.1)
 				self.robot.command_mode = self.position_mode
-				#enable velocity mode
+				#reset velocity mode
+				self.vel_ctrl.disable_velocity_mode()	#NECESSARY!!!
+				time.sleep(0.1)
 				self.vel_ctrl.enable_velocity_mode()
 				self._robot_running=True
 			except:
@@ -269,7 +271,7 @@ class fusing_pi(object):
 					self._robot_failure=False
 					for flag_name, flag_code in self.state_flags_enum.items():
 						if flag_code & self.state_w.InValue.robot_state_flags != 0:
-							print(flag_name)
+							# print(flag_name)
 							if flag_code==262144:
 								self._robot_ready=True
 							if flag_code==131072:
@@ -333,7 +335,7 @@ class fusing_pi(object):
 
 	def jog_joint(self,q,max_v,threshold=0.01,dcc_range=0.1):
 
-		gain=max(2*max_v,1)
+		gain=1#max(2*max_v,1)
 		diff=q-self.vel_ctrl.joint_position()
 
 		while np.linalg.norm(diff)>threshold:
@@ -345,8 +347,7 @@ class fusing_pi(object):
 				qdot=gain*diff
 			else:
 				qdot=max_v*diff/diff_norm
-			self.vel_ctrl.set_velocity_command(qdot)
-
+			
 			if self._robot_running==False:
 				self.vel_ctrl.set_velocity_command(np.zeros((6,)))
 				raise AssertionError('robot not ready')
@@ -356,7 +357,14 @@ class fusing_pi(object):
 				self.vel_ctrl.set_velocity_command(np.zeros((6,)))
 				raise AssertionError('Manual Estop')
 				return
-		
+			
+			# if np.max(np.abs(qdot))>0.8:
+			# 	qdot=np.zeros(6)
+			# 	print('too fast')
+
+			print(np.linalg.norm(qdot))
+			self.vel_ctrl.set_velocity_command(qdot)
+
 
 
 	def jog_joint_movel(self,p,max_v,threshold=0.001,acc_range=0.01,dcc_range=0.04,Rd=[]):
@@ -691,10 +699,10 @@ class fusing_pi(object):
 				self.stack_height2=np.array([0,0,0.004-cur_stack*0.00045])
 				self.pick(self.bin2_p+self.stack_height2,self.bin2_R,v=4.)
 				# self.pick_osc(self.bin2_p+self.stack_height2,self.bin2_R,v=4.1)
-				offset_p,offset_angle=self.vision_check_fb(self.interlining_template,interlining=True)
+				# offset_p,offset_angle=self.vision_check_fb(self.interlining_template,interlining=True)
 				######no-vision block
-				# offset_p=np.array([0,0,0])
-				# offset_angle=0.
+				offset_p=np.array([0,0,0])
+				offset_angle=0.
 				######no-vision block end
 				self.place(self.place_position-offset_p,offset_angle)
 				# self.place_slide(self.place_position-offset_p,offset_angle)
