@@ -95,9 +95,9 @@ def gripper_ctrl():
 		gripper.configure(text='gripper off')
 
 	else:
-		tool.setf_param('voltage',RR.VarValue(4.,'single'))
+		tool.setf_param('voltage',RR.VarValue(5.,'single'))
 		try:
-			m1k_obj.setvoltage(4)
+			m1k_obj.setvoltage(5)
 		except:
 			pass
 		gripper.config(relief="sunken")

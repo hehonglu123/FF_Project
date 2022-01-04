@@ -5,7 +5,7 @@ sys.path.append('../toolbox/')
 from vision import *
 import time
 
-fabric_name='PD19_016C-TOP-CLLR 56'
+fabric_name='PD19_016C-FR-LFT-LWR HICKEY 44'
 image=cv2.imread('../vision_check.jpg',0)
 edge_raw=cv2.imread('../edge_raw.jpg',0)
 

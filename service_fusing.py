@@ -107,7 +107,7 @@ class fusing_pi(object):
 			self.tool_sub.ClientConnectFailed += self.connect_failed
 			self.tool=self.tool_sub.GetDefaultClientWait(1)
 			self.tool.open()
-			self.tool.setf_param('voltage',RR.VarValue(0.,'single'))
+			# self.tool.setf_param('voltage',RR.VarValue(0.,'single'))
 			self.tool.setf_param('relay',RR.VarValue(0,'int8'))
 			
 		except:
@@ -307,7 +307,7 @@ class fusing_pi(object):
 
 		self.m1k_obj.setvoltage(0)
 		self.tool.open()
-		self.tool.setf_param('voltage',RR.VarValue(0.,'single'))
+		# self.tool.setf_param('voltage',RR.VarValue(0.,'single'))
 		self.tool.setf_param('relay',RR.VarValue(1,'int8'))
 		time.sleep(0.5)
 		self.tool.setf_param('relay',RR.VarValue(0,'int8'))
@@ -362,7 +362,6 @@ class fusing_pi(object):
 			# 	qdot=np.zeros(6)
 			# 	print('too fast')
 
-			print(np.linalg.norm(qdot))
 			self.vel_ctrl.set_velocity_command(qdot)
 
 
@@ -446,19 +445,22 @@ class fusing_pi(object):
 			self.jog_joint(q, 0.7,threshold=0.002,dcc_range=0.4)
 
 			
-			#turn on voltage first
-			# self.m1k_obj.setawgconstant('A',v)
-			self.m1k_obj.setvoltage(v)
+			
 			# self.tool.setf_param('voltage',RR.VarValue(v,'single'))
 
 			#move down 
 			self.jog_joint_movel(p,0.3,threshold=0.002,acc_range=0.,dcc_range=0.1,Rd=R)
 
+			#turn on voltage first
+			# self.m1k_obj.setawgconstant('A',v)
+			self.m1k_obj.setvoltage(v)
+
+			
 			self.vel_ctrl.set_velocity_command(np.zeros((6,)))
 
 			
 			
-			# time.sleep(0.5)
+			time.sleep(0.5)
 			
 
 			#move up
@@ -680,32 +682,30 @@ class fusing_pi(object):
 		
 			try:
 				
-				# self.fabric_template=read_template('client_yaml/templates/'+self.current_ply_fabric_type.fabric_name+'.jpg',self.fabric_dimension[self.current_ply_fabric_type.fabric_name],self.ppu)
+				self.fabric_template=read_template('client_yaml/templates/'+self.current_ply_fabric_type.fabric_name+'.jpg',self.fabric_dimension[self.current_ply_fabric_type.fabric_name],self.ppu)
 				
-				# self.stack_height1=np.array([0,0,0.00-cur_stack*0.00075])
-				# self.pick(self.bin1_p+self.stack_height1,self.bin1_R,v=3.5)
-				# # self.pick_osc(self.bin1_p+self.stack_height1,self.bin1_R,v=3.8)
+				self.stack_height1=np.array([0,0,0.00-cur_stack*0.00075])
+				self.pick(self.bin1_p+self.stack_height1,self.bin1_R,v=4.5)
 
-				# offset_p,offset_angle=self.vision_check_fb(self.fabric_template)
-				# ######no-vision block
-				# # offset_p=np.array([0,0,0])
-				# # offset_angle=0.
-				# # ######no-vision block end
-				# self.place(self.place_position-offset_p,offset_angle)
+				offset_p,offset_angle=self.vision_check_fb(self.fabric_template)
+				######no-vision block
+				# offset_p=np.array([0,0,0])
+				# offset_angle=0.
+				# ######no-vision block end
+				self.place(self.place_position-offset_p,offset_angle)
 
 
 				self.interlining_template=read_template('client_yaml/templates/'+self.current_interlining_fabric_type.fabric_name+'.jpg',self.fabric_dimension[self.current_interlining_fabric_type.fabric_name],self.ppu)
 				
 				self.stack_height2=np.array([0,0,0.004-cur_stack*0.00045])
-				self.pick(self.bin2_p+self.stack_height2,self.bin2_R,v=4.)
-				# self.pick_osc(self.bin2_p+self.stack_height2,self.bin2_R,v=4.1)
-				# offset_p,offset_angle=self.vision_check_fb(self.interlining_template,interlining=True)
+				self.pick(self.bin2_p+self.stack_height2,self.bin2_R,v=5.)
+				offset_p,offset_angle=self.vision_check_fb(self.interlining_template,interlining=True)
 				######no-vision block
-				offset_p=np.array([0,0,0])
-				offset_angle=0.
+				# offset_p=np.array([0,0,0])
+				# offset_angle=0.
 				######no-vision block end
-				self.place(self.place_position-offset_p,offset_angle)
-				# self.place_slide(self.place_position-offset_p,offset_angle)
+				# self.place(self.place_position-offset_p,offset_angle)
+				self.place_slide(self.place_position-offset_p,offset_angle)
 
 				##home
 				self.jog_joint(inv(self.home,R_ee(0)), 0.5, threshold=0.1)

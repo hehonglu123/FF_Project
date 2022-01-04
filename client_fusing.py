@@ -33,12 +33,12 @@ RRC.RegisterStdRobDefServiceTypes(RRN)
 RRN.RegisterServiceTypeFromFile("edu.rpi.robotics.fusing_system")
 
 
-fusing_laptop='192.168.51.188'
+fusing_laptop='192.168.51.116'
 robosewclient='192.168.51.61'
 pi_fuse='192.168.51.25'
 my_laptop='192.168.51.181'
 
-url='rr+tcp://localhost:12180/?service=fusing_service'
+url='rr+tcp://'+fusing_laptop+':12180/?service=fusing_service'
 fusing_sub=RRN.SubscribeService(url)
 fusing_sub.ClientConnectFailed += connect_failed
 
@@ -60,8 +60,8 @@ print(fusing_obj.current_interlining_fabric_type.fabric_name)
 
 fabric_type=RRN.NewStructure("edu.rpi.robotics.fusing_system.FabricInfo")
 interlining_type=RRN.NewStructure("edu.rpi.robotics.fusing_system.FabricInfo")
-fabric_type.fabric_name='PD19_016C-FR-LFT-LWR HICKEY 36'
-interlining_type.fabric_name='PD19_016C-FR-LFT-LWR-INT HICKEY 36'
+fabric_type.fabric_name='PD19_016C-FR-LFT-LWR HICKEY 44'
+interlining_type.fabric_name='PD19_016C-FR-LFT-LWR-INT HICKEY 44'
 
 fusing_obj.current_ply_fabric_type=fabric_type
 fusing_obj.current_interlining_fabric_type=interlining_type
@@ -70,24 +70,24 @@ print(fusing_obj.current_ply_fabric_type.fabric_name)
 print(fusing_obj.current_interlining_fabric_type.fabric_name)
 
 ##############################################sensor wire check############################################
-time.sleep(0.5)
-now=time.time()
-while time.time()-now <1:
-	print(sensor_readings.InValue)
-	time.sleep(0.5)
-##############################################actuator check#######################################
-print('testing actuator')
-fusing_obj.actuate('bin1',True)
-time.sleep(0.5)
-fusing_obj.actuate('bin1',False)
-time.sleep(0.5)
-fusing_obj.actuate('bin2',True)
-time.sleep(0.5)
-fusing_obj.actuate('bin2',False)
-time.sleep(0.5)
-fusing_obj.actuate('robot',True)
-time.sleep(0.5)
-fusing_obj.actuate('robot',False)
+# time.sleep(0.5)
+# now=time.time()
+# while time.time()-now <1:
+# 	print(sensor_readings.InValue)
+# 	time.sleep(0.5)
+# ##############################################actuator check#######################################
+# print('testing actuator')
+# fusing_obj.actuate('bin1',True)
+# time.sleep(0.5)
+# fusing_obj.actuate('bin1',False)
+# time.sleep(0.5)
+# fusing_obj.actuate('bin2',True)
+# time.sleep(0.5)
+# fusing_obj.actuate('bin2',False)
+# time.sleep(0.5)
+# fusing_obj.actuate('robot',True)
+# time.sleep(0.5)
+# fusing_obj.actuate('robot',False)
 
 ##############################################trigger pipe check############################################
 p=fusing_obj.trigger_fusing_system.Connect(-1)

@@ -38,6 +38,7 @@ class m1k(object):
         
     def setvoltage(self,v):
         self.device.channels['A'].constant(v)
+        print('set voltage to: ',v)
 
 def main():
     with RR.ServerNodeSetup("M1K_Service_Node", 11111) as node_setup:
