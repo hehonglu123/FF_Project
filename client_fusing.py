@@ -85,9 +85,9 @@ print(fusing_obj.current_interlining_fabric_type.fabric_name)
 # time.sleep(0.5)
 # fusing_obj.actuate('bin2',False)
 # time.sleep(0.5)
-# fusing_obj.actuate('robot',True)
+# fusing_obj.actuate('robot_lock',True)
 # time.sleep(0.5)
-# fusing_obj.actuate('robot',False)
+# fusing_obj.actuate('robot_lock',False)
 
 ##############################################trigger pipe check############################################
 p=fusing_obj.trigger_fusing_system.Connect(-1)

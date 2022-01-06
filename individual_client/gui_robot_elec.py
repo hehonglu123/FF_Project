@@ -105,6 +105,23 @@ def gripper_ctrl():
 		gripper.configure(text='gripper on')
 	return
 
+def lock_ctrl():
+
+
+	if robot_lock.config('relief')[-1] == 'sunken':
+		tool.setf_param('robot_lock',RR.VarValue(0,'int8'))
+		robot_lock.config(relief="raised")
+		robot_lock.configure(bg='red')
+		robot_lock.configure(text='robot lock off')
+
+	else:
+		tool.setf_param('robot_lock',RR.VarValue(1,'int8'))
+		robot_lock.config(relief="sunken")
+		robot_lock.configure(bg='green')
+		robot_lock.configure(text='robot lock on')
+	return
+
+
 def pin_ctrl():
 
 	if pin.config('relief')[-1] == 'sunken':
@@ -251,6 +268,7 @@ j6_p=Button(top,text='j6_p')
 
 
 gripper=Button(top,text='gripper off',command=lambda: gripper_ctrl(),bg='red')
+robot_lock=Button(top,text='robot lock off',command=lambda: lock_ctrl(),bg='red')
 pin=Button(top,text='pin up',command=lambda: pin_ctrl(),bg='red')
 relay=Button(top,text='relay off',command=lambda: relay_ctrl(),bg='red')
 
@@ -313,6 +331,7 @@ j6_p.bind('<ButtonRelease-1>', lambda event: stop())
 
 
 gripper.pack()
+robot_lock.pack()
 pin.pack()
 relay.pack()
 

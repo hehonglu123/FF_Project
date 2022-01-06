@@ -297,7 +297,7 @@ class fusing_pi(object):
 
 	###pressure actuator locks placeholders
 	def actuate(self,position,action):
-
+		self.tool.setf_param(position,RR.VarValue(int(action),'int8'))
 		return 
 	###ESTOP
 	def stop_fusing(self):

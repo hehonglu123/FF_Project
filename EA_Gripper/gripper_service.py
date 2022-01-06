@@ -47,12 +47,8 @@ class EA_Gripper(object):
 		self.rapid.set_digital_io('valve2', 1) 
 
 	def setf_param(self,param_name, value):
-		if param_name=='voltage':
-			print('setting voltage to: ', value.data[0])
-			# self.pi_pwm.ChangeDutyCycle(value.data[0]*100/5)
-		if param_name=='relay':
-			print('change relay to: ', value.data[0])
-			self.rapid.set_digital_io('relay', value.data[0]) 
+		print('change '+param_name+' to: ', value.data[0])
+		self.rapid.set_digital_io(param_name, value.data[0]) 
 
 	#sensor reading
 	def threadfunc(self):
