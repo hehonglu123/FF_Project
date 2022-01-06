@@ -77,6 +77,7 @@ def create_mask(template):
 def match_w_ori(image,template,orientation,alg='hsva',edge_raw=None,angle_range=10,angle_resolution=1.,interlining=False):
 	min_error=9999999999
 	act_angle=0
+	loc=[0,0]
 
 	orientation=np.degrees(orientation)
 
@@ -117,7 +118,7 @@ def match_w_ori(image,template,orientation,alg='hsva',edge_raw=None,angle_range=
 
 
 
-	return act_angle,loc
+	return act_angle,loc,min_error
 
 
 def match_w_ori_single(image,template,orientation,alg='hsva',edge_raw=None,interlining=False):

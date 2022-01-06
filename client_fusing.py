@@ -94,8 +94,7 @@ p=fusing_obj.trigger_fusing_system.Connect(-1)
 
 p.SendPacket(3)  
 
-##############################################error check############################################
-fusing_obj.actuate('operator',True)
+##############################################execution check############################################
 
 while True:
     print (fusing_obj.current_operation_count)

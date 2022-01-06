@@ -335,7 +335,7 @@ class fusing_pi(object):
 
 	def jog_joint(self,q,max_v,threshold=0.01,dcc_range=0.1):
 
-		gain=1#max(2*max_v,1)
+		gain=max(2*max_v,1)
 		diff=q-self.vel_ctrl.joint_position()
 
 		while np.linalg.norm(diff)>threshold:
@@ -442,7 +442,7 @@ class fusing_pi(object):
 		try:
 			print('go picking')
 			q=inv(p+np.array([0,0,0.3]),R)
-			self.jog_joint(q, 0.7,threshold=0.002,dcc_range=0.4)
+			self.jog_joint(q, 1.2,threshold=0.002,dcc_range=0.4)
 
 			
 			
@@ -513,7 +513,7 @@ class fusing_pi(object):
 
 		#start joggging to place position
 		q=inv(place_position+self.pins_height,R)
-		self.jog_joint(q, 0.7,threshold=0.001,dcc_range=0.1)
+		self.jog_joint(q, 1.2,threshold=0.001,dcc_range=0.1)
 		self.vel_ctrl.set_velocity_command(np.zeros((6,)))
 
 		###turn off adhesion first, 
@@ -585,15 +585,20 @@ class fusing_pi(object):
 		#####brief stop for vision
 		self.vel_ctrl.set_velocity_command(np.zeros((6,)))
 		self.vel_ctrl.disable_velocity_mode()
-		time.sleep(0.5)
+		# time.sleep(0.1)
 
 		###write for reference
 		cv2.imwrite("vision_check.jpg",self.current_frame)
-		roi_frame=cv2.cvtColor(self.current_frame[self.ROI[0]:self.ROI[1],self.ROI[2]:self.ROI[3]], cv2.COLOR_BGR2GRAY)
+		# roi_frame=cv2.cvtColor(self.current_frame[self.ROI[0]:self.ROI[1],self.ROI[2]:self.ROI[3]], cv2.COLOR_BGR2GRAY)
+		roi_frame=self.current_frame[self.ROI[0]:self.ROI[1],self.ROI[2]:self.ROI[3]]
 
-		angle,center=match_w_ori(roi_frame,template,0,'edge',interlining=interlining)
+		angle,center,min_error=match_w_ori(roi_frame,template,0,'edge',interlining=interlining)
+		###if fabric not found
+		if min_error>999999:
+			self.trigger_error('Vision Error','NO FABRIC FOUND')
+			return [0,0],999
 		###precise angle 
-		angle,center=match_w_ori(roi_frame,template,np.radians(angle),'edge',angle_range=1.,angle_resolution=0.1,interlining=interlining)
+		angle,center,min_error=match_w_ori(roi_frame,template,np.radians(angle),'edge',angle_range=1.,angle_resolution=0.1,interlining=interlining)
 
 		offset_p=(center-np.array([len(roi_frame[0]),len(roi_frame)])/2.)
 		self.vel_ctrl.enable_velocity_mode()
@@ -612,7 +617,8 @@ class fusing_pi(object):
 				raise AssertionError('Manual Estop')
 				return
 			try:
-				roi_frame=cv2.cvtColor(self.current_frame[self.ROI[0]:self.ROI[1],self.ROI[2]:self.ROI[3]], cv2.COLOR_BGR2GRAY)
+				# roi_frame=cv2.cvtColor(self.current_frame[self.ROI[0]:self.ROI[1],self.ROI[2]:self.ROI[3]], cv2.COLOR_BGR2GRAY)
+				roi_frame=self.current_frame[self.ROI[0]:self.ROI[1],self.ROI[2]:self.ROI[3]]
 				angle,center=match_w_ori_single(roi_frame,template,np.radians(angle),'edge',interlining=interlining)
 				offset_p=(center-np.array([len(roi_frame[0]),len(roi_frame)])/2.)
 				print(offset_p)
@@ -638,7 +644,7 @@ class fusing_pi(object):
 		R=np.dot(self.place_orientation,Rx(-angle))
 		#start joggging to place position
 		q=inv(place_position+self.pins_height,R)
-		self.jog_joint(q, 0.7,threshold=0.001,dcc_range=0.1)
+		self.jog_joint(q, 1.2,threshold=0.001,dcc_range=0.1)
 		self.vel_ctrl.set_velocity_command(np.zeros((6,)))
 
 		###turn off adhesion first
@@ -688,6 +694,8 @@ class fusing_pi(object):
 				self.pick(self.bin1_p+self.stack_height1,self.bin1_R,v=4.5)
 
 				offset_p,offset_angle=self.vision_check_fb(self.fabric_template)
+				if offset_angle==999:
+					return
 				######no-vision block
 				# offset_p=np.array([0,0,0])
 				# offset_angle=0.
@@ -700,6 +708,8 @@ class fusing_pi(object):
 				self.stack_height2=np.array([0,0,0.004-cur_stack*0.00045])
 				self.pick(self.bin2_p+self.stack_height2,self.bin2_R,v=5.)
 				offset_p,offset_angle=self.vision_check_fb(self.interlining_template,interlining=True)
+				if offset_angle==999:
+					return
 				######no-vision block
 				# offset_p=np.array([0,0,0])
 				# offset_angle=0.

@@ -112,6 +112,7 @@ class CameraImpl(object):
     def capture_frame(self):
         with self._capture_lock:
             ret, mat=self._capture.read()
+            mat = cv2.cvtColor(mat, cv2.COLOR_BGR2GRAY)
             if not ret:
                 raise RR.OperationFailedException("Could not read from camera")
             self._seqno+=1
@@ -120,6 +121,7 @@ class CameraImpl(object):
     def capture_frame_compressed(self):
         with self._capture_lock:
             ret, mat=self._capture.read()
+            mat = cv2.cvtColor(mat, cv2.COLOR_BGR2GRAY)
             if not ret:
                 raise RRN.OperationFailedException("Could not read from camera")
             self._seqno+=1
@@ -132,6 +134,7 @@ class CameraImpl(object):
         while(self._streaming):
             with self._capture_lock:
                 ret, mat=self._capture.read()
+                mat = cv2.cvtColor(mat, cv2.COLOR_BGR2GRAY)
                 if not ret:
                     #TODO: notify user?
                     self._streaming=False
