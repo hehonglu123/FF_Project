@@ -41,8 +41,8 @@ class fusing_pi(object):
 
 		self.current_errors=[]
 
-		self.current_ply_fabric_type.fabric_name='PD19_016C-FR-LFT-LWR HICKEY 36'
-		self.current_interlining_fabric_type.fabric_name='PD19_016C-FR-LFT-LWR-INT HICKEY 36'
+		self.current_ply_fabric_type.fabric_name='PD19_016C-FR-LFT-UP HICKEY 36'
+		self.current_interlining_fabric_type.fabric_name='PD19_016C-FR-LFT-UP-INT HICKEY 36'
 		
 
 		##################################Load Local params######################################
@@ -146,6 +146,12 @@ class fusing_pi(object):
 			print('robot not available')
 			pass
 
+	def clear_charge(self):
+		self.m1k_obj.setvoltage(0)
+		time.sleep(0.1)
+		self.tool.setf_param('relay',RR.VarValue(1,'int8'))
+		time.sleep(1)
+		self.tool.setf_param('relay',RR.VarValue(0,'int8'))
 	def initialize(self):
 
 		try:
@@ -446,21 +452,20 @@ class fusing_pi(object):
 
 			
 			
-			# self.tool.setf_param('voltage',RR.VarValue(v,'single'))
+			#turn on voltage first
+			self.m1k_obj.setvoltage(v)
 
 			#move down 
 			self.jog_joint_movel(p,0.3,threshold=0.002,acc_range=0.,dcc_range=0.1,Rd=R)
 
-			#turn on voltage first
-			# self.m1k_obj.setawgconstant('A',v)
-			self.m1k_obj.setvoltage(v)
+			
 
 			
 			self.vel_ctrl.set_velocity_command(np.zeros((6,)))
 
 			
 			
-			time.sleep(0.5)
+			# time.sleep(0.5)
 			
 
 			#move up
@@ -513,7 +518,7 @@ class fusing_pi(object):
 
 		#start joggging to place position
 		q=inv(place_position+self.pins_height,R)
-		self.jog_joint(q, 1.2,threshold=0.001,dcc_range=0.1)
+		self.jog_joint(q, 1.1,threshold=0.001,dcc_range=0.2)
 		self.vel_ctrl.set_velocity_command(np.zeros((6,)))
 
 		###turn off adhesion first, 
@@ -594,8 +599,13 @@ class fusing_pi(object):
 
 		angle,center,min_error=match_w_ori(roi_frame,template,0,'edge',interlining=interlining)
 		###if fabric not found
-		if min_error>999999:
+		if interlining and min_error>99999999:
 			self.trigger_error('Vision Error','NO FABRIC FOUND')
+			self.clear_charge()
+			return [0,0],999
+		if not interlining and min_error>999999999:
+			self.trigger_error('Vision Error','NO FABRIC FOUND')
+			self.clear_charge()
 			return [0,0],999
 		###precise angle 
 		angle,center,min_error=match_w_ori(roi_frame,template,np.radians(angle),'edge',angle_range=1.,angle_resolution=0.1,interlining=interlining)
@@ -644,7 +654,7 @@ class fusing_pi(object):
 		R=np.dot(self.place_orientation,Rx(-angle))
 		#start joggging to place position
 		q=inv(place_position+self.pins_height,R)
-		self.jog_joint(q, 1.2,threshold=0.001,dcc_range=0.1)
+		self.jog_joint(q, 1.1,threshold=0.001,dcc_range=0.2)
 		self.vel_ctrl.set_velocity_command(np.zeros((6,)))
 
 		###turn off adhesion first
@@ -691,7 +701,7 @@ class fusing_pi(object):
 				self.fabric_template=read_template('client_yaml/templates/'+self.current_ply_fabric_type.fabric_name+'.jpg',self.fabric_dimension[self.current_ply_fabric_type.fabric_name],self.ppu)
 				
 				self.stack_height1=np.array([0,0,0.00-cur_stack*0.00075])
-				self.pick(self.bin1_p+self.stack_height1,self.bin1_R,v=4.5)
+				self.pick(self.bin1_p+self.stack_height1,self.bin1_R,v=5.)
 
 				offset_p,offset_angle=self.vision_check_fb(self.fabric_template)
 				if offset_angle==999:
@@ -718,7 +728,7 @@ class fusing_pi(object):
 				self.place_slide(self.place_position-offset_p,offset_angle)
 
 				##home
-				self.jog_joint(inv(self.home,R_ee(0)), 0.5, threshold=0.1)
+				self.jog_joint(inv(self.home,R_ee(0)), 1., threshold=0.1)
 				##reset chargepad
 				self.tool.setf_param('relay',RR.VarValue(1,'int8'))
 				time.sleep(1.)

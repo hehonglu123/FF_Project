@@ -60,8 +60,8 @@ print(fusing_obj.current_interlining_fabric_type.fabric_name)
 
 fabric_type=RRN.NewStructure("edu.rpi.robotics.fusing_system.FabricInfo")
 interlining_type=RRN.NewStructure("edu.rpi.robotics.fusing_system.FabricInfo")
-fabric_type.fabric_name='PD19_016C-FR-LFT-LWR HICKEY 44'
-interlining_type.fabric_name='PD19_016C-FR-LFT-LWR-INT HICKEY 44'
+fabric_type.fabric_name='PD19_016C-FR-LFT-UP HICKEY 36'
+interlining_type.fabric_name='PD19_016C-FR-LFT-UP-INT HICKEY 36'
 
 fusing_obj.current_ply_fabric_type=fabric_type
 fusing_obj.current_interlining_fabric_type=interlining_type

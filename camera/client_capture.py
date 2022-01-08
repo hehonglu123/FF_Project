@@ -18,10 +18,15 @@ def ImageToMat(image):
 image_consts=None
 
 def main():
+    fusing_laptop='192.168.51.116'
+    pi_fuse='192.168.51.25'
+    robosewclient='192.168.51.61'
+    my_laptop='192.168.51.181'
+
     #Accept the names of the webcams and the nodename from command line
     parser = argparse.ArgumentParser(description="RR plug and play client")
 
-    url='rr+tcp://robosewclient:59823?service=camera'
+    url='rr+tcp://'+fusing_laptop+':59823?service=camera'
 
     #Startup, connect, and pull out the camera from the objref    
     cam=RRN.ConnectService(url)
@@ -31,7 +36,7 @@ def main():
 
 
     current_frame=ImageToMat(cam.capture_frame())
-    cv2.imwrite('image_data/vision_calib.jpg',current_frame)
+    cv2.imwrite('vision_check.jpg',current_frame)
 
 if __name__ == '__main__':
     main()
