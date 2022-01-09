@@ -42,7 +42,9 @@ class fusing_pi(object):
 		self.current_errors=[]
 
 		self.current_ply_fabric_type.fabric_name='PD19_016C-FR-LFT-UP HICKEY 36'
+		self.current_ply_fabric_type.fabric_type='Army Green'
 		self.current_interlining_fabric_type.fabric_name='PD19_016C-FR-LFT-UP-INT HICKEY 36'
+		self.current_interlining_fabric_type.fabric_type='Army Black'
 		
 
 		##################################Load Local params######################################
@@ -450,8 +452,6 @@ class fusing_pi(object):
 			q=inv(p+np.array([0,0,0.3]),R)
 			self.jog_joint(q, 1.2,threshold=0.002,dcc_range=0.4)
 
-			
-			
 			#turn on voltage first
 			self.m1k_obj.setvoltage(v)
 
@@ -590,7 +590,7 @@ class fusing_pi(object):
 		#####brief stop for vision
 		self.vel_ctrl.set_velocity_command(np.zeros((6,)))
 		self.vel_ctrl.disable_velocity_mode()
-		# time.sleep(0.1)
+		time.sleep(0.1)
 
 		###write for reference
 		cv2.imwrite("vision_check.jpg",self.current_frame)
@@ -700,7 +700,7 @@ class fusing_pi(object):
 				
 				self.fabric_template=read_template('client_yaml/templates/'+self.current_ply_fabric_type.fabric_name+'.jpg',self.fabric_dimension[self.current_ply_fabric_type.fabric_name],self.ppu)
 				
-				self.stack_height1=np.array([0,0,0.00-cur_stack*0.00075])
+				self.stack_height1=np.array([0,0,0.-cur_stack*0.00075])
 				self.pick(self.bin1_p+self.stack_height1,self.bin1_R,v=5.)
 
 				offset_p,offset_angle=self.vision_check_fb(self.fabric_template)

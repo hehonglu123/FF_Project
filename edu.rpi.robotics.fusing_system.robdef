@@ -13,7 +13,7 @@ using com.robotraconteur.eventlog.EventLogMessage
 
 struct FabricInfo
 	field Identifier fabric_id
-	field double voltage
+	field string fabric_type
 	field string fabric_name
 end
 

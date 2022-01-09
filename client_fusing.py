@@ -61,7 +61,10 @@ print(fusing_obj.current_interlining_fabric_type.fabric_name)
 fabric_type=RRN.NewStructure("edu.rpi.robotics.fusing_system.FabricInfo")
 interlining_type=RRN.NewStructure("edu.rpi.robotics.fusing_system.FabricInfo")
 fabric_type.fabric_name='PD19_016C-FR-LFT-UP HICKEY 36'
+fabric_type.fabric_type='Army Green'
 interlining_type.fabric_name='PD19_016C-FR-LFT-UP-INT HICKEY 36'
+interlining_type.fabric_type='Army Black'
+
 
 fusing_obj.current_ply_fabric_type=fabric_type
 fusing_obj.current_interlining_fabric_type=interlining_type
@@ -92,7 +95,7 @@ print(fusing_obj.current_interlining_fabric_type.fabric_name)
 ##############################################trigger pipe check############################################
 p=fusing_obj.trigger_fusing_system.Connect(-1)
 
-p.SendPacket(3)  
+p.SendPacket(10)  
 
 ##############################################execution check############################################
 
