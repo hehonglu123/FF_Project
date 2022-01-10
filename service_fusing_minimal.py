@@ -84,7 +84,7 @@ class fusing_pi(object):
 		return True
 	###ESTOP
 	def stop_fusing(self):
-		print('stop')
+		self.trigger_error('Operation Error: ', 'Stopped by Operator')
 
 	def execute(self,stacks):
 		for i in range(stacks):
@@ -103,7 +103,7 @@ class fusing_pi(object):
 		self.finish_signal_type.current_errors=[self.error_message_type]
 		self.finish_signal_type.finished=True
 
-		print('sending pipe '+error_msg)
+		print(error_msg)
 		###send stop signal to WGC
 		self.finish_signal.SendPacket(self.finish_signal_type)
 		

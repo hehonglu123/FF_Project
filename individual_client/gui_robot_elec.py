@@ -95,7 +95,7 @@ def gripper_ctrl():
 
 	else:
 		try:
-			m1k_obj.setvoltage(5)
+			m1k_obj.setvoltage(3)
 		except:
 			pass
 		gripper.config(relief="sunken")
