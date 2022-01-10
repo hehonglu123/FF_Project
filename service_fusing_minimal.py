@@ -29,6 +29,8 @@ class fusing_pi(object):
 		self._streaming=False
 		self._lock = threading.Lock()
 
+		self._estop=True
+
 	#triggering pipe
 	@property
 	def trigger_fusing_system(self):
@@ -81,15 +83,20 @@ class fusing_pi(object):
 
 	def initialize(self):
 		print('initializing')
+		self._estop=False
 		return True
 	###ESTOP
 	def stop_fusing(self):
+		self._estop=True
 		self.trigger_error('Operation Error: ', 'Stopped by Operator')
 
 	def execute(self,stacks):
 		for i in range(stacks):
+			if self._estop:
+				return
 			time.sleep(1)
 			self.current_operation_count+=1
+			
 
 		###send finish signal
 		self.finish_signal_type.current_errors=[]

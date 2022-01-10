@@ -320,6 +320,8 @@ class fusing_pi(object):
 		time.sleep(0.5)
 		self.tool.setf_param('relay',RR.VarValue(0,'int8'))
 
+		self.trigger_error('Operation Error: ', 'Stopped by Operator')
+
 		
 
 
