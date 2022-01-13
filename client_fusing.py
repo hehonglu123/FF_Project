@@ -38,7 +38,7 @@ robosewclient='192.168.51.61'
 pi_fuse='192.168.51.25'
 my_laptop='192.168.51.181'
 
-url='rr+tcp://localhost:12180/?service=fusing_service'
+url='rr+tcp://'+fusing_laptop+':12180/?service=fusing_service'
 fusing_sub=RRN.SubscribeService(url)
 fusing_sub.ClientConnectFailed += connect_failed
 
@@ -60,9 +60,9 @@ print(fusing_obj.current_interlining_fabric_type.fabric_name)
 
 fabric_type=RRN.NewStructure("edu.rpi.robotics.fusing_system.FabricInfo")
 interlining_type=RRN.NewStructure("edu.rpi.robotics.fusing_system.FabricInfo")
-fabric_type.fabric_name='PD19_016C-FR-LFT-UP HICKEY 36'
+fabric_type.fabric_name='PD19_016C-FR-LFT-LWR HICKEY 36'
 fabric_type.fabric_type='Army Green'
-interlining_type.fabric_name='PD19_016C-FR-LFT-UP-INT HICKEY 36'
+interlining_type.fabric_name='PD19_016C-FR-LFT-LWR-INT HICKEY 36'
 interlining_type.fabric_type='Army Black'
 
 
@@ -100,6 +100,5 @@ p.SendPacket(10)
 ##############################################execution check############################################
 
 while True:
-    print (fusing_obj.current_operation_count)
+    print ('current count: ',fusing_obj.current_operation_count)
     time.sleep(0.1)
-    fusing_obj.stop_fusing()

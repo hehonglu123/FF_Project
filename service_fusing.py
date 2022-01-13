@@ -76,7 +76,7 @@ class fusing_pi(object):
 
 		##################################Other RR services connection#######################################
 		try:	
-			url='rr+tcp://'+self.fusing_laptop+':11111?service=m1k'
+			url='rr+tcp://'+self.my_laptop+':11111?service=m1k'
 			self.m1k_sub=RRN.SubscribeService(url)
 			self.m1k_sub.ClientConnectFailed += self.connect_failed
 
@@ -155,7 +155,7 @@ class fusing_pi(object):
 		time.sleep(1)
 		self.tool.setf_param('relay',RR.VarValue(0,'int8'))
 	def initialize(self):
-
+		print('initializing')
 		try:
 			#start getting sensor data
 			self.StartStreaming()
@@ -477,8 +477,11 @@ class fusing_pi(object):
 
 	def pick_osc(self,p,R,v):
 		print('go picking')
-		q=inv(p+np.array([0,0,0.5]),R)
-		self.jog_joint(q, 1.5,threshold=0.002,dcc_range=0.4)
+		q=inv(p+np.array([0,0,0.3]),R)
+		self.jog_joint(q, 1.2,threshold=0.002,dcc_range=0.4)
+
+		#turn on voltage first
+		self.m1k_obj.setvoltage(v-0.2)
 
 		#move down 
 		self.jog_joint_movel(p,0.3,threshold=0.002,acc_range=0.,dcc_range=0.1,Rd=R)
@@ -486,25 +489,19 @@ class fusing_pi(object):
 		self.vel_ctrl.set_velocity_command(np.zeros((6,)))
 
 		#pick
-		# self.m1k_obj.setawgconstant('A',v)
-		self.m1k_obj.setvoltage(v)
-		# self.tool.setf_param('voltage',RR.VarValue(v,'single'))
-		time.sleep(0.5)
+		# self.m1k_obj.setvoltage(v)
+		# time.sleep(0.5)
 
 		###osc
-		self.jog_joint_movel(p+np.array([0,0,0.023]),0.3,threshold=0.005,acc_range=0.,dcc_range=0.1,Rd=R)
-		# self.m1k_obj.setawgconstant('A',0.)
-		self.m1k_obj.setvoltage(0)
-		# self.tool.setf_param('voltage',RR.VarValue(0,'single'))
-
-		time.sleep(0.2)
-		self.tool.setf_param('relay',RR.VarValue(1,'int8'))
+		# self.tool.setf_param('relay',RR.VarValue(1,'int8'))
 		self.tool.close()
-		time.sleep(2.)
+		self.jog_joint_movel(p+np.array([0,0,0.023]),0.3,threshold=0.005,acc_range=0.,dcc_range=0.1,Rd=R)
+		# self.m1k_obj.setvoltage(0)
+
+		
 		self.tool.open()
-		self.tool.setf_param('relay',RR.VarValue(0,'int8'))
+		# self.tool.setf_param('relay',RR.VarValue(0,'int8'))
 		self.jog_joint_movel(p,0.3,threshold=0.002,acc_range=0.,dcc_range=0.1,Rd=R)
-		# self.m1k_obj.setawgconstant('A',v)
 		self.m1k_obj.setvoltage(v)
 		# self.tool.setf_param('voltage',RR.VarValue(v,'single'))
 		
@@ -601,11 +598,12 @@ class fusing_pi(object):
 
 		angle,center,min_error=match_w_ori(roi_frame,template,0,'edge',interlining=interlining)
 		###if fabric not found
-		if interlining and min_error>99999999:
+		offset_p=(center-np.array([len(roi_frame[0]),len(roi_frame)])/2.)
+		if (interlining and min_error>39999999) or np.linalg.norm(offset_p)>100:
 			self.trigger_error('Vision Error','NO FABRIC FOUND')
 			self.clear_charge()
 			return [0,0],999
-		if not interlining and min_error>999999999:
+		if not interlining and min_error>9999999999:
 			self.trigger_error('Vision Error','NO FABRIC FOUND')
 			self.clear_charge()
 			return [0,0],999
@@ -689,7 +687,7 @@ class fusing_pi(object):
 		# vel_ctrl.set_velocity_command(np.zeros((6,)))
 		time.sleep(0.5)
 		###move up
-		q=inv(place_position+np.array([0.3,0,0.1]),R)
+		q=inv(place_position+np.array([0.3,0,0.15]),R)
 		self.jog_joint(q, 0.4,threshold=0.1,dcc_range=0.12)
 		self.tool.setf_param('relay',RR.VarValue(0,'int8'))
 
@@ -704,6 +702,7 @@ class fusing_pi(object):
 				
 				self.stack_height1=np.array([0,0,0.-cur_stack*0.00075])
 				self.pick(self.bin1_p+self.stack_height1,self.bin1_R,v=5.)
+				# self.pick_osc(self.bin1_p+self.stack_height1,self.bin1_R,v=4.)
 
 				offset_p,offset_angle=self.vision_check_fb(self.fabric_template)
 				if offset_angle==999:
@@ -719,7 +718,7 @@ class fusing_pi(object):
 				
 				self.stack_height2=np.array([0,0,0.004-cur_stack*0.00045])
 				self.pick(self.bin2_p+self.stack_height2,self.bin2_R,v=5.)
-				offset_p,offset_angle=self.vision_check_fb(self.interlining_template,interlining=True)
+				offset_p,offset_angle=self.vision_check_fb(self.interlining_template,interlining=False)
 				if offset_angle==999:
 					return
 				######no-vision block

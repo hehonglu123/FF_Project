@@ -50,10 +50,13 @@ def edge_temp_match(image,template,interlining=False):	#edge based match with al
 	# cv2.waitKey(0)
 
 	#matching
-	if interlining:
-		res = cv2.matchTemplate(image, template , cv2.TM_SQDIFF, mask=template)
-	else:
-		res = cv2.matchTemplate(image, template , cv2.TM_SQDIFF, mask=create_mask(template))
+	try:
+		if interlining:
+			res = cv2.matchTemplate(image, template , cv2.TM_SQDIFF, mask=template)
+		else:
+			res = cv2.matchTemplate(image, template , cv2.TM_SQDIFF, mask=create_mask(template))
+	except cv2.error:			#when plate not able to cover all fabric
+		return 9999999999, (0,0)
 	min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
 
 	return min_val, min_loc
@@ -105,6 +108,7 @@ def match_w_ori(image,template,orientation,alg='hsva',edge_raw=None,angle_range=
 		template_rt=rotate_image(tEdged,angle,[0,0,0])
 		###make template binary
 		template_rt=cv2.threshold(template_rt, 50, 255, cv2.THRESH_BINARY)[1]
+
 		min_val, min_loc=edge_temp_match(edged,template_rt,interlining)
 
 
