@@ -43,7 +43,7 @@ except:
 	pass
 try:	
 	# url='rr+tcp://fusing_laptop:11111?service=m1k'
-	url='rr+tcp://'+fusing_laptop+':11111?service=m1k'
+	url='rr+tcp://'+my_laptop+':11111?service=m1k'
 	m1k_obj = RRN.ConnectService(url)
 
 except:

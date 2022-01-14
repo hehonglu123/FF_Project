@@ -95,7 +95,7 @@ print(fusing_obj.current_interlining_fabric_type.fabric_name)
 ##############################################trigger pipe check############################################
 p=fusing_obj.trigger_fusing_system.Connect(-1)
 
-p.SendPacket(10)  
+p.SendPacket(12)  
 
 ##############################################execution check############################################
 

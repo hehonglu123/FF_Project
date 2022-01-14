@@ -452,17 +452,19 @@ class fusing_pi(object):
 		try:
 			print('go picking')
 			q=inv(p+np.array([0,0,0.3]),R)
-			self.jog_joint(q, 1.2,threshold=0.002,dcc_range=0.4)
+			self.jog_joint(q, 1.5,threshold=0.15,dcc_range=0.25)
+
+			
+			q=inv(p+np.array([0,0,0.1]),R)
+			#move down 
+			self.jog_joint(q, 1.2,threshold=0.1,dcc_range=0.2)
 
 			#turn on voltage first
 			self.m1k_obj.setvoltage(v)
 
-			#move down 
-			self.jog_joint_movel(p,0.3,threshold=0.002,acc_range=0.,dcc_range=0.1,Rd=R)
+			q=inv(p,R)
+			self.jog_joint(q, 0.5,threshold=0.01,dcc_range=0.1)
 
-			
-
-			
 			self.vel_ctrl.set_velocity_command(np.zeros((6,)))
 
 			
@@ -474,17 +476,48 @@ class fusing_pi(object):
 			self.jog_joint_movel(p+np.array([0,0,0.3]),0.45,acc_range=0.1,threshold=0.05)
 		except:
 			self.trigger_error("Robot not ready",traceback.format_exc())
+	# def pick(self,p,R,v):
+	# 	try:
+	# 		print('go picking')
+	# 		q=inv(p+np.array([0,0,0.3]),R)
+	# 		self.jog_joint(q, 1.2,threshold=0.002,dcc_range=0.4)
+
+	# 		#turn on voltage first
+	# 		self.m1k_obj.setvoltage(v)
+
+	# 		#move down 
+	# 		self.jog_joint_movel(p,0.3,threshold=0.002,acc_range=0.,dcc_range=0.1,Rd=R)
+
+			
+
+			
+	# 		self.vel_ctrl.set_velocity_command(np.zeros((6,)))
+
+			
+			
+	# 		# time.sleep(0.5)
+			
+
+	# 		#move up
+	# 		self.jog_joint_movel(p+np.array([0,0,0.3]),0.45,acc_range=0.1,threshold=0.05)
+	# 	except:
+	# 		self.trigger_error("Robot not ready",traceback.format_exc())
 
 	def pick_osc(self,p,R,v):
 		print('go picking')
 		q=inv(p+np.array([0,0,0.3]),R)
-		self.jog_joint(q, 1.2,threshold=0.002,dcc_range=0.4)
+		self.jog_joint(q, 1.5,threshold=0.15,dcc_range=0.25)
+
+		
+		q=inv(p+np.array([0,0,0.1]),R)
+		#move down 
+		self.jog_joint(q, 1.2,threshold=0.1,dcc_range=0.2)
 
 		#turn on voltage first
-		self.m1k_obj.setvoltage(v-0.2)
+		self.m1k_obj.setvoltage(v)
 
-		#move down 
-		self.jog_joint_movel(p,0.3,threshold=0.002,acc_range=0.,dcc_range=0.1,Rd=R)
+		q=inv(p,R)
+		self.jog_joint(q, 0.5,threshold=0.01,dcc_range=0.1)
 
 		self.vel_ctrl.set_velocity_command(np.zeros((6,)))
 
@@ -599,13 +632,14 @@ class fusing_pi(object):
 		angle,center,min_error=match_w_ori(roi_frame,template,0,'edge',interlining=interlining)
 		###if fabric not found
 		offset_p=(center-np.array([len(roi_frame[0]),len(roi_frame)])/2.)
-		if (interlining and min_error>39999999) or np.linalg.norm(offset_p)>100:
-			self.trigger_error('Vision Error','NO FABRIC FOUND')
-			self.clear_charge()
-			return [0,0],999
-		if not interlining and min_error>9999999999:
-			self.trigger_error('Vision Error','NO FABRIC FOUND')
-			self.clear_charge()
+		# if (interlining and min_error>39999999) or np.linalg.norm(offset_p)>100:
+		# 	self.trigger_error('Vision Error','NO FABRIC FOUND')
+		# 	self.clear_charge()
+		# 	return [0,0],999
+		print('min_error: ', min_error)
+		if not interlining and min_error>=9999999999:
+			# self.trigger_error('Vision Error','NO FABRIC FOUND')
+			# self.clear_charge()
 			return [0,0],999
 		###precise angle 
 		angle,center,min_error=match_w_ori(roi_frame,template,np.radians(angle),'edge',angle_range=1.,angle_resolution=0.1,interlining=interlining)
@@ -700,13 +734,17 @@ class fusing_pi(object):
 				
 				self.fabric_template=read_template('client_yaml/templates/'+self.current_ply_fabric_type.fabric_name+'.jpg',self.fabric_dimension[self.current_ply_fabric_type.fabric_name],self.ppu)
 				
-				self.stack_height1=np.array([0,0,0.-cur_stack*0.00075])
+				self.stack_height1=np.array([0,0,(stacks-cur_stack)*0.00075])
 				self.pick(self.bin1_p+self.stack_height1,self.bin1_R,v=5.)
 				# self.pick_osc(self.bin1_p+self.stack_height1,self.bin1_R,v=4.)
 
 				offset_p,offset_angle=self.vision_check_fb(self.fabric_template)
-				if offset_angle==999:
-					return
+
+				while offset_angle==999:
+					self.pick(self.bin1_p+self.stack_height1,self.bin1_R,v=5.)
+					offset_p,offset_angle=self.vision_check_fb(self.fabric_template)
+				# if offset_angle==999:
+				# 	return
 				######no-vision block
 				# offset_p=np.array([0,0,0])
 				# offset_angle=0.
@@ -716,7 +754,7 @@ class fusing_pi(object):
 
 				self.interlining_template=read_template('client_yaml/templates/'+self.current_interlining_fabric_type.fabric_name+'.jpg',self.fabric_dimension[self.current_interlining_fabric_type.fabric_name],self.ppu)
 				
-				self.stack_height2=np.array([0,0,0.004-cur_stack*0.00045])
+				self.stack_height2=np.array([0,0,(stacks-cur_stack)*0.00045])
 				self.pick(self.bin2_p+self.stack_height2,self.bin2_R,v=5.)
 				offset_p,offset_angle=self.vision_check_fb(self.interlining_template,interlining=False)
 				if offset_angle==999:

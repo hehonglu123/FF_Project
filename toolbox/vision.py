@@ -56,7 +56,7 @@ def edge_temp_match(image,template,interlining=False):	#edge based match with al
 		else:
 			res = cv2.matchTemplate(image, template , cv2.TM_SQDIFF, mask=create_mask(template))
 	except cv2.error:			#when plate not able to cover all fabric
-		return 9999999999, (0,0)
+		return 99999999999, (0,0)
 	min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
 
 	return min_val, min_loc
