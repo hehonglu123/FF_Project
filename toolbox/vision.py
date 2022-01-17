@@ -1,5 +1,5 @@
 import numpy as np
-import cv2, time
+import cv2, time, traceback
 def read_template(im_path,dimension,ppu):
 	#load template
 	template=cv2.imread(im_path, cv2.IMREAD_GRAYSCALE)
@@ -56,6 +56,7 @@ def edge_temp_match(image,template,interlining=False):	#edge based match with al
 		else:
 			res = cv2.matchTemplate(image, template , cv2.TM_SQDIFF, mask=create_mask(template))
 	except cv2.error:			#when plate not able to cover all fabric
+		traceback.print_exc()
 		return 99999999999, (0,0)
 	min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
 
@@ -65,6 +66,22 @@ def bold_edge(image,num_pix=10):
 	bolded = cv2.filter2D(image,-1,np.ones((num_pix,num_pix))/num_pix**2,borderType=cv2.BORDER_CONSTANT)
 	bolded = cv2.threshold(bolded, 5, 255, cv2.THRESH_BINARY)[1]
 	return bolded
+
+def remove_small_edges(img,min_size=88):
+	#find all your connected components (white blobs in your image)
+	nb_components, output, stats, centroids = cv2.connectedComponentsWithStats(img, connectivity=8)
+	#connectedComponentswithStats yields every seperated component with information on each of them, such as size
+	#the following part is just taking out the background which is also considered a component, but most of the time we don't want that.
+	sizes = stats[1:, -1]; nb_components = nb_components - 1
+
+	#your answer image
+	img2 = np.zeros((output.shape),dtype=np.uint8)
+	#for every component in the image, you keep it only if it's above min_size
+	for i in range(0, nb_components):
+	    if sizes[i] >= min_size:
+	        img2[output == i + 1] = 255
+
+	return img2
 
 def create_mask(template):
 	# get the (largest) contour
@@ -88,7 +105,7 @@ def match_w_ori(image,template,orientation,alg='hsva',edge_raw=None,angle_range=
 	tEdged = template#cv2.Canny(template, 50, 200,apertureSize =3)
 	image_edge=cv2.Canny(image, 50, 200,apertureSize =3)
 	
-	edged = bold_edge(image_edge)
+	edged = bold_edge(remove_small_edges(image_edge))
 	try:
 		edged=cv2.subtract(edged,edge_raw)
 		# cv2.imshow("image", edged)

@@ -569,7 +569,7 @@ class fusing_pi(object):
 		
 
 		#move up
-		q=inv(place_position+np.array([0,0,0.13]),R)
+		q=inv(place_position+np.array([0,0,0.1]),R)
 		self.jog_joint(q, 0.6,threshold=0.15,dcc_range=0.12)
 
 		#turn off HV relay
@@ -707,7 +707,7 @@ class fusing_pi(object):
 		###move up more
 		# self.jog_joint_movel(place_position+self.pins_height+np.array([0,0,0.035]), 0.01,threshold=0.001,acc_range=0.005,dcc_range=0.01)
 		#move back down, pressing the plate
-		self.jog_joint_movel(place_position+self.pins_height+np.array([0,0,0.015]), 0.2, threshold=0.002,dcc_range=0.1)
+		self.jog_joint_movel(place_position+self.pins_height+np.array([0,0,0.01]), 0.2, threshold=0.002,dcc_range=0.1)
 
 		self.jog_joint_movel(place_position+self.pins_height/6, 0.1, threshold=0.002,dcc_range=0.1)
 
@@ -722,53 +722,37 @@ class fusing_pi(object):
 		# vel_ctrl.set_velocity_command(np.zeros((6,)))
 		time.sleep(0.5)
 		###move up
-		q=inv(place_position+np.array([0.3,0,0.18]),R)
+		q=inv(place_position+np.array([0.3,0,0.2]),R)
 		self.jog_joint(q, 0.4,threshold=0.1,dcc_range=0.12)
 		self.tool.setf_param('relay',RR.VarValue(0,'int8'))
 
 
 	def execute(self, stacks):
 		for cur_stack in range(stacks):
-			self.current_ply_fabric_type.fabric_name='PD19_016C-FR-LFT-UP HICKEY 56'
-			self.current_interlining_fabric_type.fabric_name='PD19_016C-FR-LFT-UP-INT HICKEY 56'
+		
 			try:
 				
-				self.fabric_template=read_template('client_yaml/templates/'+self.current_ply_fabric_type.fabric_name+'.jpg',self.fabric_dimension[self.current_ply_fabric_type.fabric_name],self.ppu)
 				
 				self.stack_height1=np.array([0,0,(stacks-cur_stack)*0.00075])
 				self.pick(self.bin1_p+self.stack_height1,self.bin1_R,v=5.)
-				# self.pick_osc(self.bin1_p+self.stack_height1,self.bin1_R,v=4.)
 
-				offset_p,offset_angle=self.vision_check_fb(self.fabric_template)
-
-				# while offset_angle==999:
-				# 	self.pick(self.bin1_p+self.stack_height1,self.bin1_R,v=5.)
-				# 	offset_p,offset_angle=self.vision_check_fb(self.fabric_template)
-
-				if offset_angle==999:
-					return
 				######no-vision block
-				# offset_p=np.array([0,0,0])
-				# offset_angle=0.
+				offset_p=np.array([0,0,0])
+				offset_angle=0.
 				# ######no-vision block end
 				self.place(self.place_position-offset_p,offset_angle)
 
-
-				self.interlining_template=read_template('client_yaml/templates/'+self.current_interlining_fabric_type.fabric_name+'.jpg',self.fabric_dimension[self.current_interlining_fabric_type.fabric_name],self.ppu)
 				
 				self.stack_height2=np.array([0,0,(stacks-cur_stack)*0.00045])
 				self.pick(self.bin2_p+self.stack_height2,self.bin2_R,v=5.)
-				offset_p,offset_angle=self.vision_check_fb(self.interlining_template,interlining=False)
-				if offset_angle==999:
-					return
-				######no-vision block
-				# offset_p=np.array([0,0,0])
-				# offset_angle=0.
-				######no-vision block end
-				# self.place(self.place_position-offset_p,offset_angle)
-				self.place_slide(self.place_position-offset_p-np.array([0.003,0,0]),offset_angle)
 
-				# if cur_stack==stacks-1:
+				######no-vision block
+				offset_p=np.array([0,0,0])
+				offset_angle=0.
+				######no-vision block end
+				self.place(self.place_position-offset_p,offset_angle)
+
+
 				##home
 				self.jog_joint(inv(self.home,R_ee(0)), 1., threshold=0.1)
 				##reset chargepad
@@ -802,8 +786,8 @@ def main():
 		
 			service_ctx = RRN.RegisterService("fusing_service","edu.rpi.robotics.fusing_system.FusingSystem",fusing_pi_obj)
 
-			# fusing_pi_obj.execute(5)
-			input('press enter to quit')
+			fusing_pi_obj.execute(10)
+			# input('press enter to quit')
 
 		except:
 			traceback.print_exc()

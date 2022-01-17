@@ -18,7 +18,7 @@ robosewclient='192.168.51.61'
 pi_fuse='192.168.51.25'
 my_laptop='192.168.51.181'
 
-url='rr+tcp://'+fusing_laptop+':12180/?service=fusing_service'
+url='rr+tcp://'+robosewclient+':12180/?service=fusing_service'
 fusing_sub=RRN.SubscribeService(url)
 
 fusing_obj=fusing_sub.GetDefaultClientWait(1)
@@ -27,4 +27,7 @@ sensor_readings = fusing_sub.SubscribeWire("sensor_readings")
 
 ##############################################property check#######################################
 print(fusing_obj.current_ply_fabric_type.fabric_name)
+print(fusing_obj.current_ply_fabric_type.fabric_type)
+
 print(fusing_obj.current_interlining_fabric_type.fabric_name)
+print(fusing_obj.current_interlining_fabric_type.fabric_type)
