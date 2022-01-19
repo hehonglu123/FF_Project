@@ -38,7 +38,7 @@ robosewclient='192.168.51.61'
 pi_fuse='192.168.51.25'
 my_laptop='192.168.51.181'
 
-url='rr+tcp://'+fusing_laptop+':12180/?service=fusing_service'
+url='rr+tcp://'+robosewclient+':12180/?service=fusing_service'
 fusing_sub=RRN.SubscribeService(url)
 fusing_sub.ClientConnectFailed += connect_failed
 

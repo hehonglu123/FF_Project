@@ -48,6 +48,7 @@ class fusing_pi(object):
 		while p.Available:
 			try:
 				dat=p.ReceivePacket()
+				print('execute received')
 				self.current_operation_count=0
 				self.execute(dat)
 			except:

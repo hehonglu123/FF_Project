@@ -36,7 +36,7 @@ robot_name=args.robot_name
 
 #rpi relay
 try:
-	tool_sub=RRN.SubscribeService('rr+tcp://'+fusing_laptop+':22222?service=tool')
+	tool_sub=RRN.SubscribeService('rr+tcp://'+robosewclient+':22222?service=tool')
 	tool=tool_sub.GetDefaultClientWait(1)
 except:
 	print('rpi gripper service not available')
@@ -51,7 +51,7 @@ except:
 	pass
 
 #connect robot services
-url='rr+tcp://'+fusing_laptop+':58651?service=robot'
+url='rr+tcp://'+robosewclient+':58651?service=robot'
 robot_sub=RRN.SubscribeService(url)
 robot=robot_sub.GetDefaultClientWait(1)
 state_w = robot_sub.SubscribeWire("robot_state")

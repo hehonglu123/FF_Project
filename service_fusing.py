@@ -89,7 +89,7 @@ class fusing_pi(object):
 
 		try:
 			###camera connect
-			url='rr+tcp://'+self.fusing_laptop+':59823?service=camera'
+			url='rr+tcp://'+self.robosewclient+':59823?service=camera'
 			#Startup, connect, and pull out the camera from the objref    
 			self.cam_sub=RRN.SubscribeService(url)
 			self.cam_sub.ClientConnectFailed += self.connect_failed
@@ -104,7 +104,7 @@ class fusing_pi(object):
 		#tool
 		try:
 			###sensor_state [IDEC1,IDEC2,IDEC3,IDEC4,LOCK1,LOCK]
-			self.tool_sub=RRN.SubscribeService('rr+tcp://'+self.fusing_laptop+':22222?service=tool')
+			self.tool_sub=RRN.SubscribeService('rr+tcp://'+self.robosewclient+':22222?service=tool')
 			self.tool_state = self.tool_sub.SubscribeWire("tool_state")
 			self.tool_sub.ClientConnectFailed += self.connect_failed
 			self.tool=self.tool_sub.GetDefaultClientWait(1)
@@ -117,7 +117,7 @@ class fusing_pi(object):
 			pass
 
 		try:
-			self.robot_sub=RRN.SubscribeService('rr+tcp://'+self.fusing_laptop+':58651?service=robot')
+			self.robot_sub=RRN.SubscribeService('rr+tcp://'+self.robosewclient+':58651?service=robot')
 			self.robot_sub.ClientConnectFailed += self.connect_failed
 			self.state_w = self.robot_sub.SubscribeWire("robot_state")
 			self.cmd_w=self.robot_sub.SubscribeWire('position_command')
@@ -633,7 +633,7 @@ class fusing_pi(object):
 		# 	return [0,0],999
 		print('min_error: ', min_error)
 		if 'CLLR' in self.current_ply_fabric_type.fabric_name:
-			if not interlining and min_error>=2599999999:
+			if not interlining and min_error>=2499999999:
 				self.trigger_error('Vision Error','NO FABRIC FOUND')
 				self.clear_charge()
 				return [0,0],999
@@ -729,8 +729,8 @@ class fusing_pi(object):
 
 	def execute(self, stacks):
 		for cur_stack in range(stacks):
-			self.current_ply_fabric_type.fabric_name='PD19_016C-FR-LFT-UP HICKEY 56'
-			self.current_interlining_fabric_type.fabric_name='PD19_016C-FR-LFT-UP-INT HICKEY 56'
+			# self.current_ply_fabric_type.fabric_name='PD19_016C-FR-LFT-UP HICKEY 56'
+			# self.current_interlining_fabric_type.fabric_name='PD19_016C-FR-LFT-UP-INT HICKEY 56'
 			try:
 				
 				self.fabric_template=read_template('client_yaml/templates/'+self.current_ply_fabric_type.fabric_name+'.jpg',self.fabric_dimension[self.current_ply_fabric_type.fabric_name],self.ppu)
@@ -766,7 +766,7 @@ class fusing_pi(object):
 				# offset_angle=0.
 				######no-vision block end
 				# self.place(self.place_position-offset_p,offset_angle)
-				self.place_slide(self.place_position-offset_p-np.array([0.003,0,0]),offset_angle)
+				self.place_slide(self.place_position-offset_p,offset_angle)
 
 				# if cur_stack==stacks-1:
 				##home

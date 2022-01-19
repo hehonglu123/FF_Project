@@ -89,7 +89,7 @@ class fusing_pi(object):
 
 		try:
 			###camera connect
-			url='rr+tcp://'+self.fusing_laptop+':59823?service=camera'
+			url='rr+tcp://'+self.robosewclient+':59823?service=camera'
 			#Startup, connect, and pull out the camera from the objref    
 			self.cam_sub=RRN.SubscribeService(url)
 			self.cam_sub.ClientConnectFailed += self.connect_failed
@@ -104,7 +104,7 @@ class fusing_pi(object):
 		#tool
 		try:
 			###sensor_state [IDEC1,IDEC2,IDEC3,IDEC4,LOCK1,LOCK]
-			self.tool_sub=RRN.SubscribeService('rr+tcp://'+self.fusing_laptop+':22222?service=tool')
+			self.tool_sub=RRN.SubscribeService('rr+tcp://'+self.robosewclient+':22222?service=tool')
 			self.tool_state = self.tool_sub.SubscribeWire("tool_state")
 			self.tool_sub.ClientConnectFailed += self.connect_failed
 			self.tool=self.tool_sub.GetDefaultClientWait(1)
@@ -117,7 +117,7 @@ class fusing_pi(object):
 			pass
 
 		try:
-			self.robot_sub=RRN.SubscribeService('rr+tcp://'+self.fusing_laptop+':58651?service=robot')
+			self.robot_sub=RRN.SubscribeService('rr+tcp://'+self.robosewclient+':58651?service=robot')
 			self.robot_sub.ClientConnectFailed += self.connect_failed
 			self.state_w = self.robot_sub.SubscribeWire("robot_state")
 			self.cmd_w=self.robot_sub.SubscribeWire('position_command')
@@ -743,14 +743,14 @@ class fusing_pi(object):
 				self.place(self.place_position-offset_p,offset_angle)
 
 				
-				self.stack_height2=np.array([0,0,(stacks-cur_stack)*0.00045])
-				self.pick(self.bin2_p+self.stack_height2,self.bin2_R,v=5.)
+				# self.stack_height2=np.array([0,0,(stacks-cur_stack)*0.00045])
+				# self.pick(self.bin2_p+self.stack_height2,self.bin2_R,v=5.)
 
-				######no-vision block
-				offset_p=np.array([0,0,0])
-				offset_angle=0.
-				######no-vision block end
-				self.place(self.place_position-offset_p,offset_angle)
+				# ######no-vision block
+				# offset_p=np.array([0,0,0])
+				# offset_angle=0.
+				# ######no-vision block end
+				# self.place(self.place_position-offset_p,offset_angle)
 
 
 				##home

@@ -8,7 +8,7 @@ robot_name='abb'
 sys.path.append('../toolbox/')
 from vel_emulate_sub import EmulatedVelocityControl
 from general_robotics_toolbox import *
-from cv2 import aruco
+# from cv2 import aruco
 from temp_match import bold_edge
 from abb_def import *
 
@@ -66,7 +66,7 @@ def PolyArea2D(pts):
 ###determine pixels/unit distance, ROI
 def preprocess(image):
 	# tag_centroids, ids = aruco_process(image)
-	tag_centroids=np.array([[[ 97,25]], [[105,670]],[[1201,16]],[[1204,673]]])
+	tag_centroids=np.array([[[ 70,25]], [[70,697]],[[1206,25]],[[1208,700]]])
 	ROI=np.array([[np.min(tag_centroids[:,:,1]),np.max(tag_centroids[:,:,1])],[np.min(tag_centroids[:,:,0]),np.max(tag_centroids[:,:,0])]]).astype(int)		#[[r1,r2],[c1,c2]]
 	
 	vertices=np.squeeze(tag_centroids,axis=1)

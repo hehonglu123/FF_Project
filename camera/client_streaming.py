@@ -25,7 +25,7 @@ current_frame=None
 
 def main():
 
-    url='rr+tcp://'+fusing_laptop+':59823?service=camera'
+    url='rr+tcp://'+robosewclient+':59823?service=camera'
     if (len(sys.argv)>=2):
         url=sys.argv[1]
 

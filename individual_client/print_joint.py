@@ -35,7 +35,7 @@ my_laptop='192.168.51.181'
 # 	sys.exit()
 
 ####################Start Service and robot setup
-url='rr+tcp://'+fusing_laptop+':58651?service=robot'
+url='rr+tcp://'+robosewclient+':58651?service=robot'
 
 
 robot_sub=RRN.SubscribeService(url)
