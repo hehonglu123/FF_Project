@@ -94,7 +94,7 @@ def create_mask(template):
 	cv2.drawContours(result, [big_contour], 0, (255,255,255), cv2.FILLED)
 	return result
 
-def match_w_ori(image,template,orientation,alg='hsva',edge_raw=None,angle_range=10,angle_resolution=1.,interlining=False):
+def match_w_ori(image,template,orientation,alg='hsva',edge_raw=None,angle_range=8,angle_resolution=1.,interlining=False):
 	min_error=9999999999
 	act_angle=0
 	loc=[0,0]
@@ -120,8 +120,7 @@ def match_w_ori(image,template,orientation,alg='hsva',edge_raw=None,angle_range=
 	# cv2.waitKey(0)
 
 	# for i in range(0,181,180):
-	for angle in np.arange(orientation-angle_range,orientation+angle_range,angle_resolution):
-	
+	for angle in np.arange(orientation-angle_range+1,orientation+angle_range,angle_resolution):
 		template_rt=rotate_image(tEdged,angle,[0,0,0])
 		###make template binary
 		template_rt=cv2.threshold(template_rt, 50, 255, cv2.THRESH_BINARY)[1]
@@ -175,4 +174,4 @@ def match_w_ori_single(image,template,orientation,alg='hsva',edge_raw=None,inter
 	w=len(template_rt[0])
 	h=len(template_rt)
 
-	return angle,(min_loc[0]+w/2,min_loc[1]+h/2)
+	return angle,(min_loc[0]+w/2,min_loc[1]+h/2), min_error

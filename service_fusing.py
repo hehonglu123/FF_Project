@@ -452,18 +452,50 @@ class fusing_pi(object):
 		try:
 			print('go picking')
 			q=inv(p+np.array([0,0,0.3]),R)
-			self.jog_joint(q, 1.5,threshold=0.15,dcc_range=0.25)
+			self.jog_joint(q, 1.2,threshold=0.15,dcc_range=0.25)
 
 			
 			q=inv(p+np.array([0,0,0.1]),R)
 			#move down 
-			self.jog_joint(q, 1.2,threshold=0.1,dcc_range=0.2)
+			self.jog_joint(q, 1.0,threshold=0.1,dcc_range=0.2)
 
-			#turn on voltage first
-			self.m1k_obj.setvoltage(v)
+			
 
 			q=inv(p,R)
 			self.jog_joint(q, 0.5,threshold=0.01,dcc_range=0.1)
+
+			#turn on voltage first
+			self.m1k_obj.setvoltage(v)
+			time.sleep(0.5)
+
+			self.vel_ctrl.set_velocity_command(np.zeros((6,)))
+			
+
+			#move up
+			self.jog_joint_movel(p+np.array([0,0,0.3]),0.45,acc_range=0.1,threshold=0.05)
+		except:
+			self.trigger_error("Robot not ready",traceback.format_exc())
+
+
+	def pick_int(self,p,R,v):
+		try:
+			print('go picking')
+			q=inv(p+np.array([0,0,0.3]),R)
+			self.jog_joint(q, 1.2,threshold=0.15,dcc_range=0.25)
+
+			
+			q=inv(p+np.array([0,0,0.1]),R)
+			#move down 
+			self.jog_joint(q, 1.0,threshold=0.1,dcc_range=0.2)
+
+			#turn on voltage first
+			self.m1k_obj.setvoltage(v)
+			time.sleep(0.5)
+
+			q=inv(p,R)
+			self.jog_joint(q, 0.5,threshold=0.01,dcc_range=0.1)
+
+			
 
 			self.vel_ctrl.set_velocity_command(np.zeros((6,)))
 			
@@ -502,7 +534,7 @@ class fusing_pi(object):
 	def pick_osc(self,p,R,v):
 		print('go picking')
 		q=inv(p+np.array([0,0,0.3]),R)
-		self.jog_joint(q, 1.5,threshold=0.15,dcc_range=0.25)
+		self.jog_joint(q, 1.2,threshold=0.15,dcc_range=0.25)
 
 		
 		q=inv(p+np.array([0,0,0.1]),R)
@@ -638,7 +670,7 @@ class fusing_pi(object):
 				self.clear_charge()
 				return [0,0],999
 		else:
-			if not interlining and min_error>=9999999999:
+			if not interlining and min_error>=7999999999:
 				self.trigger_error('Vision Error','NO FABRIC FOUND')
 				self.clear_charge()
 				return [0,0],999
@@ -664,7 +696,17 @@ class fusing_pi(object):
 			try:
 				# roi_frame=cv2.cvtColor(self.current_frame[self.ROI[0]:self.ROI[1],self.ROI[2]:self.ROI[3]], cv2.COLOR_BGR2GRAY)
 				roi_frame=self.current_frame[self.ROI[0]:self.ROI[1],self.ROI[2]:self.ROI[3]]
-				angle,center=match_w_ori_single(roi_frame,template,np.radians(angle),'edge',interlining=interlining)
+				angle,center,min_error=match_w_ori_single(roi_frame,template,np.radians(angle),'edge',interlining=interlining)
+				# if 'CLLR' in self.current_ply_fabric_type.fabric_name:
+				# 	if not interlining and min_error>=2499999999:
+				# 		self.trigger_error('Vision Error','NO FABRIC FOUND')
+				# 		self.clear_charge()
+				# 		return [0,0],999
+				# else:
+				# 	if not interlining and min_error>=9999999999:
+				# 		self.trigger_error('Vision Error','NO FABRIC FOUND')
+				# 		self.clear_charge()
+				# 		return [0,0],999
 				offset_p=(center-np.array([len(roi_frame[0]),len(roi_frame)])/2.)
 				print(offset_p)
 				self.move(np.array([offset_p[1],-offset_p[0],0.])/1000.,np.eye(3))
@@ -715,8 +757,8 @@ class fusing_pi(object):
 		###sliding
 
 		now=time.time()
-		while time.time()-now<7:
-			self.move(np.array([0.1,0,0]),np.eye(3))
+		while time.time()-now<4.2:
+			self.move(np.array([0.13,0,0]),np.eye(3))
 
 		self.tool.open()
 		# vel_ctrl.set_velocity_command(np.zeros((6,)))
@@ -757,7 +799,7 @@ class fusing_pi(object):
 				self.interlining_template=read_template('client_yaml/templates/'+self.current_interlining_fabric_type.fabric_name+'.jpg',self.fabric_dimension[self.current_interlining_fabric_type.fabric_name],self.ppu)
 				
 				self.stack_height2=np.array([0,0,(stacks-cur_stack)*0.00045])
-				self.pick(self.bin2_p+self.stack_height2,self.bin2_R,v=5.)
+				self.pick_int(self.bin2_p+self.stack_height2,self.bin2_R,v=5.)
 				offset_p,offset_angle=self.vision_check_fb(self.interlining_template,interlining=False)
 				if offset_angle==999:
 					return
@@ -766,7 +808,10 @@ class fusing_pi(object):
 				# offset_angle=0.
 				######no-vision block end
 				# self.place(self.place_position-offset_p,offset_angle)
-				self.place_slide(self.place_position-offset_p,offset_angle)
+				if 'CLLR' in self.current_ply_fabric_type.fabric_name:
+					self.place_slide(self.place_position-offset_p+np.array([0.003,0,0]),offset_angle)
+				else:
+					self.place_slide(self.place_position-offset_p,offset_angle)
 
 				# if cur_stack==stacks-1:
 				##home
